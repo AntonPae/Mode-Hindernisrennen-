@@ -1,8 +1,8 @@
-name: Deploy to GitHub Pages
+name: Deploy Spiel to GitHub Pages
 
 on:
   push:
-    branches: [ main, master ]
+    branches: ['main', 'master']
   workflow_dispatch:
 
 permissions:
@@ -15,31 +15,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Code laden
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Node einrichten
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: lts/*
+          cache: npm
 
-      - name: Install dependencies
+      - name: Abhängigkeiten installieren
         run: npm ci || npm install
 
-      - name: Build project
+      - name: Spiel bauen
         run: npm run build
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
+      - name: GitHub Pages vorbereiten
+        uses: actions/configure-pages@v5
 
-      - name: Upload artifact
+      - name: Spiel hochladen
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist'
+          path: ./dist
 
-      - name: Deploy to GitHub Pages
+      - name: Veröffentlichen
         id: deployment
         uses: actions/deploy-pages@v4
