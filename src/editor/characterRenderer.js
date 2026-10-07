@@ -13,11 +13,11 @@ export function renderCharacter(ctx, x, y, playerConfig, animationState = { fram
   const headRadius = 22 * Math.min(scaleX, scaleY);
   const headY = -120 * scaleY;
   const torsoWidth = 36 * scaleX;
-  const torsoHeight = 50 * scaleY;
+  const torsoHeight = 48 * scaleY;
   const torsoY = headY + headRadius + 5;
 
   const legWidth = 14 * scaleX;
-  const legHeight = 50 * scaleY;
+  const legHeight = 45 * scaleY;
   const legY = torsoY + torsoHeight;
 
   const armWidth = 12 * scaleX;
@@ -323,7 +323,7 @@ function drawShoe(ctx, legWidth, shoesConfig) {
   if (shoesConfig.style === 'barefoot') {
     ctx.fillStyle = '#ffdbac';
     ctx.beginPath();
-    ctx.ellipse(2, 2, legWidth * 0.6, 4, 0, 0, Math.PI * 2);
+    ctx.ellipse(2, -2, legWidth * 0.6, 4, 0, 0, Math.PI * 2);
     ctx.fill();
     return;
   }
@@ -336,11 +336,11 @@ function drawShoe(ctx, legWidth, shoesConfig) {
   const shoeHeight = shoesConfig.style === 'boots' ? 14 : 10;
 
   ctx.beginPath();
-  ctx.roundRect(-legWidth / 2, -2, shoeWidth, shoeHeight, [2, 6, 2, 2]);
+  ctx.roundRect(-legWidth / 2, -shoeHeight, shoeWidth, shoeHeight, [2, 6, 2, 2]);
   ctx.fill();
   ctx.stroke();
 
   // Sole detail
   ctx.fillStyle = '#333333';
-  ctx.fillRect(-legWidth / 2, shoeHeight - 4, shoeWidth, 2);
+  ctx.fillRect(-legWidth / 2, -2, shoeWidth, 2);
 }
