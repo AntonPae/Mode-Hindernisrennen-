@@ -48,7 +48,7 @@ export function setupEditorUI(stateManager) {
   // Render loop for preview
   function updatePreview() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    renderCharacter(ctx, canvas.width / 2, canvas.height - 60, PlayerConfig, { frame: 0, pose: 'idle' });
+    renderCharacter(ctx, canvas.width / 2, canvas.height - 20, PlayerConfig, { frame: 0, pose: 'idle' });
   }
 
   // Bind Listeners

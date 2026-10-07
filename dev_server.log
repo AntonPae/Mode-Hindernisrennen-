@@ -1,9 +1,9 @@
 
-> custom-runner-character-editor@1.0.0 dev
-> vite
+  VITE v5.4.21  ready in 335 ms
 
-
-  VITE v5.4.21  ready in 227 ms
-
-  ➜  Local:   http://localhost:5173/
+  ➜  Local:   http://localhost:3000/Mode-Hindernisrennen-/
   ➜  Network: use --host to expose
+7:01:39 PM [vite] page reload src/editor/editorUI.js
+7:02:18 PM [vite] page reload src/editor/characterRenderer.js
+7:02:21 PM [vite] page reload src/editor/editorUI.js
+7:02:25 PM [vite] page reload src/game/runnerEngine.js

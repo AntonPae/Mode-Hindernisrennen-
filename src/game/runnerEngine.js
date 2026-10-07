@@ -270,7 +270,7 @@ export class RunnerEngine {
       const charScaleX = PlayerConfig.body.width || 1.0;
       const charScaleY = PlayerConfig.body.height || 1.0;
       const playerWidth = 36 * charScaleX;
-      const playerHeight = (this.player.isDucking ? 60 : 120) * charScaleY;
+      const playerHeight = (this.player.isDucking ? 70 : 130) * charScaleY;
 
       const playerRect = {
         x: this.player.x - playerWidth / 2,
