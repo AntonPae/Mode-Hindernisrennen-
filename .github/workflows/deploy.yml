@@ -38,6 +38,8 @@ jobs:
 
       - name: GitHub Pages vorbereiten
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - name: Spiel hochladen
         uses: actions/upload-pages-artifact@v3
