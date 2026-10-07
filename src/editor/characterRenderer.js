@@ -9,16 +9,17 @@ export function renderCharacter(ctx, x, y, playerConfig, animationState = { fram
   const scaleX = playerConfig.body.width || 1.0;
   const scaleY = playerConfig.body.height || 1.0;
 
-  // Base proportions (standing tall around 160px height)
+  // Base proportions (standing tall around 160px height aligned so y = 0 is ground baseline)
   const headRadius = 22 * Math.min(scaleX, scaleY);
-  const headY = -120 * scaleY;
-  const torsoWidth = 36 * scaleX;
-  const torsoHeight = 50 * scaleY;
-  const torsoY = headY + headRadius + 5;
-
   const legWidth = 14 * scaleX;
   const legHeight = 50 * scaleY;
-  const legY = torsoY + torsoHeight;
+  const legY = -58 * scaleY; // Leg bottom is at -8 * scaleY; shoe bottom touches 0
+
+  const torsoWidth = 36 * scaleX;
+  const torsoHeight = 50 * scaleY;
+  const torsoY = legY - torsoHeight; // -108 * scaleY
+
+  const headY = torsoY - 5 * scaleY - headRadius;
 
   const armWidth = 12 * scaleX;
   const armHeight = 45 * scaleY;
