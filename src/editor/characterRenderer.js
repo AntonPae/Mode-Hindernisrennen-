@@ -9,16 +9,17 @@ export function renderCharacter(ctx, x, y, playerConfig, animationState = { fram
   const scaleX = playerConfig.body.width || 1.0;
   const scaleY = playerConfig.body.height || 1.0;
 
-  // Base proportions (standing tall around 160px height)
+  // Base proportions anchored so y=0 is ground level (feet bottom / shadow)
   const headRadius = 22 * Math.min(scaleX, scaleY);
-  const headY = -120 * scaleY;
-  const torsoWidth = 36 * scaleX;
-  const torsoHeight = 50 * scaleY;
-  const torsoY = headY + headRadius + 5;
-
   const legWidth = 14 * scaleX;
   const legHeight = 50 * scaleY;
-  const legY = torsoY + torsoHeight;
+  const legY = -legHeight - 8;
+
+  const torsoWidth = 36 * scaleX;
+  const torsoHeight = 50 * scaleY;
+  const torsoY = legY - torsoHeight;
+
+  const headY = torsoY - 5 - headRadius;
 
   const armWidth = 12 * scaleX;
   const armHeight = 45 * scaleY;
