@@ -9,9 +9,9 @@ export function setupBackgroundSelectScreen(stateManager) {
       const selectedBg = card.dataset.bg;
       GameConfig.background = selectedBg;
 
-      // Highlight selected card visually
-      bgCards.forEach(c => c.style.borderColor = '#334155');
-      card.style.borderColor = '#60a5fa';
+      // Highlight selected card visually with cinematic gold border
+      bgCards.forEach(c => c.style.borderColor = 'rgba(245, 158, 11, 0.35)');
+      card.style.borderColor = '#f59e0b';
 
       // Transition to game state
       stateManager.setState('GAME', { background: selectedBg });

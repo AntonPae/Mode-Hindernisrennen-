@@ -1,5 +1,6 @@
 /**
- * Utility to render a modular 2D vector-style character with scaling, tinting, hair, facial features, clothes, and stickers.
+ * Utility to render a modular 2D vector-style character with cinematic golden lighting,
+ * dynamic wind sway on hair/mane, smooth running animation, clothes, and stickers.
  */
 
 export function renderCharacter(ctx, x, y, playerConfig, animationState = { frame: 0, pose: 'idle' }) {
@@ -23,6 +24,9 @@ export function renderCharacter(ctx, x, y, playerConfig, animationState = { fram
   const armWidth = 12 * scaleX;
   const armHeight = 45 * scaleY;
 
+  // Dynamic wind sway for hair
+  const windSway = animationState.pose === 'run' ? Math.sin(animationState.frame * 0.3) * 6 : Math.sin(animationState.frame * 0.1) * 2;
+
   // Animation leg/arm angles
   let leg1Angle = 0;
   let leg2Angle = 0;
@@ -30,25 +34,26 @@ export function renderCharacter(ctx, x, y, playerConfig, animationState = { fram
   let arm2Angle = 0;
 
   if (animationState.pose === 'run') {
-    const runCycle = Math.sin(animationState.frame * 0.25);
-    leg1Angle = runCycle * 0.6;
-    leg2Angle = -runCycle * 0.6;
-    arm1Angle = -runCycle * 0.7;
-    arm2Angle = runCycle * 0.7;
+    const runCycle = Math.sin(animationState.frame * 0.28);
+    leg1Angle = runCycle * 0.65;
+    leg2Angle = -runCycle * 0.65;
+    arm1Angle = -runCycle * 0.75;
+    arm2Angle = runCycle * 0.75;
   } else if (animationState.pose === 'jump') {
-    leg1Angle = -0.4;
-    leg2Angle = 0.3;
-    arm1Angle = -1.2;
-    arm2Angle = -0.8;
+    leg1Angle = -0.45;
+    leg2Angle = 0.35;
+    arm1Angle = -1.3;
+    arm2Angle = -0.85;
   } else if (animationState.pose === 'duck') {
     ctx.scale(1, 0.6);
   }
 
-  // Shadow under character
+  // Dynamic Ground Shadow (shrinks when high in the air)
   ctx.save();
+  const jumpHeightOffset = animationState.pose === 'jump' ? 25 : 0;
   ctx.beginPath();
-  ctx.ellipse(0, 0, 30 * scaleX, 8, 0, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+  ctx.ellipse(0, jumpHeightOffset, (32 * scaleX) * (1 - jumpHeightOffset * 0.015), 8, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.35)';
   ctx.fill();
   ctx.restore();
 
@@ -67,8 +72,8 @@ export function renderCharacter(ctx, x, y, playerConfig, animationState = { fram
   // Front Arm
   drawArm(ctx, torsoWidth / 2 + 2, torsoY + 8, armWidth, armHeight, arm1Angle, playerConfig.clothes.top);
 
-  // Head & Skin
-  drawHead(ctx, 0, headY, headRadius, playerConfig.body);
+  // Head & Skin & Flowing Hair
+  drawHead(ctx, 0, headY, headRadius, playerConfig.body, windSway);
 
   ctx.restore();
 }
@@ -85,8 +90,10 @@ function drawArm(ctx, x, y, width, height, angle, topConfig) {
   let sleeveH = height * 0.7;
   if (topConfig.style === 'tshirt') sleeveH = height * 0.35;
 
-  ctx.fillRect(-width / 2, 0, width, sleeveH);
-  ctx.strokeRect(-width / 2, 0, width, sleeveH);
+  ctx.beginPath();
+  ctx.roundRect(-width / 2, 0, width, sleeveH, [2]);
+  ctx.fill();
+  ctx.stroke();
 
   // Exposed skin arm
   if (sleeveH < height) {
@@ -98,10 +105,14 @@ function drawArm(ctx, x, y, width, height, angle, topConfig) {
     ctx.fill();
   }
 
+  // Golden Sun Highlight
+  ctx.fillStyle = 'rgba(254, 240, 138, 0.25)';
+  ctx.fillRect(-width / 2, 0, 3, sleeveH);
+
   ctx.restore();
 }
 
-function drawHead(ctx, x, y, radius, bodyConfig) {
+function drawHead(ctx, x, y, radius, bodyConfig, windSway = 0) {
   ctx.save();
   ctx.translate(x, y);
 
@@ -113,6 +124,12 @@ function drawHead(ctx, x, y, radius, bodyConfig) {
   ctx.lineWidth = 2;
   ctx.strokeStyle = '#d4a373';
   ctx.stroke();
+
+  // Golden Sun Highlight on forehead
+  ctx.fillStyle = 'rgba(254, 240, 138, 0.3)';
+  ctx.beginPath();
+  ctx.arc(0, 0, radius * 0.85, -Math.PI * 0.8, -Math.PI * 0.2);
+  ctx.fill();
 
   // Face Expression
   ctx.fillStyle = '#1e293b';
@@ -166,7 +183,7 @@ function drawHead(ctx, x, y, radius, bodyConfig) {
       break;
   }
 
-  // Hair
+  // Hair / Flowing Mane in Wind
   if (bodyConfig.hairId !== 'hair_none') {
     ctx.fillStyle = bodyConfig.hairColor || '#4a2e00';
     ctx.strokeStyle = bodyConfig.hairColor || '#4a2e00';
@@ -175,20 +192,28 @@ function drawHead(ctx, x, y, radius, bodyConfig) {
       ctx.beginPath();
       ctx.arc(0, -radius * 0.2, radius * 1.05, Math.PI, 0);
       ctx.fill();
-    } else if (bodyConfig.hairId === 'hair_2') { // Spiky / Mohawk
+    } else if (bodyConfig.hairId === 'hair_2') { // Spiky / Wild Mohawk
       ctx.beginPath();
-      ctx.moveTo(-radius * 0.8, -radius * 0.5);
-      ctx.lineTo(-radius * 0.3, -radius * 1.4);
-      ctx.lineTo(0, -radius * 0.8);
-      ctx.lineTo(radius * 0.3, -radius * 1.4);
+      ctx.moveTo(-radius * 0.8 + windSway, -radius * 0.5);
+      ctx.lineTo(-radius * 0.3 + windSway * 1.5, -radius * 1.4);
+      ctx.lineTo(0 + windSway, -radius * 0.8);
+      ctx.lineTo(radius * 0.3 + windSway * 1.2, -radius * 1.4);
       ctx.lineTo(radius * 0.8, -radius * 0.5);
       ctx.closePath();
       ctx.fill();
-    } else if (bodyConfig.hairId === 'hair_3') { // Long
+    } else if (bodyConfig.hairId === 'hair_3') { // Flowing Long Mane
       ctx.beginPath();
       ctx.arc(0, -radius * 0.2, radius * 1.1, Math.PI * 0.8, Math.PI * 2.2);
-      ctx.fillRect(-radius * 1.05, -radius * 0.2, radius * 0.4, radius * 1.3);
-      ctx.fillRect(radius * 0.65, -radius * 0.2, radius * 0.4, radius * 1.3);
+      ctx.fillRect(-radius * 1.05 - windSway * 0.5, -radius * 0.2, radius * 0.4, radius * 1.3);
+      ctx.fillRect(radius * 0.65 - windSway, -radius * 0.2, radius * 0.5 + windSway * 0.8, radius * 1.4);
+      ctx.fill();
+
+      // Flowing strand tip in wind
+      ctx.beginPath();
+      ctx.moveTo(radius * 0.65, radius * 0.8);
+      ctx.quadraticCurveTo(radius * 1.2 - windSway * 1.5, radius * 1.1, radius * 1.5 - windSway * 2, radius * 0.5);
+      ctx.lineTo(radius * 0.8, radius * 0.2);
+      ctx.closePath();
       ctx.fill();
     }
   }
@@ -217,10 +242,14 @@ function drawTorso(ctx, x, y, width, height, topConfig) {
   ctx.fill();
   ctx.stroke();
 
+  // Golden Sun Sheen on Torso
+  ctx.fillStyle = 'rgba(254, 240, 138, 0.2)';
+  ctx.fillRect(-w / 2 + 2, 2, w * 0.3, height - 4);
+
   // Style Details
   if (style === 'hoodie') {
     // Hoodie Pocket & Strings
-    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
     ctx.beginPath();
     ctx.roundRect(-w * 0.35, height * 0.55, w * 0.7, height * 0.35, [2]);
     ctx.fill();
@@ -248,7 +277,6 @@ function drawTorso(ctx, x, y, width, height, topConfig) {
   if (topConfig.stickers && topConfig.stickers.length > 0) {
     topConfig.stickers.forEach(s => {
       ctx.save();
-      // Position relative to shirt center
       const stickerX = (s.x || 0) * (w / 2);
       const stickerY = (s.y || 0.5) * height;
       const stickerScale = s.scale || 1.0;

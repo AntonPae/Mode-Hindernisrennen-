@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Custom Runner mit Charakter-Editor</title>
+  <title>Spirit: Der Wilde Ritt - Cinematic Runner</title>
   <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
@@ -14,8 +14,8 @@
     <!-- State: Editor Container Overlay -->
     <div id="editor-screen" class="screen-overlay active">
       <header class="app-header">
-        <h1>Charakter-Editor</h1>
-        <p>Gestalte deinen Läufer & wähle eine Spezial-Fähigkeit</p>
+        <h1 class="cinematic-title">✨ SPIRIT ✨</h1>
+        <p class="cinematic-subtitle">Der Wilde Ritt – Gestalte deinen Läufer & wähle deine Spezial-Fähigkeit</p>
       </header>
 
       <div class="editor-layout">
@@ -36,7 +36,7 @@
               <input type="range" id="bodyWidth" min="0.8" max="1.2" step="0.05" value="1.0">
             </div>
             <div class="control-group">
-              <label for="faceSelect">Gesicht:</label>
+              <label for="faceSelect">Gesichtsausdruck:</label>
               <select id="faceSelect">
                 <option value="face_1">Glücklich 😀</option>
                 <option value="face_2">Cool 😎</option>
@@ -44,11 +44,11 @@
               </select>
             </div>
             <div class="control-group">
-              <label for="hairSelect">Frisur:</label>
+              <label for="hairSelect">Mähne / Frisur:</label>
               <select id="hairSelect">
+                <option value="hair_3">Wildes Mähnenhaar</option>
                 <option value="hair_1">Kurz</option>
-                <option value="hair_2">Irokese / Style</option>
-                <option value="hair_3">Lang</option>
+                <option value="hair_2">Irokese / Wild Style</option>
                 <option value="hair_none">Glatze</option>
               </select>
             </div>
@@ -60,9 +60,9 @@
 
           <!-- Kleidung Tab / Section -->
           <fieldset class="editor-section">
-            <legend>Kleidung</legend>
+            <legend>Kleidung & Style</legend>
             <div class="control-group">
-              <label for="topStyle">Oberteil Cut:</label>
+              <label for="topStyle">Oberteil:</label>
               <select id="topStyle">
                 <option value="hoodie">Hoodie</option>
                 <option value="tshirt">T-Shirt</option>
@@ -72,7 +72,7 @@
             </div>
 
             <div class="control-group">
-              <label for="pantsStyle">Hose Cut:</label>
+              <label for="pantsStyle">Hose:</label>
               <select id="pantsStyle">
                 <option value="jeans">Jeans</option>
                 <option value="shorts">Shorts</option>
@@ -82,10 +82,10 @@
             </div>
 
             <div class="control-group">
-              <label for="shoesStyle">Schuhe Cut:</label>
+              <label for="shoesStyle">Schuhe:</label>
               <select id="shoesStyle">
+                <option value="boots">Reit-Stiefel</option>
                 <option value="sneakers">Sneakers</option>
-                <option value="boots">Boots</option>
                 <option value="barefoot">Barfuß</option>
               </select>
               <input type="color" id="shoesColor" value="#ffffff">
@@ -94,7 +94,7 @@
 
           <!-- Sticker Section -->
           <fieldset class="editor-section">
-            <legend>Sticker auf Oberteil</legend>
+            <legend>Emblem / Sticker</legend>
             <div class="control-group">
               <label for="stickerSelect">Sticker wählen:</label>
               <select id="stickerSelect">
@@ -115,21 +115,21 @@
               <label class="ability-card">
                 <input type="radio" name="ability" value="speed_boost" checked>
                 <div class="card-content">
-                  <strong>⚡ Supersprint</strong>
+                  <strong>⚡ Wilde Galopp-Sprint</strong>
                   <p>Erhöht kurzzeitig das Tempo & macht unbesiegbar</p>
                 </div>
               </label>
               <label class="ability-card">
                 <input type="radio" name="ability" value="double_jump">
                 <div class="card-content">
-                  <strong>🦘 Doppelsprung</strong>
+                  <strong>🦘 Hindernis-Spung</strong>
                   <p>Erlaubt einen zweiten Sprung in der Luft</p>
                 </div>
               </label>
             </div>
           </fieldset>
 
-          <button id="toBgSelectBtn" class="btn btn-primary btn-large">Weiter zur Hintergrundauswahl ➔</button>
+          <button id="toBgSelectBtn" class="btn btn-primary btn-large glow-btn">Weiter zur Film-Kulisse 🌄 ➔</button>
         </div>
       </div>
     </div>
@@ -137,30 +137,30 @@
     <!-- State: Background Select Container Overlay -->
     <div id="bg-select-screen" class="screen-overlay hidden">
       <header class="app-header">
-        <h1>Wähle dein Renn-Setting</h1>
-        <p>Wo möchtest du dein Rennen austragen?</p>
+        <h1 class="cinematic-title">Wähle deine Film-Kulisse</h1>
+        <p class="cinematic-subtitle">Wo möchtest du dein wildes Abenteuer erleben?</p>
       </header>
 
       <div class="bg-cards-container">
         <div class="bg-card" data-bg="meadow">
           <div class="bg-card-preview meadow-preview"></div>
-          <h3>🌱 Grüne Wiese</h3>
-          <p>Klassischer Parcours mit blauem Himmel und frischer Luft.</p>
-          <button class="btn btn-secondary select-bg-btn">Auswählen</button>
+          <h3>🌅 Spirit-Prärie</h3>
+          <p>Majestätischer Sonnenuntergang, ferne Bergketten, sanfte Hügel & wildes Steppengras.</p>
+          <button class="btn btn-secondary select-bg-btn">Reiten Starten 🐎</button>
         </div>
 
         <div class="bg-card" data-bg="cave">
           <div class="bg-card-preview cave-preview"></div>
-          <h3>🌋 Höhle & Hölle</h3>
-          <p>Dunkelrote Felsen, Lava-Elemente und gefährliche Hitze.</p>
-          <button class="btn btn-secondary select-bg-btn">Auswählen</button>
+          <h3>🏜️ Canyon-Schlucht</h3>
+          <p>Dramatische rote Felsmassive, Schluchten & Abenteuer-Pfade im Abendrot.</p>
+          <button class="btn btn-secondary select-bg-btn">Reiten Starten 🐎</button>
         </div>
 
         <div class="bg-card" data-bg="neon">
           <div class="bg-card-preview neon-preview"></div>
-          <h3>🌆 Neon-City</h3>
-          <p>Futuristisches Nacht-Szenario im leuchtenden Cyberpunk-Glanz.</p>
-          <button class="btn btn-secondary select-bg-btn">Auswählen</button>
+          <h3>🌌 Zauber-Dämmerungswald</h3>
+          <p>Mysteröser Abendwald mit leuchtenden Glühwürmchen & alten Baumriesen.</p>
+          <button class="btn btn-secondary select-bg-btn">Reiten Starten 🐎</button>
         </div>
       </div>
 
@@ -173,8 +173,8 @@
     <div id="game-screen" class="screen-overlay hidden game-hud">
       <div class="top-hud">
         <div class="score-board">
-          <span>Distanz: <strong id="scoreVal">0</strong> m</span>
-          <span class="high-score">Highscore: <strong id="highScoreVal">0</strong> m</span>
+          <span>Renn-Distanz: <strong id="scoreVal">0</strong> m</span>
+          <span class="high-score">Rekord: <strong id="highScoreVal">0</strong> m</span>
         </div>
         <button id="pauseBtn" class="btn btn-small">⏸️ Pause</button>
       </div>
@@ -196,9 +196,9 @@
       <div id="game-over-modal" class="modal hidden">
         <div class="modal-content">
           <h2>Rennen Beendet!</h2>
-          <p>Deine Streckenlänge: <span id="finalScore">0</span> m</p>
+          <p>Deine zurückgelegte Strecke: <span id="finalScore">0</span> m</p>
           <div class="modal-actions">
-            <button id="restartBtn" class="btn btn-primary">🔄 Nochmal versuchen</button>
+            <button id="restartBtn" class="btn btn-primary glow-btn">🔄 Erneut Reiten</button>
             <button id="editorReturnBtn" class="btn btn-secondary">✏️ Charakter anpassen</button>
           </div>
         </div>
