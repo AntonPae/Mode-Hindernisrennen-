@@ -5,3 +5,7 @@
   ➜  Network: use --host to expose
 1:51:31 PM [vite] hmr update /src/style.css, /src/style.css?direct
 1:51:35 PM [vite] hmr update /src/style.css, /src/style.css?direct
+2:00:31 PM [vite] page reload src/editor/characterData.js
+2:01:09 PM [vite] page reload index.html
+2:01:20 PM [vite] page reload src/editor/editorUI.js
+2:02:09 PM [vite] page reload src/editor/characterRenderer.js

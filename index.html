@@ -28,6 +28,10 @@
           <fieldset class="editor-section">
             <legend>Körper & Kopf</legend>
             <div class="control-group">
+              <label for="skinColor">Hautfarbe:</label>
+              <input type="color" id="skinColor" value="#f5c29b">
+            </div>
+            <div class="control-group">
               <label for="bodyHeight">Höhe: <span id="heightVal">1.0</span></label>
               <input type="range" id="bodyHeight" min="0.8" max="1.2" step="0.05" value="1.0">
             </div>
@@ -40,16 +44,22 @@
               <select id="faceSelect">
                 <option value="face_1">Glücklich 😀</option>
                 <option value="face_2">Cool 😎</option>
-                <option value="face_3">Fokussiert 😠</option>
+                <option value="face_3">Entschlossen 😤</option>
+                <option value="face_4">Staunend 😲</option>
+                <option value="face_5">Lächeln 🙂</option>
+                <option value="face_6">Niedlich 😊</option>
               </select>
             </div>
             <div class="control-group">
               <label for="hairSelect">Mähne / Frisur:</label>
               <select id="hairSelect">
                 <option value="hair_3">Wildes Mähnenhaar</option>
-                <option value="hair_1">Kurz</option>
-                <option value="hair_2">Irokese / Wild Style</option>
-                <option value="hair_none">Glatze</option>
+                <option value="hair_ponytail">Pferdeschwanz / Zopf</option>
+                <option value="hair_waves">Lange Wellen</option>
+                <option value="hair_cap">Reit-Cappy / Kappe 🧢</option>
+                <option value="hair_1">Kurzhaar</option>
+                <option value="hair_curly">Locken / Afro</option>
+                <option value="hair_none">Keine Haare</option>
               </select>
             </div>
             <div class="control-group">
@@ -64,31 +74,35 @@
             <div class="control-group">
               <label for="topStyle">Oberteil:</label>
               <select id="topStyle">
+                <option value="riding_vest">Reitweste / Jacke 🧥</option>
                 <option value="hoodie">Hoodie</option>
-                <option value="tshirt">T-Shirt</option>
-                <option value="oversize">Oversized</option>
+                <option value="tshirt">T-Shirt 👕</option>
+                <option value="jacket">Lederjacke / Western</option>
+                <option value="sweater">Pullover</option>
               </select>
-              <input type="color" id="topColor" value="#0055ff">
+              <input type="color" id="topColor" value="#8b4513">
             </div>
 
             <div class="control-group">
               <label for="pantsStyle">Hose:</label>
               <select id="pantsStyle">
+                <option value="riding_breeches">Reithose / Leggings</option>
                 <option value="jeans">Jeans</option>
                 <option value="shorts">Shorts</option>
-                <option value="sweatpants">Jogginghose</option>
+                <option value="cargo">Cargo / Outdoor</option>
               </select>
-              <input type="color" id="pantsColor" value="#222222">
+              <input type="color" id="pantsColor" value="#3d2b1f">
             </div>
 
             <div class="control-group">
               <label for="shoesStyle">Schuhe:</label>
               <select id="shoesStyle">
-                <option value="boots">Reit-Stiefel</option>
-                <option value="sneakers">Sneakers</option>
-                <option value="barefoot">Barfuß</option>
+                <option value="riding_boots">Reitstiefel 👢</option>
+                <option value="sneakers">Sneakers 👟</option>
+                <option value="boots">Ankle Boots</option>
+                <option value="sandals">Sandalen</option>
               </select>
-              <input type="color" id="shoesColor" value="#ffffff">
+              <input type="color" id="shoesColor" value="#1a0f08">
             </div>
           </fieldset>
 
@@ -99,7 +113,10 @@
               <label for="stickerSelect">Sticker wählen:</label>
               <select id="stickerSelect">
                 <option value="star">Stern ⭐</option>
+                <option value="horse">Pferd 🐴</option>
+                <option value="horseshoe">Hufeisen 🧲</option>
                 <option value="flame">Flamme 🔥</option>
+                <option value="crown">Krone 👑</option>
                 <option value="heart">Herz ❤️</option>
                 <option value="lightning">Blitz ⚡</option>
               </select>

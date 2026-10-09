@@ -6,6 +6,7 @@ export function setupEditorUI(stateManager) {
   const ctx = canvas.getContext('2d');
 
   // Input Elements
+  const skinColor = document.getElementById('skinColor');
   const bodyHeight = document.getElementById('bodyHeight');
   const heightVal = document.getElementById('heightVal');
   const bodyWidth = document.getElementById('bodyWidth');
@@ -29,6 +30,7 @@ export function setupEditorUI(stateManager) {
   const toBgSelectBtn = document.getElementById('toBgSelectBtn');
 
   // Set initial input values from PlayerConfig
+  skinColor.value = PlayerConfig.body.skinColor || '#f5c29b';
   bodyHeight.value = PlayerConfig.body.height;
   heightVal.textContent = PlayerConfig.body.height;
   bodyWidth.value = PlayerConfig.body.width;
@@ -52,6 +54,11 @@ export function setupEditorUI(stateManager) {
   }
 
   // Bind Listeners
+  skinColor.addEventListener('input', (e) => {
+    PlayerConfig.body.skinColor = e.target.value;
+    updatePreview();
+  });
+
   bodyHeight.addEventListener('input', (e) => {
     PlayerConfig.body.height = parseFloat(e.target.value);
     heightVal.textContent = PlayerConfig.body.height;
@@ -154,7 +161,10 @@ export function setupEditorUI(stateManager) {
   function getStickerName(type) {
     switch (type) {
       case 'star': return '⭐ Stern';
+      case 'horse': return '🐴 Pferd';
+      case 'horseshoe': return '🧲 Hufeisen';
       case 'flame': return '🔥 Flamme';
+      case 'crown': return '👑 Krone';
       case 'heart': return '❤️ Herz';
       case 'lightning': return '⚡ Blitz';
       default: return type;
