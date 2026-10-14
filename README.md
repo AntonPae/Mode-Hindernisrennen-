@@ -2,6 +2,8 @@
 
 Ein 2D-Endless-Runner-Spiel mit integriertem Charakter-Editor.
 
+[Spiel online spielen](https://antonpae.github.io/Mode-Hindernisrennen-)
+
 ## Deployment / GitHub Pages
 
 Der GitHub Actions Workflow in `.github/workflows/deploy.yml` baut das Projekt automatisch und veröffentlicht es auf GitHub Pages.
