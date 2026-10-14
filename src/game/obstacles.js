@@ -2,7 +2,7 @@ export class ObstacleManager {
   constructor() {
     this.obstacles = [];
     this.spawnTimer = 0;
-    this.minInterval = 120; // Frames between obstacles
+    this.minInterval = 110; // Frames between obstacles
   }
 
   reset() {
@@ -13,7 +13,7 @@ export class ObstacleManager {
   update(speed, canvasWidth, groundY) {
     this.spawnTimer++;
 
-    if (this.spawnTimer > this.minInterval + Math.random() * 80) {
+    if (this.spawnTimer > this.minInterval + Math.random() * 70) {
       this.spawnTimer = 0;
       this.spawnObstacle(canvasWidth, groundY);
     }
@@ -24,7 +24,7 @@ export class ObstacleManager {
       obs.x -= speed;
 
       // Remove off-screen obstacles
-      if (obs.x + obs.width < 0) {
+      if (obs.x + obs.width < -50) {
         this.obstacles.splice(i, 1);
       }
     }
@@ -35,22 +35,22 @@ export class ObstacleManager {
     const type = types[Math.floor(Math.random() * types.length)];
 
     if (type === 'fence') {
-      const height = 40 + Math.random() * 20;
+      const height = 45 + Math.random() * 25;
       this.obstacles.push({
         type: 'fence',
         x: canvasWidth + 20,
         y: groundY - height,
-        width: 30,
+        width: 36,
         height: height
       });
     } else if (type === 'pit') {
-      const width = 60 + Math.random() * 40;
+      const width = 70 + Math.random() * 45;
       this.obstacles.push({
         type: 'pit',
         x: canvasWidth + 20,
         y: groundY,
         width: width,
-        height: 100 // Depth below ground
+        height: 120 // Depth below ground
       });
     }
   }
@@ -58,37 +58,109 @@ export class ObstacleManager {
   draw(ctx, theme) {
     this.obstacles.forEach(obs => {
       ctx.save();
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+
       if (obs.type === 'fence') {
-        // Wooden / Cyber / Lava Fence depending on theme
+        // Modern 2D Cartoon Fence / Barrier / Barricade
+        ctx.lineWidth = 3.5;
+        ctx.strokeStyle = '#0f172a';
+
         if (theme === 'cave') {
-          ctx.fillStyle = '#b91c1c';
-          ctx.strokeStyle = '#f87171';
+          // Volcanic Spiked Barrier
+          ctx.fillStyle = '#dc2626';
+          ctx.beginPath();
+          ctx.roundRect(obs.x, obs.y, obs.width, obs.height, [6]);
+          ctx.fill();
+          ctx.stroke();
+
+          // Spikes on top
+          ctx.fillStyle = '#f87171';
+          ctx.beginPath();
+          ctx.moveTo(obs.x, obs.y);
+          ctx.lineTo(obs.x + obs.width / 2, obs.y - 12);
+          ctx.lineTo(obs.x + obs.width, obs.y);
+          ctx.fill();
+          ctx.stroke();
+
+          // Glowing lava cracks
+          ctx.strokeStyle = '#fef08a';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.moveTo(obs.x + 8, obs.y + 10);
+          ctx.lineTo(obs.x + obs.width - 10, obs.y + obs.height - 12);
+          ctx.stroke();
+
         } else if (theme === 'neon') {
-          ctx.fillStyle = '#06b6d4';
+          // Cyberpunk Neon Hologram Barrier
+          ctx.fillStyle = '#0284c7';
+          ctx.beginPath();
+          ctx.roundRect(obs.x, obs.y, obs.width, obs.height, [8]);
+          ctx.fill();
+
           ctx.strokeStyle = '#22d3ee';
+          ctx.shadowBlur = 12;
+          ctx.shadowColor = '#06b6d4';
+          ctx.stroke();
+
+          // Neon Hazard Stripes
+          ctx.fillStyle = '#22d3ee';
+          ctx.fillRect(obs.x + 4, obs.y + 8, obs.width - 8, 6);
+          ctx.fillRect(obs.x + 4, obs.y + obs.height - 14, obs.width - 8, 6);
+
         } else {
-          ctx.fillStyle = '#854d0e';
-          ctx.strokeStyle = '#ca8a04';
+          // Stylized Wooden Cartoon Hurdle
+          ctx.fillStyle = '#b45309';
+          ctx.beginPath();
+          ctx.roundRect(obs.x, obs.y, obs.width, obs.height, [6]);
+          ctx.fill();
+          ctx.stroke();
+
+          // Wooden planks & bolts
+          ctx.fillStyle = '#f59e0b';
+          ctx.fillRect(obs.x + 4, obs.y + 8, obs.width - 8, 8);
+          ctx.fillRect(obs.x + 4, obs.y + obs.height - 16, obs.width - 8, 8);
+
+          // Bolts
+          ctx.fillStyle = '#0f172a';
+          ctx.beginPath();
+          ctx.arc(obs.x + 8, obs.y + 12, 2.5, 0, Math.PI * 2);
+          ctx.arc(obs.x + obs.width - 8, obs.y + 12, 2.5, 0, Math.PI * 2);
+          ctx.arc(obs.x + 8, obs.y + obs.height - 12, 2.5, 0, Math.PI * 2);
+          ctx.arc(obs.x + obs.width - 8, obs.y + obs.height - 12, 2.5, 0, Math.PI * 2);
+          ctx.fill();
         }
 
-        ctx.lineWidth = 2;
-        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-        ctx.strokeRect(obs.x, obs.y, obs.width, obs.height);
-
-        // Fence posts detail
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(obs.x + 4, obs.y + 6, obs.width - 8, 4);
-        ctx.fillRect(obs.x + 4, obs.y + obs.height - 12, obs.width - 8, 4);
-
       } else if (obs.type === 'pit') {
-        // Pit / Hole in ground
+        // Cartoon Hole / Pit with depth and sharp edges
         ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
         ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
 
-        // Pit edges highlight
-        ctx.fillStyle = theme === 'cave' ? '#ef4444' : '#64748b';
-        ctx.fillRect(obs.x, obs.y, 4, 10);
-        ctx.fillRect(obs.x + obs.width - 4, obs.y, 4, 10);
+        // Edge highlights & hazard indicators
+        ctx.lineWidth = 3.5;
+        ctx.strokeStyle = '#0f172a';
+
+        if (theme === 'cave') {
+          // Lava Pit Edge
+          ctx.fillStyle = '#ef4444';
+          ctx.fillRect(obs.x, obs.y, obs.width, 14);
+          ctx.fillStyle = '#fef08a';
+          ctx.fillRect(obs.x, obs.y + 14, obs.width, 4);
+        } else if (theme === 'neon') {
+          // Glowing Neon Edge
+          ctx.fillStyle = '#ec4899';
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = '#f43f5e';
+          ctx.fillRect(obs.x, obs.y, obs.width, 8);
+        } else {
+          // Grass Cliff Edge
+          ctx.fillStyle = '#16a34a';
+          ctx.fillRect(obs.x - 4, obs.y, 8, 12);
+          ctx.fillRect(obs.x + obs.width - 4, obs.y, 8, 12);
+          ctx.strokeRect(obs.x - 4, obs.y, 8, 12);
+          ctx.strokeRect(obs.x + obs.width - 4, obs.y, 8, 12);
+        }
       }
       ctx.restore();
     });
@@ -97,24 +169,24 @@ export class ObstacleManager {
   checkCollisions(playerRect) {
     for (const obs of this.obstacles) {
       if (obs.type === 'fence') {
-        // AABB box intersection
+        // AABB box intersection with slight generous margin
         if (
-          playerRect.x < obs.x + obs.width &&
-          playerRect.x + playerRect.width > obs.x &&
-          playerRect.y < obs.y + obs.height &&
-          playerRect.y + playerRect.height > obs.y
+          playerRect.x + 6 < obs.x + obs.width &&
+          playerRect.x + playerRect.width - 6 > obs.x &&
+          playerRect.y + 6 < obs.y + obs.height &&
+          playerRect.y + playerRect.height > obs.y + 4
         ) {
           return true;
         }
       } else if (obs.type === 'pit') {
-        // Player falls in pit if their center/bottom is directly over the hole without being high enough in jump
+        // Player falls in pit if center is directly over hole without jump clearance
         const playerBottom = playerRect.y + playerRect.height;
         const playerCenterX = playerRect.x + playerRect.width / 2;
 
         if (
-          playerCenterX > obs.x + 5 &&
-          playerCenterX < obs.x + obs.width - 5 &&
-          playerBottom >= obs.y - 5
+          playerCenterX > obs.x + 8 &&
+          playerCenterX < obs.x + obs.width - 8 &&
+          playerBottom >= obs.y - 4
         ) {
           return true;
         }

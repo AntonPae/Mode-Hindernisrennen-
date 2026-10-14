@@ -26,8 +26,8 @@ class SoundManager {
     const gain = this.ctx.createGain();
 
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(150, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(400, this.ctx.currentTime + 0.15);
+    osc.frequency.setValueAtTime(160, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(450, this.ctx.currentTime + 0.15);
 
     gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
     gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
@@ -45,8 +45,8 @@ class SoundManager {
     const gain = this.ctx.createGain();
 
     osc.type = 'triangle';
-    osc.frequency.setValueAtTime(300, this.ctx.currentTime);
-    osc.frequency.linearRampToValueAtTime(800, this.ctx.currentTime + 0.25);
+    osc.frequency.setValueAtTime(320, this.ctx.currentTime);
+    osc.frequency.linearRampToValueAtTime(850, this.ctx.currentTime + 0.25);
 
     gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
     gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
@@ -64,17 +64,17 @@ class SoundManager {
     const gain = this.ctx.createGain();
 
     osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(120, this.ctx.currentTime);
-    osc.frequency.linearRampToValueAtTime(40, this.ctx.currentTime + 0.3);
+    osc.frequency.setValueAtTime(140, this.ctx.currentTime);
+    osc.frequency.linearRampToValueAtTime(30, this.ctx.currentTime + 0.35);
 
     gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.35);
 
     osc.connect(gain);
     gain.connect(this.ctx.destination);
 
     osc.start();
-    osc.stop(this.ctx.currentTime + 0.3);
+    osc.stop(this.ctx.currentTime + 0.35);
   }
 }
 
@@ -106,13 +106,16 @@ export class RunnerEngine {
     this.baseSpeed = 5;
     this.currentSpeed = this.baseSpeed;
 
+    // Visual particles array (dust, stars, speedlines)
+    this.particles = [];
+
     // Player physics state
     this.player = {
-      x: 100,
+      x: 120,
       y: 0,
       vy: 0,
       gravity: 0.65,
-      jumpForce: -13,
+      jumpForce: -13.5,
       isGrounded: false,
       jumpsLeft: 1,
       isDucking: false,
@@ -160,6 +163,7 @@ export class RunnerEngine {
     this.score = 0;
     this.scrollX = 0;
     this.currentSpeed = this.baseSpeed;
+    this.particles = [];
 
     const groundY = this.displayHeight * 0.75;
     this.player.y = groundY;
@@ -195,6 +199,36 @@ export class RunnerEngine {
     requestAnimationFrame((t) => this.gameLoop(t));
   }
 
+  spawnDustParticle(x, y) {
+    this.particles.push({
+      type: 'dust',
+      x: x + (Math.random() - 0.5) * 10,
+      y: y - 4,
+      vx: -this.currentSpeed * 0.4 - Math.random() * 2,
+      vy: -Math.random() * 2,
+      radius: 4 + Math.random() * 6,
+      alpha: 0.8,
+      life: 20
+    });
+  }
+
+  spawnCollisionStars(x, y) {
+    for (let i = 0; i < 12; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 4 + Math.random() * 8;
+      this.particles.push({
+        type: 'star',
+        x: x,
+        y: y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        size: 8 + Math.random() * 8,
+        alpha: 1.0,
+        life: 30
+      });
+    }
+  }
+
   update() {
     if (this.isPaused) return;
 
@@ -211,21 +245,21 @@ export class RunnerEngine {
 
     if (this.player.invulnerableTimer > 0) {
       this.player.invulnerableTimer--;
-      this.currentSpeed = this.baseSpeed * 1.8;
+      this.currentSpeed = this.baseSpeed * 1.85;
       if (this.player.invulnerableTimer <= 0) {
         this.player.invulnerable = false;
         this.currentSpeed = this.baseSpeed;
       }
     } else {
-      this.currentSpeed = this.baseSpeed + Math.floor(this.score / 100) * 0.3;
+      this.currentSpeed = this.baseSpeed + Math.floor(this.score / 100) * 0.35;
     }
 
     // Controls & Horizontal movement
-    if (this.controls.keys.left && this.player.x > 50) {
-      this.player.x -= 4;
+    if (this.controls.keys.left && this.player.x > 60) {
+      this.player.x -= 4.5;
     }
     if (this.controls.keys.right && this.player.x < this.displayWidth * 0.5) {
-      this.player.x += 4;
+      this.player.x += 4.5;
     }
 
     // Duck state
@@ -239,6 +273,9 @@ export class RunnerEngine {
         this.player.isGrounded = false;
         this.player.jumpsLeft--;
         this.sounds.playJump();
+        // Spawn jump dust cloud
+        this.spawnDustParticle(this.player.x, groundY);
+        this.spawnDustParticle(this.player.x - 10, groundY);
       }
     }
 
@@ -248,10 +285,31 @@ export class RunnerEngine {
 
     // Ground Collision
     if (this.player.y >= groundY) {
+      if (!this.player.isGrounded && this.player.vy > 2) {
+        // Landing puff
+        this.spawnDustParticle(this.player.x, groundY);
+      }
       this.player.y = groundY;
       this.player.vy = 0;
       this.player.isGrounded = true;
       this.player.jumpsLeft = PlayerConfig.ability === 'double_jump' ? 2 : 1;
+    }
+
+    // Running dust spawn
+    if (this.player.isGrounded && Math.random() < 0.3) {
+      this.spawnDustParticle(this.player.x - 12, groundY);
+    }
+
+    // Update Particles
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life--;
+      p.alpha = Math.max(0, p.life / 30);
+      if (p.life <= 0) {
+        this.particles.splice(i, 1);
+      }
     }
 
     // Animation frames
@@ -270,7 +328,7 @@ export class RunnerEngine {
       const charScaleX = PlayerConfig.body.width || 1.0;
       const charScaleY = PlayerConfig.body.height || 1.0;
       const playerWidth = 36 * charScaleX;
-      const playerHeight = (this.player.isDucking ? 60 : 120) * charScaleY;
+      const playerHeight = (this.player.isDucking ? 55 : 110) * charScaleY;
 
       const playerRect = {
         x: this.player.x - playerWidth / 2,
@@ -281,6 +339,7 @@ export class RunnerEngine {
 
       if (this.obstacles.checkCollisions(playerRect)) {
         this.sounds.playCollision();
+        this.spawnCollisionStars(this.player.x, this.player.y - 40);
         this.gameOver();
       }
     }
@@ -292,11 +351,19 @@ export class RunnerEngine {
     const theme = GameConfig.background || 'meadow';
     const groundY = this.displayHeight * 0.75;
 
-    // Draw Parallax Background
+    // Draw Modern Cartoon Parallax Background
     this.drawBackground(theme, groundY);
+
+    // Draw Speedlines if Sprint skill is active
+    if (this.player.invulnerableTimer > 0) {
+      this.drawSpeedlines();
+    }
 
     // Draw Obstacles
     this.obstacles.draw(this.ctx, theme);
+
+    // Draw Particles
+    this.drawParticles();
 
     // Draw Player
     let pose = 'run';
@@ -305,8 +372,8 @@ export class RunnerEngine {
 
     this.ctx.save();
     if (this.player.invulnerable) {
-      this.ctx.shadowBlur = 15;
-      this.ctx.shadowColor = '#f59e0b';
+      this.ctx.shadowBlur = 20;
+      this.ctx.shadowColor = '#fbbf24';
     }
 
     renderCharacter(this.ctx, this.player.x, this.player.y, PlayerConfig, {
@@ -316,83 +383,224 @@ export class RunnerEngine {
     this.ctx.restore();
   }
 
+  drawSpeedlines() {
+    this.ctx.save();
+    this.ctx.strokeStyle = 'rgba(251, 191, 36, 0.45)';
+    this.ctx.lineWidth = 3;
+    for (let i = 0; i < 15; i++) {
+      const y = Math.random() * this.displayHeight;
+      const x1 = Math.random() * this.displayWidth;
+      const len = 100 + Math.random() * 200;
+      this.ctx.beginPath();
+      this.ctx.moveTo(x1, y);
+      this.ctx.lineTo(x1 - len, y);
+      this.ctx.stroke();
+    }
+    this.ctx.restore();
+  }
+
+  drawParticles() {
+    this.particles.forEach(p => {
+      this.ctx.save();
+      this.ctx.globalAlpha = p.alpha;
+      if (p.type === 'dust') {
+        this.ctx.fillStyle = '#e2e8f0';
+        this.ctx.strokeStyle = '#0f172a';
+        this.ctx.lineWidth = 1.5;
+        this.ctx.beginPath();
+        this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.stroke();
+      } else if (p.type === 'star') {
+        this.ctx.fillStyle = '#fbbf24';
+        this.ctx.font = `${p.size}px sans-serif`;
+        this.ctx.fillText('⭐', p.x, p.y);
+      }
+      this.ctx.restore();
+    });
+  }
+
   drawBackground(theme, groundY) {
     const w = this.displayWidth;
     const h = this.displayHeight;
 
+    this.ctx.lineJoin = 'round';
+    this.ctx.lineCap = 'round';
+
     if (theme === 'cave') {
-      // Cave Sky / Background
+      // Modern Cartoon Cave / Volcanic Setting
       const bgGrad = this.ctx.createLinearGradient(0, 0, 0, groundY);
       bgGrad.addColorStop(0, '#2e1065');
-      bgGrad.addColorStop(1, '#7f1d1d');
+      bgGrad.addColorStop(0.6, '#581c87');
+      bgGrad.addColorStop(1, '#991b1b');
       this.ctx.fillStyle = bgGrad;
       this.ctx.fillRect(0, 0, w, groundY);
 
-      // Distant cave stalagmites parallax
-      this.ctx.fillStyle = '#450a0a';
-      for (let i = 0; i < w + 200; i += 150) {
-        const x = (i - (this.scrollX * 0.2) % 150) - 150;
+      // Layer 1: Distant Stalactites Silhouette
+      this.ctx.fillStyle = '#3b0764';
+      this.ctx.strokeStyle = '#0f172a';
+      this.ctx.lineWidth = 3;
+      for (let i = 0; i < w + 200; i += 120) {
+        const x = (i - (this.scrollX * 0.15) % 120) - 120;
         this.ctx.beginPath();
-        this.ctx.moveTo(x, groundY);
-        this.ctx.lineTo(x + 75, groundY - 120);
-        this.ctx.lineTo(x + 150, groundY);
+        this.ctx.moveTo(x, 0);
+        this.ctx.lineTo(x + 40, 80 + Math.sin(i) * 30);
+        this.ctx.lineTo(x + 80, 0);
         this.ctx.fill();
       }
 
-      // Ground / Lava
-      this.ctx.fillStyle = '#991b1b';
+      // Layer 2: Rocky Arches Parallax
+      this.ctx.fillStyle = '#7f1d1d';
+      for (let i = 0; i < w + 300; i += 220) {
+        const x = (i - (this.scrollX * 0.3) % 220) - 220;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, groundY);
+        this.ctx.quadraticCurveTo(x + 110, groundY - 180, x + 220, groundY);
+        this.ctx.fill();
+        this.ctx.stroke();
+      }
+
+      // Ground: Glowing Lava Lake
+      const lavaGrad = this.ctx.createLinearGradient(0, groundY, 0, h);
+      lavaGrad.addColorStop(0, '#dc2626');
+      lavaGrad.addColorStop(0.5, '#ef4444');
+      lavaGrad.addColorStop(1, '#7f1d1d');
+      this.ctx.fillStyle = lavaGrad;
       this.ctx.fillRect(0, groundY, w, h - groundY);
-      this.ctx.fillStyle = '#f87171';
-      this.ctx.fillRect(0, groundY, w, 6);
+
+      // Lava Top Rim Highlight
+      this.ctx.fillStyle = '#fef08a';
+      this.ctx.fillRect(0, groundY, w, 8);
+      this.ctx.lineWidth = 3.5;
+      this.ctx.strokeStyle = '#0f172a';
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, groundY);
+      this.ctx.lineTo(w, groundY);
+      this.ctx.stroke();
 
     } else if (theme === 'neon') {
-      // Neon City Background
+      // Modern Cyberpunk / Synthwave City
       const bgGrad = this.ctx.createLinearGradient(0, 0, 0, groundY);
-      bgGrad.addColorStop(0, '#09090b');
-      bgGrad.addColorStop(1, '#1e1b4b');
+      bgGrad.addColorStop(0, '#020617');
+      bgGrad.addColorStop(0.6, '#1e1b4b');
+      bgGrad.addColorStop(1, '#831843');
       this.ctx.fillStyle = bgGrad;
       this.ctx.fillRect(0, 0, w, groundY);
 
-      // City Skyline Parallax
+      // Neon Sun on Horizon
+      const sunY = groundY - 60;
+      const sunGrad = this.ctx.createLinearGradient(0, sunY - 80, 0, sunY + 80);
+      sunGrad.addColorStop(0, '#f43f5e');
+      sunGrad.addColorStop(1, '#fbbf24');
+      this.ctx.fillStyle = sunGrad;
+      this.ctx.beginPath();
+      this.ctx.arc(w / 2, sunY, 90, 0, Math.PI * 2);
+      this.ctx.fill();
+
+      // Skyline Layer 1 (Distant Silhouette)
+      this.ctx.fillStyle = '#0f172a';
+      for (let i = 0; i < w + 200; i += 80) {
+        const x = (i - (this.scrollX * 0.15) % 80) - 80;
+        const bHeight = 100 + (i % 7) * 20;
+        this.ctx.fillRect(x, groundY - bHeight, 60, bHeight);
+      }
+
+      // Skyline Layer 2 (Neon Illuminated Buildings)
       this.ctx.fillStyle = '#1e1035';
-      for (let i = 0; i < w + 300; i += 100) {
-        const x = (i - (this.scrollX * 0.3) % 100) - 100;
-        this.ctx.fillRect(x, groundY - 160, 70, 160);
-        this.ctx.fillStyle = '#ec4899';
-        this.ctx.fillRect(x + 10, groundY - 140, 8, 8);
-        this.ctx.fillRect(x + 30, groundY - 100, 8, 8);
+      this.ctx.strokeStyle = '#0f172a';
+      this.ctx.lineWidth = 3;
+      for (let i = 0; i < w + 300; i += 130) {
+        const x = (i - (this.scrollX * 0.35) % 130) - 130;
+        const bHeight = 140 + (i % 5) * 30;
+        this.ctx.fillRect(x, groundY - bHeight, 95, bHeight);
+        this.ctx.strokeRect(x, groundY - bHeight, 95, bHeight);
+
+        // Neon Windows / Sign
+        this.ctx.fillStyle = (i % 2 === 0) ? '#06b6d4' : '#ec4899';
+        this.ctx.fillRect(x + 15, groundY - bHeight + 20, 18, 18);
+        this.ctx.fillRect(x + 55, groundY - bHeight + 20, 18, 18);
+        this.ctx.fillRect(x + 15, groundY - bHeight + 60, 18, 18);
+        this.ctx.fillRect(x + 55, groundY - bHeight + 60, 18, 18);
         this.ctx.fillStyle = '#1e1035';
       }
 
-      // Neon Ground
-      this.ctx.fillStyle = '#0f172a';
+      // Neon Grid Ground
+      this.ctx.fillStyle = '#09090b';
       this.ctx.fillRect(0, groundY, w, h - groundY);
+
+      // Cyan Grid Line Rim
       this.ctx.fillStyle = '#06b6d4';
-      this.ctx.fillRect(0, groundY, w, 4);
+      this.ctx.shadowBlur = 10;
+      this.ctx.shadowColor = '#06b6d4';
+      this.ctx.fillRect(0, groundY, w, 6);
+      this.ctx.shadowBlur = 0;
 
     } else {
-      // Meadow Sky
+      // Modern 2D Cartoon Meadow Sky
       const bgGrad = this.ctx.createLinearGradient(0, 0, 0, groundY);
       bgGrad.addColorStop(0, '#38bdf8');
+      bgGrad.addColorStop(0.7, '#7dd3fc');
       bgGrad.addColorStop(1, '#bae6fd');
       this.ctx.fillStyle = bgGrad;
       this.ctx.fillRect(0, 0, w, groundY);
 
-      // Distant Hills
-      this.ctx.fillStyle = '#86efac';
-      for (let i = 0; i < w + 400; i += 200) {
-        const x = (i - (this.scrollX * 0.2) % 200) - 200;
-        this.ctx.beginPath();
-        this.ctx.arc(x + 100, groundY + 40, 120, Math.PI, 0);
-        this.ctx.fill();
+      // Puffy Cartoon Clouds (Layer 1)
+      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      for (let i = 0; i < w + 400; i += 280) {
+        const x = (i - (this.scrollX * 0.1) % 280) - 280;
+        this.drawCartoonCloud(x, 70 + (i % 3) * 20, 50);
       }
 
-      // Grass Ground
-      this.ctx.fillStyle = '#15803d';
+      // Distant Rounded Hills (Layer 2)
+      this.ctx.fillStyle = '#86efac';
+      this.ctx.strokeStyle = '#0f172a';
+      this.ctx.lineWidth = 3.5;
+      for (let i = 0; i < w + 500; i += 250) {
+        const x = (i - (this.scrollX * 0.25) % 250) - 250;
+        this.ctx.beginPath();
+        this.ctx.arc(x + 125, groundY + 80, 160, Math.PI, 0);
+        this.ctx.fill();
+        this.ctx.stroke();
+      }
+
+      // Lush Grass Ground
+      const grassGrad = this.ctx.createLinearGradient(0, groundY, 0, h);
+      grassGrad.addColorStop(0, '#22c55e');
+      grassGrad.addColorStop(1, '#15803d');
+      this.ctx.fillStyle = grassGrad;
       this.ctx.fillRect(0, groundY, w, h - groundY);
-      this.ctx.fillStyle = '#22c55e';
-      this.ctx.fillRect(0, groundY, w, 10);
+
+      // Top Grass Outline & Layer
+      this.ctx.fillStyle = '#4ade80';
+      this.ctx.fillRect(0, groundY, w, 12);
+
+      this.ctx.lineWidth = 3.5;
+      this.ctx.strokeStyle = '#0f172a';
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, groundY);
+      this.ctx.lineTo(w, groundY);
+      this.ctx.stroke();
+
+      // Grass tufts along the ground
+      this.ctx.fillStyle = '#16a34a';
+      for (let i = 0; i < w + 100; i += 90) {
+        const x = (i - (this.scrollX) % 90) - 90;
+        this.ctx.beginPath();
+        this.ctx.arc(x, groundY, 6, Math.PI, 0);
+        this.ctx.arc(x + 8, groundY, 9, Math.PI, 0);
+        this.ctx.arc(x + 16, groundY, 6, Math.PI, 0);
+        this.ctx.fill();
+      }
     }
+  }
+
+  drawCartoonCloud(x, y, radius) {
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, radius, Math.PI * 0.5, Math.PI * 1.5);
+    this.ctx.arc(x + radius, y - radius * 0.5, radius * 0.7, Math.PI, Math.PI * 1.85);
+    this.ctx.arc(x + radius * 2, y, radius * 0.8, Math.PI * 1.2, Math.PI * 0.2);
+    this.ctx.closePath();
+    this.ctx.fill();
   }
 
   gameOver() {
