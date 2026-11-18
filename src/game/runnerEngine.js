@@ -280,6 +280,12 @@ export class RunnerEngine {
     this.player.invulnerableTimer = 120; // 2 sec turbo
   }
 
+  resumeFromPuzzle() {
+    this.controls.reset();
+    this.triggerBonusSpeed();
+    this.sounds.playSprint();
+  }
+
   stop() {
     this.isRunning = false;
     this.qte.hideOverlay();
@@ -334,9 +340,35 @@ export class RunnerEngine {
 
     const groundY = this.displayHeight * 0.75;
 
-    // Update Quick-Time Event / Mini-puzzle
-    this.qte.update(this.score);
-    const inBulletTime = this.qte.isEventActive();
+    // Update Puzzle Stop System (only trigger when grounded and on clear ground)
+    const canStartPuzzle =
+      this.player.isGrounded &&
+      !this.obstacles.hasObstacleNearPlayer(this.player.x) &&
+      !this.player.invulnerable;
+    this.qte.update(this.score, canStartPuzzle);
+
+    if (this.qte.isEventActive()) {
+      // Character stops completely & stands still while the riddle is active
+      this.currentSpeed = 0;
+      this.player.isDucking = false;
+      this.player.vy = 0;
+      this.player.y = groundY;
+      this.player.isGrounded = true;
+      this.player.animFrame++;
+
+      // Let existing particles fade out smoothly
+      for (let i = this.particles.length - 1; i >= 0; i--) {
+        const p = this.particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life--;
+        p.alpha = Math.max(0, p.life / 30);
+        if (p.life <= 0) {
+          this.particles.splice(i, 1);
+        }
+      }
+      return;
+    }
 
     // Ability: Speed Boost timer / trigger
     if (this.controls.consumeAbilityPress()) {
@@ -356,11 +388,6 @@ export class RunnerEngine {
       }
     } else {
       this.currentSpeed = this.baseSpeed + Math.floor(this.score / 100) * 0.35;
-    }
-
-    // Bullet-time slow motion during QTE
-    if (inBulletTime) {
-      this.currentSpeed *= 0.35;
     }
 
     // Controls & Horizontal movement
@@ -499,8 +526,12 @@ export class RunnerEngine {
 
     // Draw Player
     let pose = 'run';
-    if (!this.player.isGrounded) pose = 'jump';
-    if (this.player.isDucking) pose = 'duck';
+    if (this.qte.isEventActive()) {
+      pose = 'idle';
+    } else {
+      if (!this.player.isGrounded) pose = 'jump';
+      if (this.player.isDucking) pose = 'duck';
+    }
 
     this.ctx.save();
     if (this.player.invulnerable) {
@@ -512,6 +543,42 @@ export class RunnerEngine {
       frame: this.player.animFrame,
       pose: pose
     });
+    this.ctx.restore();
+
+    if (this.qte.isEventActive()) {
+      this.drawPuzzleBubble();
+    }
+  }
+
+  drawPuzzleBubble() {
+    const scaleY = PlayerConfig.body.height || 1.0;
+    const bubbleX = this.player.x + 28;
+    const bubbleY = this.player.y - 165 * scaleY;
+
+    this.ctx.save();
+    this.ctx.fillStyle = '#ffffff';
+    this.ctx.strokeStyle = '#0f172a';
+    this.ctx.lineWidth = 3;
+
+    this.ctx.beginPath();
+    this.ctx.roundRect(bubbleX - 46, bubbleY - 22, 92, 40, [14]);
+    this.ctx.fill();
+    this.ctx.stroke();
+
+    // Small pointer tail
+    this.ctx.beginPath();
+    this.ctx.moveTo(bubbleX - 18, bubbleY + 18);
+    this.ctx.lineTo(bubbleX - 28, bubbleY + 30);
+    this.ctx.lineTo(bubbleX - 6, bubbleY + 18);
+    this.ctx.closePath();
+    this.ctx.fill();
+    this.ctx.stroke();
+
+    this.ctx.fillStyle = '#0f172a';
+    this.ctx.font = 'bold 16px Fredoka, sans-serif';
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
+    this.ctx.fillText('❓ Rätsel!', bubbleX, bubbleY - 2);
     this.ctx.restore();
   }
 

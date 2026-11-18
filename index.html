@@ -182,21 +182,19 @@
         <button id="pauseBtn" class="btn btn-small">⏸️ Pause</button>
       </div>
 
-      <!-- Quick-Time Event Overlay -->
+      <!-- Rätsel / Puzzle Overlay -->
       <div id="qte-overlay" class="modal hidden qte-modal">
         <div class="qte-container">
           <div class="qte-header">
-            <span class="qte-badge">⚡ SCHNELLE ENTSCHEIDUNG!</span>
-          </div>
-          <div class="qte-timer-track">
-            <div id="qte-timer-bar" class="qte-timer-bar"></div>
+            <span class="qte-badge">🧩 RÄTSEL-STOPP!</span>
           </div>
           <div id="qte-prompt" class="qte-prompt">
-            Wähle das richtige Portal:
+            Löse das Rätsel, um weiterzulaufen:
           </div>
           <div id="qte-options" class="qte-options">
             <!-- Buttons injected by QuickTimeEventManager -->
           </div>
+          <div id="qte-feedback" class="qte-feedback hidden"></div>
         </div>
       </div>
 

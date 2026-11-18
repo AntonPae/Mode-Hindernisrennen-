@@ -304,4 +304,13 @@ export class ObstacleManager {
     }
     return false;
   }
+
+  hasObstacleNearPlayer(playerX) {
+    for (const obs of this.obstacles) {
+      if (obs.x + obs.width > playerX - 70 && obs.x < playerX + 150) {
+        return true;
+      }
+    }
+    return false;
+  }
 }
