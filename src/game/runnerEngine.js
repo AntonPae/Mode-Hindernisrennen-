@@ -1,5 +1,6 @@
 import { PlayerConfig, GameConfig } from '../editor/characterData.js';
 import { ShopManager } from '../editor/shopData.js';
+import { HomeManager } from '../home/homeData.js';
 import { renderCharacter } from '../editor/characterRenderer.js';
 import { ControlsManager } from './controls.js';
 import { ObstacleManager, CoinManager } from './obstacles.js';
@@ -197,6 +198,7 @@ export class RunnerEngine {
 
     this.restartBtn = document.getElementById('restartBtn');
     this.editorReturnBtn = document.getElementById('editorReturnBtn');
+    this.homeReturnBtn = document.getElementById('homeReturnBtn');
 
     this.isRunning = false;
     this.isPaused = false;
@@ -256,6 +258,13 @@ export class RunnerEngine {
       this.editorReturnBtn.addEventListener('click', () => {
         this.gameOverModal.classList.add('hidden');
         this.stateManager.setState('EDITOR');
+      });
+    }
+
+    if (this.homeReturnBtn) {
+      this.homeReturnBtn.addEventListener('click', () => {
+        this.gameOverModal.classList.add('hidden');
+        this.stateManager.setState('HOME');
       });
     }
   }
@@ -1142,6 +1151,7 @@ export class RunnerEngine {
     const prog = ShopManager.recordProgress(this.score, 0);
     const totalRunEarned = this.runCoins + distanceBonusCoins + prog.levelUpBonus;
     const newBalance = ShopManager.addCoins(this.runCoins + distanceBonusCoins);
+    HomeManager.onRunCompleted();
 
     if (this.earnedCoinsValEl) this.earnedCoinsValEl.textContent = totalRunEarned;
     if (this.totalCoinsValEl) this.totalCoinsValEl.textContent = newBalance;

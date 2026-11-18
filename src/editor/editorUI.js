@@ -313,6 +313,13 @@ export function setupEditorUI(stateManager) {
     stateManager.setState('BACKGROUND_SELECT');
   });
 
+  const toHomeBtn = document.getElementById('toHomeBtn');
+  if (toHomeBtn) {
+    toHomeBtn.addEventListener('click', () => {
+      stateManager.setState('HOME');
+    });
+  }
+
   // Refresh coin wallet & unlock affordability whenever returning to Editor
   stateManager.onStateChange((newState) => {
     if (newState === 'EDITOR') {

@@ -116,7 +116,10 @@
             <div id="abilityOptions" class="ability-options"></div>
           </fieldset>
 
-          <button id="toBgSelectBtn" class="btn btn-primary btn-large">Weiter zur Hintergrundauswahl ➔</button>
+          <div class="editor-cta-row">
+            <button id="toHomeBtn" class="btn btn-home btn-large">🏡 Mein Haus &amp; Garten</button>
+            <button id="toBgSelectBtn" class="btn btn-primary btn-large">Weiter zur Hintergrundauswahl ➔</button>
+          </div>
         </div>
       </div>
     </div>
@@ -138,6 +141,67 @@
 
       <div class="bg-select-actions">
         <button id="backToEditorBtn" class="btn btn-secondary">📋 Zurück zum Editor</button>
+      </div>
+    </div>
+
+    <!-- State: Home & Garden Container Overlay -->
+    <div id="home-screen" class="screen-overlay hidden">
+      <header class="app-header">
+        <h1>🏡 Mein Haus &amp; Garten</h1>
+        <p>Baue dein Zuhause aus, kümmere dich um Tiere, Küche, Wohnung &amp; Garten!</p>
+        <div class="coin-wallet-bar">
+          <span class="coin-pill">🪙 Spielgeld: <strong id="homeCoinsVal">0</strong></span>
+          <span class="level-pill">🏆 Level <strong id="homeLevelVal">1</strong></span>
+          <span class="supply-pill">🥘 Zutaten: <strong id="foodCountVal">3</strong></span>
+          <span class="supply-pill">🦴 Tierfutter: <strong id="petFoodCountVal">3</strong></span>
+          <button type="button" id="homeMysteryBtn" class="btn btn-mystery">🎁 Haus-Überraschung (75 🪙)</button>
+        </div>
+        <div id="homeToast" class="shop-toast hidden"></div>
+      </header>
+
+      <div class="home-layout">
+        <div class="home-stage-column">
+          <div class="home-canvas-card">
+            <canvas id="homeCanvas" width="760" height="360"></canvas>
+          </div>
+
+          <div class="home-needs-grid">
+            <div class="need-card">
+              <div class="need-label"><span>🧹 Sauberkeit</span><strong id="cleanPct">75%</strong></div>
+              <div class="need-track"><div id="cleanBar" class="need-fill"></div></div>
+            </div>
+            <div class="need-card">
+              <div class="need-label"><span>🍲 Sättigung (Kochen)</span><strong id="hungerPct">70%</strong></div>
+              <div class="need-track"><div id="hungerBar" class="need-fill"></div></div>
+            </div>
+            <div class="need-card">
+              <div class="need-label"><span>🐾 Tier-Wohl</span><strong id="petPct">80%</strong></div>
+              <div class="need-track"><div id="petBar" class="need-fill"></div></div>
+            </div>
+            <div class="need-card">
+              <div class="need-label"><span>🌱 Garten-Wachstum</span><strong id="gardenPct">40%</strong></div>
+              <div class="need-track"><div id="gardenBar" class="need-fill"></div></div>
+            </div>
+          </div>
+
+          <div class="home-actions-bar">
+            <button type="button" id="cookBtn" class="btn btn-care">🍳 Kochen</button>
+            <button type="button" id="cleanBtn" class="btn btn-care">🧹 Putzen</button>
+            <button type="button" id="feedPetsBtn" class="btn btn-care">🦴 Tiere füttern</button>
+            <button type="button" id="petAnimalsBtn" class="btn btn-care">🤗 Streicheln</button>
+            <button type="button" id="gardenBtn" class="btn btn-care">🚿 Garten gießen</button>
+          </div>
+
+          <div class="home-nav-row">
+            <button type="button" id="homeToEditorBtn" class="btn btn-secondary">✏️ Zurück zum Editor</button>
+            <button type="button" id="homeToGameBtn" class="btn btn-primary">🏃 Rennen starten &amp; Geld verdienen</button>
+          </div>
+        </div>
+
+        <div class="home-shop-column">
+          <div id="homeShopTabs" class="home-shop-tabs"></div>
+          <div id="homeShopGrid" class="home-shop-grid"></div>
+        </div>
       </div>
     </div>
 
@@ -192,6 +256,7 @@
           </div>
           <div class="modal-actions">
             <button id="restartBtn" class="btn btn-primary">🔄 Nochmal versuchen</button>
+            <button id="homeReturnBtn" class="btn btn-home">🏡 Zum Haus &amp; Garten</button>
             <button id="editorReturnBtn" class="btn btn-secondary">🛍️ Charakter &amp; Shop</button>
           </div>
         </div>

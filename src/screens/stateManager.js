@@ -1,6 +1,7 @@
 export const State = {
   EDITOR: 'EDITOR',
   BACKGROUND_SELECT: 'BACKGROUND_SELECT',
+  HOME: 'HOME',
   GAME: 'GAME'
 };
 
@@ -11,6 +12,7 @@ export class StateManager {
 
     this.editorScreen = document.getElementById('editor-screen');
     this.bgSelectScreen = document.getElementById('bg-select-screen');
+    this.homeScreen = document.getElementById('home-screen');
     this.gameScreen = document.getElementById('game-screen');
   }
 
@@ -35,10 +37,12 @@ export class StateManager {
   updateUI() {
     if (this.editorScreen) this.editorScreen.classList.add('hidden');
     if (this.bgSelectScreen) this.bgSelectScreen.classList.add('hidden');
+    if (this.homeScreen) this.homeScreen.classList.add('hidden');
     if (this.gameScreen) this.gameScreen.classList.add('hidden');
 
     if (this.editorScreen) this.editorScreen.classList.remove('active');
     if (this.bgSelectScreen) this.bgSelectScreen.classList.remove('active');
+    if (this.homeScreen) this.homeScreen.classList.remove('active');
     if (this.gameScreen) this.gameScreen.classList.remove('active');
 
     switch (this.currentState) {
@@ -52,6 +56,12 @@ export class StateManager {
         if (this.bgSelectScreen) {
           this.bgSelectScreen.classList.remove('hidden');
           this.bgSelectScreen.classList.add('active');
+        }
+        break;
+      case State.HOME:
+        if (this.homeScreen) {
+          this.homeScreen.classList.remove('hidden');
+          this.homeScreen.classList.add('active');
         }
         break;
       case State.GAME:
