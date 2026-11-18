@@ -559,6 +559,13 @@ export function setupHomeScreen(stateManager) {
     });
   }
 
+  const homeToIceCreamBtn = document.getElementById('homeToIceCreamBtn');
+  if (homeToIceCreamBtn) {
+    homeToIceCreamBtn.addEventListener('click', () => {
+      stateManager.setState('ICECREAM');
+    });
+  }
+
   if (playFromHomeBtn) {
     playFromHomeBtn.addEventListener('click', () => {
       stateManager.setState('BACKGROUND_SELECT');

@@ -184,6 +184,12 @@ body, html {
   box-shadow: 0 8px 18px rgba(5, 150, 105, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
+.btn-icecream {
+  background: linear-gradient(135deg, #fb7185 0%, #f59e0b 100%);
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(244, 63, 94, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
 .btn-earn {
   position: relative;
   background: linear-gradient(135deg, #10b981 0%, #0d9488 100%);
@@ -1765,6 +1771,128 @@ body, html {
   padding: 1.2rem;
   text-align: center;
   color: var(--ink-body);
+}
+
+/* ===================================================== */
+/* JOB: ICE CREAM PARLOR (EISDIELE)                      */
+/* ===================================================== */
+
+.icecream-layout {
+  width: min(900px, 100%);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-bottom: 2.5rem;
+}
+
+#iceCreamCanvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  cursor: pointer;
+}
+
+.icecream-cone-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 1rem;
+  background: #fff9fb;
+  border-top: 1px solid var(--hairline);
+}
+
+.icecream-cone-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  color: var(--ink-strong);
+}
+
+.ice-cone-slots {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.cone-empty-hint {
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+
+.cone-scoop-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.72rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink-strong);
+  background: linear-gradient(135deg, var(--scoop-light, #fce7f3), #ffffff);
+  border: 1.5px solid var(--scoop, #ec4899);
+  box-shadow: 0 2px 6px rgba(88, 28, 135, 0.08);
+}
+
+.ice-flavor-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  background: #ffffff;
+  border-top: 1px solid var(--hairline);
+}
+
+.ice-flavor-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 12px;
+  border: 1.5px solid rgba(236, 72, 153, 0.22);
+  background: #fdf8ff;
+  color: var(--ink-strong);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: transform 0.14s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.ice-flavor-btn:hover {
+  transform: translateY(-2px);
+  border-color: #db2777;
+  background: #fdf2f8;
+}
+
+.ice-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.2);
+  flex-shrink: 0;
+}
+
+.walk-pad-action {
+  background: linear-gradient(135deg, #f43f8e 0%, #db2777 100%);
+  color: #ffffff;
+  border-color: transparent;
+}
+
+.walk-pad-action:hover {
+  background: linear-gradient(135deg, #fb7185 0%, #e11d74 100%);
+}
+
+.ice-nav-row {
+  margin-top: 0.25rem;
 }
 
 /* Focus & Reduced Motion */

@@ -427,6 +427,13 @@ export function setupEditorUI(stateManager) {
     });
   }
 
+  const toIceCreamBtn = document.getElementById('toIceCreamBtn');
+  if (toIceCreamBtn) {
+    toIceCreamBtn.addEventListener('click', () => {
+      stateManager.setState('ICECREAM');
+    });
+  }
+
   window.addEventListener('runner:coins-updated', () => {
     updateWalletUI();
     renderAllShopGrids();

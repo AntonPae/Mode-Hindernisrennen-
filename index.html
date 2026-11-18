@@ -119,6 +119,7 @@
 
           <div class="editor-cta-row">
             <button id="toHomeBtn" class="btn btn-home btn-large">🏡 Mein Haus &amp; Garten</button>
+            <button id="toIceCreamBtn" class="btn btn-icecream btn-large">🍦 Beruf: Eisdiele</button>
             <button id="toBgSelectBtn" class="btn btn-primary btn-large">Weiter zur Hintergrundauswahl ➔</button>
           </div>
         </div>
@@ -209,6 +210,7 @@
 
           <div class="home-nav-row">
             <button type="button" id="homeToEditorBtn" class="btn btn-secondary">✏️ Zurück zum Editor</button>
+            <button type="button" id="homeToIceCreamBtn" class="btn btn-icecream">🍦 Beruf: Eisdiele</button>
             <button type="button" id="homeToGameBtn" class="btn btn-primary">🏃 Rennen starten &amp; Geld verdienen</button>
           </div>
         </div>
@@ -216,6 +218,49 @@
         <div class="home-shop-column">
           <div id="homeShopTabs" class="home-shop-tabs"></div>
           <div id="homeShopGrid" class="home-shop-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- State: Ice Cream Parlor Job Overlay -->
+    <div id="icecream-screen" class="screen-overlay hidden">
+      <header class="app-header">
+        <h1>🍦 Beruf: Eisdiele</h1>
+        <p>Steh hinter der Theke, hol die gewünschten Eissorten und bring sie deinen Gästen an den Platz!</p>
+        <div class="coin-wallet-bar">
+          <span class="coin-pill">🪙 Spielgeld: <strong id="iceCoinsVal">0</strong></span>
+          <span class="level-pill">🏆 Level <strong id="iceLevelVal">1</strong></span>
+          <span class="supply-pill">🍨 Bediente Gäste: <strong id="iceServedVal">0</strong></span>
+          <span class="supply-pill">💰 Schicht-Verdienst: +<strong id="iceShiftEarningsVal">0</strong> 🪙</span>
+          <button type="button" id="openEarnIceBtn" class="btn btn-earn">💰 Geld verdienen</button>
+        </div>
+        <div id="iceToast" class="shop-toast hidden"></div>
+      </header>
+
+      <div class="icecream-layout">
+        <div class="home-canvas-card">
+          <div class="home-task-banner">
+            <span id="iceStatusText">Klicke auf eine Eissorte hinter dir und bringe die fertige Tüte an den Platz!</span>
+          </div>
+          <canvas id="iceCreamCanvas" width="820" height="440"></canvas>
+          <div class="icecream-cone-bar">
+            <div class="icecream-cone-label">
+              <strong>🍦 Deine Eistüte:</strong>
+              <div id="iceConeSlots" class="ice-cone-slots"></div>
+            </div>
+            <button type="button" id="iceClearConeBtn" class="btn btn-small btn-secondary">🗑️ Tüte leeren</button>
+          </div>
+          <div id="iceFlavorBar" class="ice-flavor-bar"></div>
+          <div class="home-walk-pad">
+            <button type="button" id="iceWalkLeftBtn" class="walk-pad-btn" aria-label="Nach links gehen">◀ Links</button>
+            <button type="button" id="iceActionBtn" class="walk-pad-btn walk-pad-action" aria-label="Eis holen oder servieren">🍦 Holen / Servieren</button>
+            <button type="button" id="iceWalkRightBtn" class="walk-pad-btn" aria-label="Nach rechts gehen">Rechts ▶</button>
+          </div>
+        </div>
+
+        <div class="home-nav-row ice-nav-row">
+          <button type="button" id="iceToEditorBtn" class="btn btn-secondary">✏️ Zurück zum Editor</button>
+          <button type="button" id="iceToHomeBtn" class="btn btn-home">🏡 Zu Haus &amp; Garten</button>
         </div>
       </div>
     </div>

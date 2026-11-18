@@ -56,6 +56,16 @@ export const MISSION_DEFS = [
     baseReward: 35,
     stepReward: 15,
     describe: (target) => `Erledige ${target} Pflege-Aktionen in Haus & Garten`
+  },
+  {
+    id: 'serve_icecream',
+    title: 'Eis-Profi',
+    icon: '🍦',
+    baseTarget: 3,
+    stepTarget: 2,
+    baseReward: 40,
+    stepReward: 15,
+    describe: (target) => `Bediene ${target} Gäste in der Eisdiele`
   }
 ];
 
@@ -143,7 +153,7 @@ export const EarnMoneyManager = {
     }
   },
 
-  recordEvent({ meters = 0, riddles = 0, coins = 0, care = 0, runFinished = false } = {}) {
+  recordEvent({ meters = 0, riddles = 0, coins = 0, care = 0, icecream = 0, runFinished = false } = {}) {
     const state = this.getState();
 
     if (meters > 0 && state.missions.run_meters) {
@@ -157,6 +167,9 @@ export const EarnMoneyManager = {
     }
     if (care > 0 && state.missions.home_care) {
       state.missions.home_care.progress += care;
+    }
+    if (icecream > 0 && state.missions.serve_icecream) {
+      state.missions.serve_icecream.progress += icecream;
     }
 
     // Finishing a run refreshes quiz & treasure hunt and grants a wheel ticket if >= 40m

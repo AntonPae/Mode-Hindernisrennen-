@@ -3,6 +3,7 @@ import { StateManager, State } from './screens/stateManager.js';
 import { setupEditorUI } from './editor/editorUI.js';
 import { setupBackgroundSelectScreen } from './screens/backgroundSelect.js';
 import { setupHomeScreen } from './home/homeScreen.js';
+import { setupIceCreamScreen } from './jobs/iceCreamScreen.js';
 import { setupEarnMoneyUI } from './economy/earnMoneyUI.js';
 import { RunnerEngine } from './game/runnerEngine.js';
 
@@ -13,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupEditorUI(stateManager);
   setupBackgroundSelectScreen(stateManager);
   setupHomeScreen(stateManager);
+  setupIceCreamScreen(stateManager);
 
   const earnMoneyUI = setupEarnMoneyUI({
     onCoinsChange: () => {
