@@ -4,29 +4,29 @@ import { ShopManager } from '../editor/shopData.js';
 import { EarnMoneyManager } from '../economy/earnMoneyData.js';
 
 export const CAFE_STATIONS = [
-  { id: 'ice', label: '🍦 Eis-Truhe', x: 145, color: '#f43f5e', light: '#ffe4e6' },
-  { id: 'waffle', label: '🧇 Waffel-Eisen', x: 335, color: '#f59e0b', light: '#fef3c7' },
-  { id: 'food', label: '🥘 Warme Küche', x: 525, color: '#ea580c', light: '#ffedd5' },
-  { id: 'drink', label: '🥤 Getränke-Bar', x: 715, color: '#0ea5e9', light: '#e0f2fe' }
+  { id: 'ice', label: '🍦 Eis-Truhe', x: 112, color: '#f43f5e', light: '#ffe4e6' },
+  { id: 'waffle', label: '🧇 Waffel-Eisen', x: 294, color: '#f59e0b', light: '#fef3c7' },
+  { id: 'food', label: '🥘 Warme Küche', x: 476, color: '#ea580c', light: '#ffedd5' },
+  { id: 'drink', label: '🥤 Getränke-Bar', x: 658, color: '#0ea5e9', light: '#e0f2fe' }
 ];
 
 export const CAFE_MENU = [
   // Eis (hinter der Eistruhe)
-  { id: 'ice_erdbeere', name: 'Erdbeer-Eis', short: 'Erdbeere', station: 'ice', kind: 'ice', color: '#f43f5e', light: '#fda4af', dark: '#be123c', price: 7 },
-  { id: 'ice_schoko', name: 'Schoko-Eis', short: 'Schoko', station: 'ice', kind: 'ice', color: '#78350f', light: '#b45309', dark: '#451a03', price: 7 },
-  { id: 'ice_vanille', name: 'Vanille-Eis', short: 'Vanille', station: 'ice', kind: 'ice', color: '#fde047', light: '#fef9c3', dark: '#ca8a04', price: 7 },
-  { id: 'ice_pistazie', name: 'Pistazien-Eis', short: 'Pistazie', station: 'ice', kind: 'ice', color: '#34d399', light: '#a7f3d0', dark: '#047857', price: 8 },
+  { id: 'ice_erdbeere', icon: '🍓', name: 'Erdbeer-Eis', short: 'Erdbeere', station: 'ice', kind: 'ice', color: '#f43f5e', light: '#fda4af', dark: '#be123c', price: 7 },
+  { id: 'ice_schoko', icon: '🍫', name: 'Schoko-Eis', short: 'Schoko', station: 'ice', kind: 'ice', color: '#78350f', light: '#b45309', dark: '#451a03', price: 7 },
+  { id: 'ice_vanille', icon: '🍦', name: 'Vanille-Eis', short: 'Vanille', station: 'ice', kind: 'ice', color: '#fde047', light: '#fef9c3', dark: '#ca8a04', price: 7 },
+  { id: 'ice_pistazie', icon: '🍨', name: 'Pistazien-Eis', short: 'Pistazie', station: 'ice', kind: 'ice', color: '#34d399', light: '#a7f3d0', dark: '#047857', price: 8 },
   // Waffeln
-  { id: 'waffle_classic', name: 'Herzwaffel', short: 'Waffel', station: 'waffle', kind: 'waffle', color: '#f59e0b', light: '#fde68a', dark: '#b45309', topping: '#fffbeb', price: 9 },
-  { id: 'waffle_berry', name: 'Beeren-Waffel', short: 'Beeren-Waffel', station: 'waffle', kind: 'waffle', color: '#d97706', light: '#fcd34d', dark: '#92400e', topping: '#f43f5e', price: 11 },
+  { id: 'waffle_classic', icon: '🧇', name: 'Herzwaffel', short: 'Waffel', station: 'waffle', kind: 'waffle', color: '#f59e0b', light: '#fde68a', dark: '#b45309', topping: '#fffbeb', price: 9 },
+  { id: 'waffle_berry', icon: '🫐', name: 'Beeren-Waffel', short: 'Beeren-Waffel', station: 'waffle', kind: 'waffle', color: '#d97706', light: '#fcd34d', dark: '#92400e', topping: '#f43f5e', price: 11 },
   // Essen / Warme Gerichte
-  { id: 'food_pan', name: 'Gemüse-Pfanne', short: 'Pfanne 🥘', station: 'food', kind: 'pan', color: '#ea580c', light: '#fdba74', dark: '#9a3412', price: 12 },
-  { id: 'food_pasta', name: 'Pasta', short: 'Pasta 🍝', station: 'food', kind: 'pasta', color: '#ef4444', light: '#fde047', dark: '#b91c1c', price: 12 },
-  { id: 'food_pizza', name: 'Mini-Pizza', short: 'Pizza 🍕', station: 'food', kind: 'pizza', color: '#f97316', light: '#fef08a', dark: '#c2410c', price: 11 },
+  { id: 'food_pan', icon: '🥘', name: 'Gemüse-Pfanne', short: 'Pfanne 🥘', station: 'food', kind: 'pan', color: '#ea580c', light: '#fdba74', dark: '#9a3412', price: 12 },
+  { id: 'food_pasta', icon: '🍝', name: 'Pasta', short: 'Pasta 🍝', station: 'food', kind: 'pasta', color: '#ef4444', light: '#fde047', dark: '#b91c1c', price: 12 },
+  { id: 'food_pizza', icon: '🍕', name: 'Mini-Pizza', short: 'Pizza 🍕', station: 'food', kind: 'pizza', color: '#f97316', light: '#fef08a', dark: '#c2410c', price: 11 },
   // Trinken
-  { id: 'drink_limo', name: 'Zitronen-Limo', short: 'Limo 🍋', station: 'drink', kind: 'drink', color: '#fde047', light: '#fef9c3', dark: '#eab308', price: 6 },
-  { id: 'drink_shake', name: 'Erdbeer-Shake', short: 'Shake 🍓', station: 'drink', kind: 'shake', color: '#f472b6', light: '#fbcfe8', dark: '#db2777', price: 8 },
-  { id: 'drink_kakao', name: 'Warmer Kakao', short: 'Kakao ☕', station: 'drink', kind: 'mug', color: '#92400e', light: '#d97706', dark: '#451a03', price: 7 }
+  { id: 'drink_limo', icon: '🍋', name: 'Zitronen-Limo', short: 'Limo 🍋', station: 'drink', kind: 'drink', color: '#fde047', light: '#fef9c3', dark: '#eab308', price: 6 },
+  { id: 'drink_shake', icon: '🥤', name: 'Erdbeer-Shake', short: 'Shake 🍓', station: 'drink', kind: 'shake', color: '#f472b6', light: '#fbcfe8', dark: '#db2777', price: 8 },
+  { id: 'drink_kakao', icon: '☕', name: 'Warmer Kakao', short: 'Kakao ☕', station: 'drink', kind: 'mug', color: '#92400e', light: '#d97706', dark: '#451a03', price: 7 }
 ];
 
 const MENU_BY_ID = Object.fromEntries(CAFE_MENU.map((m) => [m.id, m]));
@@ -44,7 +44,17 @@ const COUNTER_RIGHT = 762;
 const COUNTER_TOP_Y = 178;
 const COUNTER_BOTTOM_Y = 224;
 const AISLE_Y = 172;
-const TRASH_X = 815;
+const TRASH_X = 805;
+
+function getStationItemSlots(st) {
+  const items = CAFE_MENU.filter((m) => m.station === st.id);
+  const gap = items.length >= 4 ? 38 : items.length === 3 ? 50 : 62;
+  return items.map((item, idx) => ({
+    item,
+    x: st.x + (idx - (items.length - 1) / 2) * gap,
+    y: 102
+  }));
+}
 
 const CUSTOMER_PRESETS = [
   { skin: '#ffdecb', hair: '#78350f', shirt: '#ec4899', hairStyle: 'bob', name: 'Mia' },
@@ -301,7 +311,13 @@ export function setupIceCreamScreen(stateManager) {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'ice-flavor-btn';
-      btn.innerHTML = `<span class="ice-swatch" style="background:radial-gradient(circle at 30% 30%, ${item.light}, ${item.color});"></span><span>${item.name}</span>`;
+      btn.innerHTML = `
+        <span class="ice-item-icon" style="background:radial-gradient(circle at 30% 30%, ${item.light}, ${item.color});">${item.icon}</span>
+        <span class="ice-item-meta">
+          <span class="ice-item-name">${item.name}</span>
+          <span class="ice-item-price">+${item.price} 🪙</span>
+        </span>
+      `;
       btn.addEventListener('click', () => {
         navigateToPoint(st.x, AISLE_Y, { type: 'pickup', itemId: item.id });
       });
@@ -447,13 +463,29 @@ export function setupIceCreamScreen(stateManager) {
     const cx = (clientX - rect.left) * scaleX;
     const cy = (clientY - rect.top) * scaleY;
 
-    // 1. Clicked on one of the 4 back stations behind the counter?
-    if (cy >= 50 && cy <= 165) {
+    // 1. Clicked on one of the 4 back stations (or directly on a large food item!)
+    if (cy >= 38 && cy <= 165) {
       for (const st of CAFE_STATIONS) {
-        if (Math.abs(cx - st.x) <= 78) {
+        if (Math.abs(cx - st.x) <= 84) {
           activeStationTab = st.id;
           renderStationTabs();
           renderMenuButtons();
+          if (cy >= 66) {
+            const slots = getStationItemSlots(st);
+            let picked = null;
+            let bestDist = 28;
+            for (const slot of slots) {
+              const d = Math.abs(cx - slot.x);
+              if (d < bestDist) {
+                bestDist = d;
+                picked = slot.item;
+              }
+            }
+            if (picked) {
+              navigateToPoint(st.x, AISLE_Y, { type: 'pickup', itemId: picked.id });
+              return;
+            }
+          }
           navigateToPoint(st.x, AISLE_Y, { type: 'pickup_station', stationId: st.id });
           return;
         }
@@ -911,8 +943,8 @@ export function setupIceCreamScreen(stateManager) {
     // Delivered dishes sitting directly on the table!
     if (c && c.servedItems) {
       c.servedItems.forEach((id, sIdx) => {
-        const ox = (sIdx - (c.servedItems.length - 1) / 2) * 20;
-        drawMenuItemGraphic(ox, -16, id, 0.72);
+        const ox = (sIdx - (c.servedItems.length - 1) / 2) * 24;
+        drawMenuItemGraphic(ox, -16, id, 0.94);
       });
     }
 
@@ -922,10 +954,10 @@ export function setupIceCreamScreen(stateManager) {
   function drawSpeechBubble(c, tb) {
     if (c.state !== 'waiting') return;
     const isMatch = ordersMatch(trayItems, c.order);
-    const bw = 166;
-    const bh = 88;
+    const bw = 178;
+    const bh = 96;
     const bx = Math.max(10, Math.min(860 - bw - 10, tb.x - bw / 2));
-    const by = 248;
+    const by = 232;
 
     ctx.save();
     ctx.shadowColor = isMatch ? 'rgba(16, 185, 129, 0.42)' : 'rgba(88, 28, 135, 0.16)';
@@ -954,13 +986,13 @@ export function setupIceCreamScreen(stateManager) {
     // Draw each requested item icon + short name inside speech bubble
     c.order.forEach((id, idx) => {
       const item = MENU_BY_ID[id];
-      const ry = by + 19 + idx * 21;
-      drawMenuItemGraphic(bx + 22, ry, id, 0.74);
-      ctx.font = '700 11px "Plus Jakarta Sans", sans-serif';
+      const ry = by + 21 + idx * 23;
+      drawMenuItemGraphic(bx + 25, ry, id, 0.92);
+      ctx.font = '800 12px "Plus Jakarta Sans", sans-serif';
       ctx.fillStyle = '#271333';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(item.short, bx + 42, ry + 1);
+      ctx.fillText(item.short, bx + 48, ry + 1);
     });
 
     // Patience / Tip bar at bottom
@@ -1027,7 +1059,7 @@ export function setupIceCreamScreen(stateManager) {
     ctx.textBaseline = 'middle';
     ctx.fillText('TRAUM-CAFÉ & EISDIELE', w / 2, 18);
 
-    // 2. Back Stations behind the counter (y: 58..136)
+    // 2. Back Stations behind the counter (y: 44..138) with extra-large tappable items!
     const nearSt = getNearbyStation(player.x, player.y);
     CAFE_STATIONS.forEach((st) => {
       const isNear = nearSt && nearSt.id === st.id;
@@ -1038,7 +1070,7 @@ export function setupIceCreamScreen(stateManager) {
       }
       ctx.fillStyle = st.light;
       ctx.beginPath();
-      ctx.roundRect(st.x - 74, 70, 148, 66, [14]);
+      ctx.roundRect(st.x - 83, 56, 166, 80, [16]);
       ctx.fill();
       ctx.strokeStyle = isNear ? st.color : 'rgba(148, 163, 184, 0.38)';
       ctx.lineWidth = isNear ? 2.6 : 1.5;
@@ -1047,19 +1079,23 @@ export function setupIceCreamScreen(stateManager) {
       // Station header pill
       ctx.fillStyle = isNear ? st.color : '#ffffff';
       ctx.beginPath();
-      ctx.roundRect(st.x - 62, 54, 124, 22, [10]);
+      ctx.roundRect(st.x - 66, 42, 132, 24, [11]);
       ctx.fill();
-      ctx.font = '800 11px "Plus Jakarta Sans", sans-serif';
+      ctx.font = '800 11.5px "Plus Jakarta Sans", sans-serif';
       ctx.fillStyle = isNear ? '#ffffff' : '#271333';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(st.label, st.x, 65);
+      ctx.fillText(st.label, st.x, 54);
 
-      // Station icon showcase inside box
-      const items = CAFE_MENU.filter((m) => m.station === st.id).slice(0, 3);
-      items.forEach((it, idx) => {
-        const ix = st.x + (idx - (items.length - 1) / 2) * 40;
-        drawMenuItemGraphic(ix, 108, it.id, 1.0);
+      // Large clickable food/drink showcase inside box
+      const slots = getStationItemSlots(st);
+      const itemScale = slots.length >= 4 ? 1.28 : 1.48;
+      slots.forEach(({ item, x: ix, y: iy }) => {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.68)';
+        ctx.beginPath();
+        ctx.arc(ix, iy, slots.length >= 4 ? 17 : 22, 0, Math.PI * 2);
+        ctx.fill();
+        drawMenuItemGraphic(ix, iy, item.id, itemScale);
       });
       ctx.restore();
     });
@@ -1111,15 +1147,15 @@ export function setupIceCreamScreen(stateManager) {
         ctx.save();
         ctx.fillStyle = '#ffffff';
         ctx.strokeStyle = '#db2777';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2.2;
         ctx.beginPath();
-        ctx.roundRect(player.x + player.facing * 24 - 28, player.y - 52, 56, 10, [5]);
+        ctx.roundRect(player.x + player.facing * 26 - 34, player.y - 54, 68, 12, [6]);
         ctx.fill();
         ctx.stroke();
 
         trayItems.forEach((id, idx) => {
-          const ox = (idx - (trayItems.length - 1) / 2) * 18;
-          drawMenuItemGraphic(player.x + player.facing * 24 + ox, player.y - 60, id, 0.72);
+          const ox = (idx - (trayItems.length - 1) / 2) * 22;
+          drawMenuItemGraphic(player.x + player.facing * 26 + ox, player.y - 63, id, 0.94);
         });
         ctx.restore();
       }

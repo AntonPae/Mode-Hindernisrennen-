@@ -1829,31 +1829,38 @@ body, html {
 .cone-scoop-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.28rem 0.72rem;
+  gap: 0.45rem;
+  padding: 0.42rem 0.95rem;
   border-radius: 9999px;
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-size: 0.96rem;
+  font-weight: 800;
   color: var(--ink-strong);
   background: linear-gradient(135deg, var(--scoop-light, #fce7f3), #ffffff);
-  border: 1.5px solid var(--scoop, #ec4899);
-  box-shadow: 0 2px 6px rgba(88, 28, 135, 0.08);
+  border: 2px solid var(--scoop, #ec4899);
+  box-shadow: 0 3px 8px rgba(88, 28, 135, 0.1);
 }
 
 .ice-station-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem;
-  padding: 0.55rem 1rem 0.1rem 1rem;
+  gap: 0.55rem;
+  padding: 0.7rem 1rem 0.25rem 1rem;
   background: #ffffff;
   border-top: 1px solid var(--hairline);
 }
 
+.ice-station-tabs .home-tab-btn {
+  padding: 0.62rem 1.05rem;
+  font-size: 0.96rem;
+  border-radius: 14px;
+  min-height: 46px;
+}
+
 .ice-flavor-bar {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
-  gap: 0.48rem;
-  padding: 0.55rem 1rem 0.65rem 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  gap: 0.72rem;
+  padding: 0.7rem 1rem 0.85rem 1rem;
   background: #ffffff;
 }
 
@@ -1862,33 +1869,76 @@ body, html {
 }
 
 .ice-flavor-btn {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
-  padding: 0.5rem 0.65rem;
-  border-radius: 12px;
-  border: 1.5px solid rgba(236, 72, 153, 0.22);
+  justify-content: flex-start;
+  gap: 0.72rem;
+  min-height: 68px;
+  padding: 0.72rem 0.9rem;
+  border-radius: 18px;
+  border: 2px solid rgba(236, 72, 153, 0.28);
   background: #fdf8ff;
   color: var(--ink-strong);
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 700;
-  font-size: 0.82rem;
+  font-size: 0.98rem;
+  text-align: left;
   cursor: pointer;
-  transition: transform 0.14s ease, border-color 0.16s ease, background 0.16s ease;
+  touch-action: manipulation;
+  box-shadow: 0 4px 12px rgba(88, 28, 135, 0.07);
+  transition: transform 0.14s ease, border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
 }
 
 .ice-flavor-btn:hover {
   transform: translateY(-2px);
   border-color: #db2777;
   background: #fdf2f8;
+  box-shadow: 0 8px 18px rgba(219, 39, 119, 0.16);
+}
+
+.ice-flavor-btn:active {
+  transform: scale(0.97);
+}
+
+.ice-item-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 2px solid #ffffff;
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.16);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.55rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.ice-item-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.ice-item-name {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: var(--ink-strong);
+  line-height: 1.18;
+}
+
+.ice-item-price {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #b45309;
 }
 
 .ice-swatch {
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  border: 1.5px solid #ffffff;
+  border: 2px solid #ffffff;
   box-shadow: 0 1px 4px rgba(15, 23, 42, 0.2);
   flex-shrink: 0;
 }
