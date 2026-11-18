@@ -224,7 +224,7 @@
 
     <!-- State: Ice Cream & Café Parlor Job Overlay -->
     <div id="icecream-screen" class="screen-overlay hidden">
-      <header class="app-header">
+      <header class="app-header ice-compact-header">
         <h1>🍦🥘 Beruf: Traum-Café &amp; Eisdiele</h1>
         <p>Hol Eis, Waffeln, warmes Essen &amp; Getränke hinter der Theke und bring sie an die Tische!</p>
         <div class="coin-wallet-bar">
@@ -238,33 +238,42 @@
       </header>
 
       <div class="icecream-layout">
-        <div class="home-canvas-card">
-          <div class="home-task-banner">
-            <span id="iceStatusText">Hole Eis, Waffeln, Essen &amp; Trinken hinter der Theke und bring sie an die Tische!</span>
-          </div>
-          <canvas id="iceCreamCanvas" width="860" height="470"></canvas>
-          <div class="icecream-cone-bar">
-            <div class="icecream-cone-label">
-              <strong>🍽️ Dein Tablett:</strong>
-              <div id="iceConeSlots" class="ice-cone-slots"></div>
+        <div class="ice-stage-column">
+          <div class="home-canvas-card ice-stage-card">
+            <div class="home-task-banner">
+              <span id="iceStatusText">Hole Eis, Waffeln, Essen &amp; Trinken hinter der Theke und bring sie an die Tische!</span>
             </div>
-            <button type="button" id="iceClearConeBtn" class="btn btn-small btn-secondary">🗑️ Tablett leeren</button>
+            <canvas id="iceCreamCanvas" width="860" height="470"></canvas>
+            <div class="icecream-cone-bar">
+              <div class="icecream-cone-label">
+                <strong>🍽️ Dein Tablett:</strong>
+                <div id="iceConeSlots" class="ice-cone-slots"></div>
+              </div>
+              <button type="button" id="iceClearConeBtn" class="btn btn-small btn-secondary">🗑️ Tablett leeren</button>
+            </div>
+            <div class="home-walk-pad">
+              <button type="button" id="iceWalkLeftBtn" class="walk-pad-btn" aria-label="Nach links gehen">◀ Links</button>
+              <button type="button" id="iceWalkUpBtn" class="walk-pad-btn" aria-label="Nach hinten zur Theke gehen">▲ Theke</button>
+              <button type="button" id="iceActionBtn" class="walk-pad-btn walk-pad-action" aria-label="Nehmen oder am Tisch servieren">🍽️ Holen / Servieren</button>
+              <button type="button" id="iceWalkDownBtn" class="walk-pad-btn" aria-label="Nach vorne zu den Tischen gehen">▼ Tische</button>
+              <button type="button" id="iceWalkRightBtn" class="walk-pad-btn" aria-label="Nach rechts gehen">Rechts ▶</button>
+            </div>
           </div>
-          <div id="iceStationTabs" class="ice-station-tabs"></div>
-          <div id="iceFlavorBar" class="ice-flavor-bar"></div>
-          <div class="home-walk-pad">
-            <button type="button" id="iceWalkLeftBtn" class="walk-pad-btn" aria-label="Nach links gehen">◀ Links</button>
-            <button type="button" id="iceWalkUpBtn" class="walk-pad-btn" aria-label="Nach hinten zur Theke gehen">▲ Theke</button>
-            <button type="button" id="iceActionBtn" class="walk-pad-btn walk-pad-action" aria-label="Nehmen oder am Tisch servieren">🍽️ Holen / Servieren</button>
-            <button type="button" id="iceWalkDownBtn" class="walk-pad-btn" aria-label="Nach vorne zu den Tischen gehen">▼ Tische</button>
-            <button type="button" id="iceWalkRightBtn" class="walk-pad-btn" aria-label="Nach rechts gehen">Rechts ▶</button>
+
+          <div class="home-nav-row ice-nav-row">
+            <button type="button" id="iceToEditorBtn" class="btn btn-secondary">✏️ Zurück zum Editor</button>
+            <button type="button" id="iceToHomeBtn" class="btn btn-home">🏡 Zu Haus &amp; Garten</button>
           </div>
         </div>
 
-        <div class="home-nav-row ice-nav-row">
-          <button type="button" id="iceToEditorBtn" class="btn btn-secondary">✏️ Zurück zum Editor</button>
-          <button type="button" id="iceToHomeBtn" class="btn btn-home">🏡 Zu Haus &amp; Garten</button>
-        </div>
+        <aside class="ice-menu-column">
+          <div class="ice-menu-header">
+            <h2>🍽️ Speisekarte</h2>
+            <span>Tippe auf Essen oder Trinken – deine Figur holt es sofort!</span>
+          </div>
+          <div id="iceStationTabs" class="ice-station-tabs"></div>
+          <div id="iceFlavorBar" class="ice-flavor-bar"></div>
+        </aside>
       </div>
     </div>
 

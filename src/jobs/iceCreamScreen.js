@@ -955,9 +955,9 @@ export function setupIceCreamScreen(stateManager) {
     if (c.state !== 'waiting') return;
     const isMatch = ordersMatch(trayItems, c.order);
     const bw = 178;
-    const bh = 96;
+    const bh = 92;
     const bx = Math.max(10, Math.min(860 - bw - 10, tb.x - bw / 2));
-    const by = 232;
+    const by = 228;
 
     ctx.save();
     ctx.shadowColor = isMatch ? 'rgba(16, 185, 129, 0.42)' : 'rgba(88, 28, 135, 0.16)';
@@ -1208,16 +1208,16 @@ export function setupIceCreamScreen(stateManager) {
       drawTable(tb, idx, c);
     });
 
-    // If player walked out in front of the counter, draw player cleanly in the dining room!
-    if (player.y >= 210) {
-      drawPlayerWithTray();
-    }
-
-    // 4. Speech bubbles on top so orders are always crystal clear
+    // 4. Speech bubbles above tables
     TABLE_POS.forEach((tb, idx) => {
       const c = tables[idx];
       if (c) drawSpeechBubble(c, tb);
     });
+
+    // If player walked out in front of the counter, draw player on top so they are always visible!
+    if (player.y >= 210) {
+      drawPlayerWithTray();
+    }
 
     // 5. Sparkling FX particles
     fxParticles.forEach((p) => {
