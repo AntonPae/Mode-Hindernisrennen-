@@ -98,6 +98,12 @@ export function setupBackgroundSelectScreen(stateManager) {
     });
   }
 
+  window.addEventListener('runner:coins-updated', () => {
+    if (stateManager.getState() === 'BACKGROUND_SELECT') {
+      renderBackgroundCards();
+    }
+  });
+
   stateManager.onStateChange((newState) => {
     if (newState === 'BACKGROUND_SELECT') {
       renderBackgroundCards();

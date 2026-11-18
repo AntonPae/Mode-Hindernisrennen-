@@ -22,6 +22,7 @@
         <div class="coin-wallet-bar">
           <span class="coin-pill">🪙 Spielgeld: <strong id="editorCoinsVal">0</strong></span>
           <span class="level-pill">🏆 Level <strong id="editorLevelVal">1</strong></span>
+          <button type="button" id="openEarnEditorBtn" class="btn btn-earn">💰 Geld verdienen</button>
           <button type="button" id="mysteryBoxBtn" class="btn btn-mystery">🎁 Überraschungs-Kiste (65 🪙)</button>
         </div>
         <div id="shopToast" class="shop-toast hidden"></div>
@@ -131,6 +132,7 @@
         <p>Schalte neue Welten frei oder starte die Überraschungs-Tour!</p>
         <div class="coin-wallet-bar">
           <span class="coin-pill">🪙 Spielgeld: <strong id="bgCoinsVal">0</strong></span>
+          <button type="button" id="openEarnBgBtn" class="btn btn-earn">💰 Geld verdienen</button>
         </div>
         <div id="bgToast" class="shop-toast hidden"></div>
       </header>
@@ -154,6 +156,7 @@
           <span class="level-pill">🏆 Level <strong id="homeLevelVal">1</strong></span>
           <span class="supply-pill">🥘 Zutaten: <strong id="foodCountVal">3</strong></span>
           <span class="supply-pill">🦴 Tierfutter: <strong id="petFoodCountVal">3</strong></span>
+          <button type="button" id="openEarnHomeBtn" class="btn btn-earn">💰 Geld verdienen</button>
           <button type="button" id="homeMysteryBtn" class="btn btn-mystery">🎁 Haus-Überraschung (75 🪙)</button>
         </div>
         <div id="homeToast" class="shop-toast hidden"></div>
@@ -252,6 +255,7 @@
           <p>Deine Streckenlänge: <span id="finalScore">0</span> m</p>
           <div class="gameover-coins-box">
             <div>In diesem Lauf verdient: <strong>+<span id="earnedCoinsVal">0</span> 🪙</strong></div>
+            <div id="gameoverBonusBreakdown" class="gameover-bonus-sub"></div>
             <div>Dein Spielgeld: <strong><span id="totalCoinsVal">0</span> 🪙</strong></div>
           </div>
           <div class="modal-actions">
@@ -260,6 +264,22 @@
             <button id="editorReturnBtn" class="btn btn-secondary">🛍️ Charakter &amp; Shop</button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Earn Money / Activities Modal -->
+    <div id="earn-money-modal" class="modal hidden">
+      <div class="earn-modal-content">
+        <div class="earn-modal-header">
+          <div>
+            <h2>💰 Spielgeld verdienen</h2>
+            <span class="coin-pill">🪙 Aktuell: <strong id="earnCoinsVal">0</strong></span>
+          </div>
+          <button type="button" id="closeEarnModalBtn" class="btn btn-small btn-secondary">✖</button>
+        </div>
+        <div id="earnToast" class="shop-toast hidden"></div>
+        <div id="earnTabs" class="earn-tabs"></div>
+        <div id="earnTabBody" class="earn-tab-body"></div>
       </div>
     </div>
   </div>

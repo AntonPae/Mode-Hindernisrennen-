@@ -456,7 +456,7 @@ export class CoinManager {
           kind: 'gold'
         });
       }
-    } else if (pattern < 0.85) {
+    } else if (pattern < 0.78) {
       // Jump arc of 3 coins
       const offsets = [0, -45, 0];
       for (let i = 0; i < 3; i++) {
@@ -468,7 +468,7 @@ export class CoinManager {
           kind: 'gold'
         });
       }
-    } else {
+    } else if (pattern < 0.93) {
       // Rare high diamond coin (+15)
       this.coins.push({
         x: startX,
@@ -476,6 +476,15 @@ export class CoinManager {
         radius: 16,
         value: 15,
         kind: 'gem'
+      });
+    } else {
+      // Super rare Golden Bonus Chest (+30)
+      this.coins.push({
+        x: startX,
+        y: groundY - 95,
+        radius: 18,
+        value: 30,
+        kind: 'chest'
       });
     }
   }
@@ -515,7 +524,27 @@ export class CoinManager {
       ctx.save();
       ctx.translate(c.x, c.y + pulse * 3);
 
-      if (c.kind === 'gem') {
+      if (c.kind === 'chest') {
+        // Golden Treasure Chest (+30)
+        ctx.shadowColor = '#fbbf24';
+        ctx.shadowBlur = 16;
+        ctx.fillStyle = '#b45309';
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.roundRect(-16, -12, 32, 24, [6]);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#fbbf24';
+        ctx.fillRect(-16, -4, 32, 6);
+        ctx.fillRect(-4, -8, 8, 12);
+
+        ctx.font = 'bold 12px Fredoka, sans-serif';
+        ctx.fillStyle = '#fef08a';
+        ctx.textAlign = 'center';
+        ctx.fillText('+30', 0, -18);
+      } else if (c.kind === 'gem') {
         // Glowing Cyan Bonus Gem (+15)
         ctx.fillStyle = '#38bdf8';
         ctx.strokeStyle = '#0f172a';

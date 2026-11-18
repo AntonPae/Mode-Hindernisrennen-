@@ -1,4 +1,5 @@
 import { ShopManager } from '../editor/shopData.js';
+import { EarnMoneyManager } from '../economy/earnMoneyData.js';
 
 /**
  * Interactive Puzzle / Rätsel Stop System
@@ -273,6 +274,32 @@ function generateDynamicRiddle() {
   };
 }
 
+export function createRandomRiddle(usedRiddles = new Set()) {
+  // 50% freshly generated puzzle, 50% classic curated riddle
+  if (Math.random() < 0.5) {
+    const dyn = generateDynamicRiddle();
+    return {
+      ...dyn,
+      options: [...dyn.options].sort(() => Math.random() - 0.5)
+    };
+  }
+
+  if (usedRiddles.size >= RIDDLE_BANK.length) {
+    usedRiddles.clear();
+  }
+  const available = RIDDLE_BANK
+    .map((r, idx) => ({ r, idx }))
+    .filter(({ idx }) => !usedRiddles.has(idx));
+
+  const picked = available[Math.floor(Math.random() * available.length)];
+  usedRiddles.add(picked.idx);
+
+  return {
+    ...picked.r,
+    options: [...picked.r.options].sort(() => Math.random() - 0.5)
+  };
+}
+
 export class QuickTimeEventManager {
   constructor(runnerEngine) {
     this.runner = runnerEngine;
@@ -320,26 +347,9 @@ export class QuickTimeEventManager {
   }
 
   pickNextRiddle() {
-    // 50% freshly generated puzzle, 50% classic curated riddle
-    if (Math.random() < 0.5) {
-      const dyn = generateDynamicRiddle();
-      this.currentRiddle = dyn;
-      this.options = [...dyn.options].sort(() => Math.random() - 0.5);
-      return;
-    }
-
-    if (this.usedRiddles.size >= RIDDLE_BANK.length) {
-      this.usedRiddles.clear();
-    }
-    const available = RIDDLE_BANK
-      .map((r, idx) => ({ r, idx }))
-      .filter(({ idx }) => !this.usedRiddles.has(idx));
-
-    const picked = available[Math.floor(Math.random() * available.length)];
-    this.usedRiddles.add(picked.idx);
-
-    this.currentRiddle = picked.r;
-    this.options = [...picked.r.options].sort(() => Math.random() - 0.5);
+    const picked = createRandomRiddle(this.usedRiddles);
+    this.currentRiddle = picked;
+    this.options = picked.options;
   }
 
   triggerPuzzleStop() {
@@ -425,6 +435,7 @@ export class QuickTimeEventManager {
     this.runner.addBonusScore(50);
     this.runner.addRunCoins(25);
     const prog = ShopManager.recordProgress(0, 1);
+    EarnMoneyManager.recordEvent({ riddles: 1 });
 
     if (this.feedbackEl) {
       this.feedbackEl.className = 'qte-feedback qte-success-text';

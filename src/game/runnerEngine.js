@@ -1,6 +1,7 @@
 import { PlayerConfig, GameConfig } from '../editor/characterData.js';
 import { ShopManager } from '../editor/shopData.js';
 import { HomeManager } from '../home/homeData.js';
+import { EarnMoneyManager } from '../economy/earnMoneyData.js';
 import { renderCharacter } from '../editor/characterRenderer.js';
 import { ControlsManager } from './controls.js';
 import { ObstacleManager, CoinManager } from './obstacles.js';
@@ -194,6 +195,7 @@ export class RunnerEngine {
     this.finalScoreEl = document.getElementById('finalScore');
     this.earnedCoinsValEl = document.getElementById('earnedCoinsVal');
     this.totalCoinsValEl = document.getElementById('totalCoinsVal');
+    this.gameoverBonusBreakdownEl = document.getElementById('gameoverBonusBreakdown');
     this.gameOverModal = document.getElementById('game-over-modal');
 
     this.restartBtn = document.getElementById('restartBtn');
@@ -605,8 +607,8 @@ export class RunnerEngine {
     // Coin Pickup Check
     const pickup = this.coins.checkPickups(playerRect);
     if (pickup.gained > 0) {
-      const hasGem = pickup.picked.some((p) => p.kind === 'gem');
-      this.sounds.playCoin(hasGem);
+      const hasSpecial = pickup.picked.some((p) => p.kind === 'gem' || p.kind === 'chest');
+      this.sounds.playCoin(hasSpecial);
       pickup.picked.forEach((p) => this.addRunCoins(p.value, p.x, p.y - 16));
     }
 
@@ -1140,21 +1142,42 @@ export class RunnerEngine {
   gameOver() {
     this.isRunning = false;
     this.qte.hideOverlay();
+    const isNewHighscore = this.score > this.highScore && this.score >= 30;
     if (this.score > this.highScore) {
       this.highScore = this.score;
       localStorage.setItem('runner_highscore', this.highScore.toString());
       this.highScoreValEl.textContent = this.highScore;
     }
 
-    // Distance bonus coins (+1 coin per 25m run) + Level progress
+    // Distance bonus coins (+1 coin per 25m run) + Highscore bonus + Home/Pet pocket money + Level progress
     const distanceBonusCoins = Math.floor(this.score / 25);
+    const highscoreBonus = isNewHighscore ? 25 : 0;
+    const homeBonus = this.score >= 20 ? HomeManager.getRunPocketMoneyBonus() : 0;
+
     const prog = ShopManager.recordProgress(this.score, 0);
-    const totalRunEarned = this.runCoins + distanceBonusCoins + prog.levelUpBonus;
-    const newBalance = ShopManager.addCoins(this.runCoins + distanceBonusCoins);
+    EarnMoneyManager.recordEvent({
+      meters: this.score,
+      coins: this.runCoins,
+      runFinished: true
+    });
     HomeManager.onRunCompleted();
+
+    const extraCoins = this.runCoins + distanceBonusCoins + highscoreBonus + homeBonus;
+    const totalRunEarned = extraCoins + prog.levelUpBonus;
+    const newBalance = ShopManager.addCoins(extraCoins);
 
     if (this.earnedCoinsValEl) this.earnedCoinsValEl.textContent = totalRunEarned;
     if (this.totalCoinsValEl) this.totalCoinsValEl.textContent = newBalance;
+
+    if (this.gameoverBonusBreakdownEl) {
+      const notes = [];
+      if (distanceBonusCoins > 0) notes.push(`+${distanceBonusCoins} 🪙 Strecke`);
+      if (highscoreBonus > 0) notes.push(`+${highscoreBonus} 🪙 Rekord!`);
+      if (homeBonus > 0) notes.push(`+${homeBonus} 🪙 Haus & Tiere`);
+      if (prog.levelUpBonus > 0) notes.push(`+${prog.levelUpBonus} 🪙 Level Up!`);
+      if (this.score >= 40) notes.push('+1 🎡 Glücksrad-Ticket');
+      this.gameoverBonusBreakdownEl.textContent = notes.join(' • ');
+    }
 
     this.finalScoreEl.textContent = this.score;
     this.gameOverModal.classList.remove('hidden');

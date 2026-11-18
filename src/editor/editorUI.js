@@ -320,6 +320,11 @@ export function setupEditorUI(stateManager) {
     });
   }
 
+  window.addEventListener('runner:coins-updated', () => {
+    updateWalletUI();
+    renderAllShopGrids();
+  });
+
   // Refresh coin wallet & unlock affordability whenever returning to Editor
   stateManager.onStateChange((newState) => {
     if (newState === 'EDITOR') {

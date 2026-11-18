@@ -1,4 +1,5 @@
 import { ShopManager } from '../editor/shopData.js';
+import { EarnMoneyManager } from '../economy/earnMoneyData.js';
 
 export const HOME_CATALOG = {
   expansions: [
@@ -184,6 +185,22 @@ export const HomeManager = {
     return 0;
   },
 
+  addSupply(key, amount = 1) {
+    const state = this.getState();
+    state.inventory[key] = (state.inventory[key] || 0) + amount;
+    this.saveState(state);
+    return state.inventory[key];
+  },
+
+  getRunPocketMoneyBonus() {
+    const state = this.getState();
+    let bonus = (state.owned.pets?.length || 0) * 2;
+    if (this.hasItem('decor', 'trophy_shelf')) bonus += 5;
+    if (this.hasItem('supplies', 'robot_helper')) bonus += 5;
+    if (this.hasItem('garden', 'greenhouse')) bonus += 4;
+    return bonus;
+  },
+
   buyItem(category, itemId) {
     const list = HOME_CATALOG[category] || [];
     const item = list.find((i) => i.id === itemId);
@@ -301,6 +318,7 @@ export const HomeManager = {
     state.needs.cleanliness = Math.max(10, state.needs.cleanliness - 5);
     this.saveState(state);
     ShopManager.addCoins(bonusCoins);
+    EarnMoneyManager.recordEvent({ care: 1 });
     return { ok: true, bonusCoins, state };
   },
 
@@ -316,6 +334,7 @@ export const HomeManager = {
     state.needs.cleanliness = Math.min(100, state.needs.cleanliness + boost);
     this.saveState(state);
     ShopManager.addCoins(bonusCoins);
+    EarnMoneyManager.recordEvent({ care: 1 });
     return { ok: true, bonusCoins, state };
   },
 
@@ -334,6 +353,7 @@ export const HomeManager = {
     state.needs.petCare = Math.min(100, state.needs.petCare + boost);
     this.saveState(state);
     ShopManager.addCoins(bonusCoins);
+    EarnMoneyManager.recordEvent({ care: 1 });
     return { ok: true, bonusCoins, state };
   },
 
@@ -344,6 +364,7 @@ export const HomeManager = {
     }
     state.needs.petCare = Math.min(100, state.needs.petCare + 15);
     this.saveState(state);
+    EarnMoneyManager.recordEvent({ care: 1 });
     return { ok: true, state };
   },
 
@@ -358,6 +379,7 @@ export const HomeManager = {
       state.needs.gardenGrowth = 10;
       this.saveState(state);
       ShopManager.addCoins(reward);
+      EarnMoneyManager.recordEvent({ care: 1 });
       return { ok: true, action: 'harvest', bonusCoins: reward, state };
     }
 
@@ -366,6 +388,7 @@ export const HomeManager = {
     const growthStep = (hasGoldCan ? 50 : 30) + (hasGreenhouse ? 15 : 0);
     state.needs.gardenGrowth = Math.min(100, state.needs.gardenGrowth + growthStep);
     this.saveState(state);
+    EarnMoneyManager.recordEvent({ care: 1 });
     return { ok: true, action: 'water', state };
   }
 };

@@ -52,6 +52,8 @@ export function setupHomeScreen(stateManager) {
   let decayInterval = null;
   let toastTimer = null;
   const fxParticles = [];
+  let activeFind = null;
+  let nextFindTimer = 180; // ~3 seconds after entering Home
 
   function showToast(msg, type = 'info') {
     if (!toastEl) return;
@@ -112,6 +114,10 @@ export function setupHomeScreen(stateManager) {
         gardenBtn.classList.remove('btn-harvest-ready');
       }
     }
+  }
+
+  function notifyMoneyOrMissionChange() {
+    window.dispatchEvent(new CustomEvent('runner:coins-updated'));
   }
 
   function renderTabs() {
@@ -215,6 +221,7 @@ export function setupHomeScreen(stateManager) {
       if (res.ok) {
         updateUI();
         renderShopGrid();
+        notifyMoneyOrMissionChange();
         spawnFX('🍳', 250, 240, 5);
         spawnFX('🪙', 270, 210, 3);
         showToast(`🍽️ Lecker gekocht! +${res.bonusCoins} 🪙 Wohlfühl-Bonus!`, 'success');
@@ -230,6 +237,7 @@ export function setupHomeScreen(stateManager) {
       if (res.ok) {
         updateUI();
         renderShopGrid();
+        notifyMoneyOrMissionChange();
         spawnFX('✨', 200, 260, 8);
         showToast(`🧹 Blitzsauber geputzt! +${res.bonusCoins} 🪙 Fleiß-Bonus!`, 'success');
       } else if (res.reason === 'already_clean') {
@@ -244,6 +252,7 @@ export function setupHomeScreen(stateManager) {
       if (res.ok) {
         updateUI();
         renderShopGrid();
+        notifyMoneyOrMissionChange();
         spawnFX('❤️', 360, 260, 6);
         showToast(`🦴 Alle Tiere gefüttert! +${res.bonusCoins} 🪙 Tierfreund-Bonus!`, 'success');
       } else if (res.reason === 'no_pets') {
@@ -259,6 +268,7 @@ export function setupHomeScreen(stateManager) {
       const res = HomeManager.petAnimals();
       if (res.ok) {
         updateUI();
+        notifyMoneyOrMissionChange();
         spawnFX('💕', 380, 250, 6);
         showToast('🤗 Deine Tiere schnurren & wedeln vor Freude!', 'success');
       } else {
@@ -273,6 +283,7 @@ export function setupHomeScreen(stateManager) {
       if (res.ok) {
         updateUI();
         renderShopGrid();
+        notifyMoneyOrMissionChange();
         if (res.action === 'harvest') {
           spawnFX('🍎', 580, 250, 6);
           spawnFX('🪙', 590, 210, 5);
@@ -281,6 +292,30 @@ export function setupHomeScreen(stateManager) {
           spawnFX('💧', 580, 260, 7);
           showToast('🚿 Garten gegossen! Die Pflanzen wachsen!', 'info');
         }
+      }
+    });
+  }
+
+  // Clickable sparkling treasure finds on Home Canvas
+  if (canvas) {
+    canvas.style.cursor = 'pointer';
+    canvas.addEventListener('click', (e) => {
+      if (!activeFind) return;
+      const rect = canvas.getBoundingClientRect();
+      const clickX = ((e.clientX - rect.left) / rect.width) * canvas.width;
+      const clickY = ((e.clientY - rect.top) / rect.height) * canvas.height;
+      if (Math.hypot(clickX - activeFind.x, clickY - activeFind.y) <= 38) {
+        const reward = activeFind.coins;
+        const icon = activeFind.icon;
+        ShopManager.addCoins(reward);
+        spawnFX('🪙', activeFind.x, activeFind.y, 7);
+        spawnFX('✨', activeFind.x, activeFind.y - 10, 6);
+        activeFind = null;
+        nextFindTimer = 540 + Math.floor(Math.random() * 300); // ~9-14s
+        updateUI();
+        renderShopGrid();
+        notifyMoneyOrMissionChange();
+        showToast(`${icon} Glücksfund im Garten! +${reward} 🪙 eingesammelt!`, 'success');
       }
     });
   }
@@ -739,6 +774,40 @@ export function setupHomeScreen(stateManager) {
       }
     });
 
+    // --- CLICKABLE TREASURE FIND IN HOUSE / GARDEN ---
+    if (!activeFind) {
+      nextFindTimer--;
+      if (nextFindTimer <= 0) {
+        const finds = [
+          { icon: '💰', coins: 12 },
+          { icon: '🦋', coins: 8 },
+          { icon: '🍀', coins: 6 },
+          { icon: '📦', coins: 14 }
+        ];
+        const chosen = finds[Math.floor(Math.random() * finds.length)];
+        activeFind = {
+          ...chosen,
+          x: 410 + Math.random() * 300,
+          y: groundY - 22 - Math.random() * 75
+        };
+      }
+    } else {
+      const bob = Math.sin(animFrame * 0.1) * 5;
+      ctx.save();
+      ctx.fillStyle = 'rgba(250, 204, 21, 0.28)';
+      ctx.beginPath();
+      ctx.arc(activeFind.x, activeFind.y + bob, 22 + Math.sin(animFrame * 0.14) * 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.font = '26px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(activeFind.icon, activeFind.x, activeFind.y + bob);
+      ctx.font = 'bold 11px Fredoka, sans-serif';
+      ctx.fillStyle = '#fef08a';
+      ctx.fillText('Klick!', activeFind.x, activeFind.y + bob - 22);
+      ctx.restore();
+    }
+
     // --- FLOATING FX PARTICLES ---
     for (let i = fxParticles.length - 1; i >= 0; i--) {
       const p = fxParticles[i];
@@ -778,6 +847,13 @@ export function setupHomeScreen(stateManager) {
       decayInterval = null;
     }
   }
+
+  window.addEventListener('runner:coins-updated', () => {
+    if (stateManager.getState() === 'HOME') {
+      updateUI();
+      renderShopGrid();
+    }
+  });
 
   stateManager.onStateChange((newState) => {
     if (newState === 'HOME') {

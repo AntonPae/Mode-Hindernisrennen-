@@ -3,6 +3,7 @@ import { StateManager, State } from './screens/stateManager.js';
 import { setupEditorUI } from './editor/editorUI.js';
 import { setupBackgroundSelectScreen } from './screens/backgroundSelect.js';
 import { setupHomeScreen } from './home/homeScreen.js';
+import { setupEarnMoneyUI } from './economy/earnMoneyUI.js';
 import { RunnerEngine } from './game/runnerEngine.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -13,12 +14,23 @@ document.addEventListener('DOMContentLoaded', () => {
   setupBackgroundSelectScreen(stateManager);
   setupHomeScreen(stateManager);
 
+  const earnMoneyUI = setupEarnMoneyUI({
+    onCoinsChange: () => {
+      window.dispatchEvent(new CustomEvent('runner:coins-updated'));
+    }
+  });
+
+  window.addEventListener('runner:coins-updated', () => {
+    earnMoneyUI.refreshBadges();
+  });
+
   stateManager.onStateChange((newState) => {
     if (newState === State.GAME) {
       runnerEngine.start();
     } else {
       runnerEngine.stop();
     }
+    earnMoneyUI.refreshBadges();
   });
 
   // Initial state setup
