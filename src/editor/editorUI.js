@@ -34,6 +34,8 @@ export function setupEditorUI(stateManager) {
   const toBgSelectBtn = document.getElementById('toBgSelectBtn');
 
   let toastTimer = null;
+  let editorFrame = 0;
+  let editorRafId = null;
 
   function showToast(message, type = 'info') {
     if (!shopToast) return;
@@ -56,7 +58,21 @@ export function setupEditorUI(stateManager) {
 
   function updatePreview() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    renderCharacter(ctx, canvas.width / 2, canvas.height - 50, PlayerConfig, { frame: 0, pose: 'idle' });
+    renderCharacter(ctx, canvas.width / 2, canvas.height - 50, PlayerConfig, { frame: editorFrame, pose: 'idle' });
+  }
+
+  function startEditorAnim() {
+    if (editorRafId) return;
+    const tick = () => {
+      if (stateManager.getState() !== 'EDITOR') {
+        editorRafId = null;
+        return;
+      }
+      editorFrame++;
+      updatePreview();
+      editorRafId = requestAnimationFrame(tick);
+    };
+    editorRafId = requestAnimationFrame(tick);
   }
 
   function getSelectedId(category) {
@@ -331,6 +347,10 @@ export function setupEditorUI(stateManager) {
       updateWalletUI();
       renderAllShopGrids();
       updatePreview();
+      startEditorAnim();
+    } else if (editorRafId) {
+      cancelAnimationFrame(editorRafId);
+      editorRafId = null;
     }
   });
 
@@ -339,4 +359,5 @@ export function setupEditorUI(stateManager) {
   renderAllShopGrids();
   renderStickersUI();
   updatePreview();
+  startEditorAnim();
 }

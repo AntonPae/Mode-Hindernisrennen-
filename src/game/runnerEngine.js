@@ -814,54 +814,85 @@ export class RunnerEngine {
   drawBackground(theme, groundY) {
     const w = this.displayWidth;
     const h = this.displayHeight;
+    const t = this.player.animFrame;
 
     this.ctx.lineJoin = 'round';
     this.ctx.lineCap = 'round';
 
     if (theme === 'cave') {
-      // Modern Cartoon Cave / Volcanic Setting
+      // Cartoon Volcanic Cavern with Glowing Crystals & Bubbling Lava
       const bgGrad = this.ctx.createLinearGradient(0, 0, 0, groundY);
       bgGrad.addColorStop(0, '#2e1065');
-      bgGrad.addColorStop(0.6, '#581c87');
-      bgGrad.addColorStop(1, '#991b1b');
+      bgGrad.addColorStop(0.55, '#6b21a8');
+      bgGrad.addColorStop(1, '#b91c1c');
       this.ctx.fillStyle = bgGrad;
       this.ctx.fillRect(0, 0, w, groundY);
 
-      // Layer 1: Distant Stalactites Silhouette
-      this.ctx.fillStyle = '#3b0764';
-      this.ctx.strokeStyle = '#0f172a';
-      this.ctx.lineWidth = 3;
-      for (let i = 0; i < w + 200; i += 120) {
-        const x = (i - (this.scrollX * 0.15) % 120) - 120;
+      // Layer 1: Outlined Stalactites with Cel Highlight
+      for (let i = 0; i < w + 220; i += 110) {
+        const x = (i - (this.scrollX * 0.14) % 110) - 110;
+        const tipY = 65 + Math.abs(Math.sin(i * 0.7)) * 45;
+        this.ctx.fillStyle = '#4c1d95';
+        this.ctx.strokeStyle = '#0f172a';
+        this.ctx.lineWidth = 3;
         this.ctx.beginPath();
-        this.ctx.moveTo(x, 0);
-        this.ctx.lineTo(x + 40, 80 + Math.sin(i) * 30);
-        this.ctx.lineTo(x + 80, 0);
+        this.ctx.moveTo(x, -4);
+        this.ctx.lineTo(x + 38, tipY);
+        this.ctx.lineTo(x + 76, -4);
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.stroke();
+
+        // Highlight edge
+        this.ctx.fillStyle = '#7c3aed';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + 12, 0);
+        this.ctx.lineTo(x + 38, tipY - 8);
+        this.ctx.lineTo(x + 38, 0);
+        this.ctx.closePath();
         this.ctx.fill();
       }
 
-      // Layer 2: Rocky Arches Parallax
-      this.ctx.fillStyle = '#7f1d1d';
-      for (let i = 0; i < w + 300; i += 220) {
-        const x = (i - (this.scrollX * 0.3) % 220) - 220;
+      // Layer 2: Cartoon Rocky Arches & Glowing Cyan Crystals
+      for (let i = 0; i < w + 320; i += 240) {
+        const x = (i - (this.scrollX * 0.3) % 240) - 240;
+        this.ctx.fillStyle = '#7f1d1d';
+        this.ctx.strokeStyle = '#0f172a';
+        this.ctx.lineWidth = 3.5;
         this.ctx.beginPath();
         this.ctx.moveTo(x, groundY);
-        this.ctx.quadraticCurveTo(x + 110, groundY - 180, x + 220, groundY);
+        this.ctx.quadraticCurveTo(x + 120, groundY - 195, x + 240, groundY);
+        this.ctx.fill();
+        this.ctx.stroke();
+
+        // Cartoon Crystal Cluster
+        this.ctx.fillStyle = '#22d3ee';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + 95, groundY);
+        this.ctx.lineTo(x + 112, groundY - 46);
+        this.ctx.lineTo(x + 130, groundY);
+        this.ctx.closePath();
         this.ctx.fill();
         this.ctx.stroke();
       }
 
-      // Ground: Glowing Lava Lake
+      // Ground: Glowing Lava Lake with Animated Bubbles
       const lavaGrad = this.ctx.createLinearGradient(0, groundY, 0, h);
-      lavaGrad.addColorStop(0, '#dc2626');
-      lavaGrad.addColorStop(0.5, '#ef4444');
+      lavaGrad.addColorStop(0, '#f97316');
+      lavaGrad.addColorStop(0.4, '#dc2626');
       lavaGrad.addColorStop(1, '#7f1d1d');
       this.ctx.fillStyle = lavaGrad;
       this.ctx.fillRect(0, groundY, w, h - groundY);
 
-      // Lava Top Rim Highlight
       this.ctx.fillStyle = '#fef08a';
-      this.ctx.fillRect(0, groundY, w, 8);
+      this.ctx.fillRect(0, groundY, w, 10);
+      for (let i = 0; i < w + 160; i += 140) {
+        const bx = (i - (this.scrollX * 0.8) % 140) - 140;
+        const pop = Math.abs(Math.sin(t * 0.06 + i)) * 8;
+        this.ctx.beginPath();
+        this.ctx.arc(bx + 60, groundY + 4, 6 + pop * 0.5, Math.PI, 0);
+        this.ctx.fill();
+      }
       this.ctx.lineWidth = 3.5;
       this.ctx.strokeStyle = '#0f172a';
       this.ctx.beginPath();
@@ -870,165 +901,265 @@ export class RunnerEngine {
       this.ctx.stroke();
 
     } else if (theme === 'neon') {
-      // Modern Cyberpunk / Synthwave City
+      // Cartoon Synthwave Metropolis with Striped Sun & Hover Cars
       const bgGrad = this.ctx.createLinearGradient(0, 0, 0, groundY);
-      bgGrad.addColorStop(0, '#020617');
-      bgGrad.addColorStop(0.6, '#1e1b4b');
-      bgGrad.addColorStop(1, '#831843');
+      bgGrad.addColorStop(0, '#090d24');
+      bgGrad.addColorStop(0.55, '#31105f');
+      bgGrad.addColorStop(1, '#be185d');
       this.ctx.fillStyle = bgGrad;
       this.ctx.fillRect(0, 0, w, groundY);
 
-      // Neon Sun on Horizon
-      const sunY = groundY - 60;
-      const sunGrad = this.ctx.createLinearGradient(0, sunY - 80, 0, sunY + 80);
-      sunGrad.addColorStop(0, '#f43f5e');
-      sunGrad.addColorStop(1, '#fbbf24');
+      // Outlined Retro Cartoon Sun with Stripes
+      const sunY = groundY - 68;
+      const sunGrad = this.ctx.createLinearGradient(0, sunY - 90, 0, sunY + 90);
+      sunGrad.addColorStop(0, '#fb7185');
+      sunGrad.addColorStop(1, '#fde047');
+      this.ctx.save();
       this.ctx.fillStyle = sunGrad;
-      this.ctx.beginPath();
-      this.ctx.arc(w / 2, sunY, 90, 0, Math.PI * 2);
-      this.ctx.fill();
-
-      // Skyline Layer 1 (Distant Silhouette)
-      this.ctx.fillStyle = '#0f172a';
-      for (let i = 0; i < w + 200; i += 80) {
-        const x = (i - (this.scrollX * 0.15) % 80) - 80;
-        const bHeight = 100 + (i % 7) * 20;
-        this.ctx.fillRect(x, groundY - bHeight, 60, bHeight);
-      }
-
-      // Skyline Layer 2 (Neon Illuminated Buildings)
-      this.ctx.fillStyle = '#1e1035';
       this.ctx.strokeStyle = '#0f172a';
-      this.ctx.lineWidth = 3;
-      for (let i = 0; i < w + 300; i += 130) {
-        const x = (i - (this.scrollX * 0.35) % 130) - 130;
-        const bHeight = 140 + (i % 5) * 30;
-        this.ctx.fillRect(x, groundY - bHeight, 95, bHeight);
-        this.ctx.strokeRect(x, groundY - bHeight, 95, bHeight);
+      this.ctx.lineWidth = 4;
+      this.ctx.beginPath();
+      this.ctx.arc(w / 2, sunY, 88, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.stroke();
+      this.ctx.fillStyle = '#701a75';
+      for (let s = 12; s < 68; s += 16) {
+        this.ctx.fillRect(w / 2 - 84, sunY + s, 168, 5);
+      }
+      this.ctx.restore();
 
-        // Neon Windows / Sign
-        this.ctx.fillStyle = (i % 2 === 0) ? '#06b6d4' : '#ec4899';
-        this.ctx.fillRect(x + 15, groundY - bHeight + 20, 18, 18);
-        this.ctx.fillRect(x + 55, groundY - bHeight + 20, 18, 18);
-        this.ctx.fillRect(x + 15, groundY - bHeight + 60, 18, 18);
-        this.ctx.fillRect(x + 55, groundY - bHeight + 60, 18, 18);
-        this.ctx.fillStyle = '#1e1035';
+      // Distant City Silhouette
+      this.ctx.fillStyle = '#1e1b4b';
+      for (let i = 0; i < w + 200; i += 85) {
+        const x = (i - (this.scrollX * 0.14) % 85) - 85;
+        const bHeight = 95 + (i % 7) * 20;
+        this.ctx.fillRect(x, groundY - bHeight, 66, bHeight);
       }
 
-      // Neon Grid Ground
+      // Foreground Cartoon Neon Towers
+      for (let i = 0; i < w + 300; i += 140) {
+        const x = (i - (this.scrollX * 0.34) % 140) - 140;
+        const bHeight = 140 + (i % 5) * 28;
+        this.ctx.fillStyle = '#1e1035';
+        this.ctx.strokeStyle = '#0f172a';
+        this.ctx.lineWidth = 3.5;
+        this.ctx.fillRect(x, groundY - bHeight, 98, bHeight);
+        this.ctx.strokeRect(x, groundY - bHeight, 98, bHeight);
+
+        // Roof antenna
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + 49, groundY - bHeight);
+        this.ctx.lineTo(x + 49, groundY - bHeight - 18);
+        this.ctx.stroke();
+
+        // Lit Cartoon Windows
+        this.ctx.fillStyle = (i % 2 === 0) ? '#22d3ee' : '#f472b6';
+        this.ctx.fillRect(x + 14, groundY - bHeight + 20, 22, 16);
+        this.ctx.fillRect(x + 56, groundY - bHeight + 20, 22, 16);
+        this.ctx.fillRect(x + 14, groundY - bHeight + 54, 22, 16);
+        this.ctx.fillRect(x + 56, groundY - bHeight + 54, 22, 16);
+      }
+
+      // Flying Neon Hover-Car in Sky
+      const carX = (w + 120) - ((t * 3.2) % (w + 240));
+      this.ctx.fillStyle = '#38bdf8';
+      this.ctx.strokeStyle = '#0f172a';
+      this.ctx.lineWidth = 2.5;
+      this.ctx.beginPath();
+      this.ctx.roundRect(carX, 85, 38, 14, [7]);
+      this.ctx.fill();
+      this.ctx.stroke();
+
+      // Cyber Grid Ground
       this.ctx.fillStyle = '#09090b';
       this.ctx.fillRect(0, groundY, w, h - groundY);
-
-      // Cyan Grid Line Rim
-      this.ctx.fillStyle = '#06b6d4';
-      this.ctx.shadowBlur = 10;
-      this.ctx.shadowColor = '#06b6d4';
-      this.ctx.fillRect(0, groundY, w, 6);
-      this.ctx.shadowBlur = 0;
+      this.ctx.strokeStyle = 'rgba(34, 211, 238, 0.35)';
+      this.ctx.lineWidth = 2;
+      for (let gx = 0; gx < w + 80; gx += 60) {
+        const sx = (gx - (this.scrollX % 60));
+        this.ctx.beginPath();
+        this.ctx.moveTo(sx, groundY + 6);
+        this.ctx.lineTo(sx - 40, h);
+        this.ctx.stroke();
+      }
+      this.ctx.fillStyle = '#22d3ee';
+      this.ctx.fillRect(0, groundY, w, 7);
 
     } else if (theme === 'ice') {
-      // Arctic Ice World
+      // Cartoon Arctic Aurora & Cel-Shaded Peaks
       const bgGrad = this.ctx.createLinearGradient(0, 0, 0, groundY);
-      bgGrad.addColorStop(0, '#0c4a6e');
-      bgGrad.addColorStop(0.55, '#0284c7');
+      bgGrad.addColorStop(0, '#0f172a');
+      bgGrad.addColorStop(0.45, '#0284c7');
       bgGrad.addColorStop(1, '#bae6fd');
       this.ctx.fillStyle = bgGrad;
       this.ctx.fillRect(0, 0, w, groundY);
 
-      // Snow Peaks Parallax
-      this.ctx.fillStyle = '#e0f2fe';
-      this.ctx.strokeStyle = '#0f172a';
-      this.ctx.lineWidth = 3;
+      // Waving Cartoon Aurora Ribbon
+      this.ctx.save();
+      this.ctx.strokeStyle = 'rgba(74, 222, 128, 0.45)';
+      this.ctx.lineWidth = 22;
+      this.ctx.beginPath();
+      for (let ax = 0; ax <= w; ax += 40) {
+        const ay = 75 + Math.sin(ax * 0.012 + t * 0.03) * 24;
+        if (ax === 0) this.ctx.moveTo(ax, ay);
+        else this.ctx.lineTo(ax, ay);
+      }
+      this.ctx.stroke();
+      this.ctx.restore();
+
+      // Cel-Shaded Snow Peaks with Left Sunlit Side & Right Ice Shadow
       for (let i = 0; i < w + 320; i += 220) {
         const x = (i - (this.scrollX * 0.2) % 220) - 220;
+        this.ctx.fillStyle = '#f0f9ff';
+        this.ctx.strokeStyle = '#0f172a';
+        this.ctx.lineWidth = 3.5;
         this.ctx.beginPath();
         this.ctx.moveTo(x, groundY);
-        this.ctx.lineTo(x + 110, groundY - 150);
+        this.ctx.lineTo(x + 110, groundY - 155);
         this.ctx.lineTo(x + 220, groundY);
         this.ctx.closePath();
         this.ctx.fill();
+
+        this.ctx.fillStyle = '#bae6fd';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + 110, groundY - 155);
+        this.ctx.lineTo(x + 220, groundY);
+        this.ctx.lineTo(x + 110, groundY);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, groundY);
+        this.ctx.lineTo(x + 110, groundY - 155);
+        this.ctx.lineTo(x + 220, groundY);
         this.ctx.stroke();
       }
 
-      // Falling Snowflakes
-      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      // Crisp Outlined Snowflakes
+      this.ctx.fillStyle = '#ffffff';
       for (let i = 0; i < 24; i++) {
-        const sx = ((i * 97 + this.player.animFrame * 0.7) % w);
-        const sy = ((i * 53 + this.player.animFrame * 1.6) % groundY);
+        const sx = ((i * 97 + t * 0.7) % w);
+        const sy = ((i * 53 + t * 1.6) % groundY);
         this.ctx.beginPath();
-        this.ctx.arc(sx, sy, 3 + (i % 3), 0, Math.PI * 2);
+        this.ctx.arc(sx, sy, 3.5 + (i % 3), 0, Math.PI * 2);
         this.ctx.fill();
       }
 
-      // Icy Ground
+      // Icy Ground with Thick Cartoon Snow Top
       const iceGrad = this.ctx.createLinearGradient(0, groundY, 0, h);
       iceGrad.addColorStop(0, '#7dd3fc');
       iceGrad.addColorStop(1, '#0284c7');
       this.ctx.fillStyle = iceGrad;
       this.ctx.fillRect(0, groundY, w, h - groundY);
       this.ctx.fillStyle = '#f0f9ff';
-      this.ctx.fillRect(0, groundY, w, 10);
+      this.ctx.fillRect(0, groundY, w, 14);
+      this.ctx.strokeStyle = '#0f172a';
+      this.ctx.lineWidth = 3.5;
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, groundY);
+      this.ctx.lineTo(w, groundY);
+      this.ctx.stroke();
 
     } else if (theme === 'beach') {
-      // Sunny Tropical Beach
+      // Sunny Animated Cartoon Beach
       const bgGrad = this.ctx.createLinearGradient(0, 0, 0, groundY);
-      bgGrad.addColorStop(0, '#0ea5e9');
-      bgGrad.addColorStop(0.65, '#38bdf8');
+      bgGrad.addColorStop(0, '#0284c7');
+      bgGrad.addColorStop(0.6, '#38bdf8');
       bgGrad.addColorStop(1, '#fef08a');
       this.ctx.fillStyle = bgGrad;
       this.ctx.fillRect(0, 0, w, groundY);
 
-      // Sun
-      this.ctx.fillStyle = '#fde047';
-      this.ctx.beginPath();
-      this.ctx.arc(w - 110, 90, 42, 0, Math.PI * 2);
-      this.ctx.fill();
+      // Smiling Cartoon Sun with Rays
+      this.drawCartoonSun(w - 105, 82, 36, t);
 
-      // Turquoise Ocean Strip
-      this.ctx.fillStyle = '#06b6d4';
-      this.ctx.fillRect(0, groundY - 36, w, 36);
-
-      // Distant Palm Trees
-      for (let i = 0; i < w + 320; i += 260) {
-        const x = (i - (this.scrollX * 0.28) % 260) - 260;
-        this.ctx.fillStyle = '#92400e';
-        this.ctx.fillRect(x + 60, groundY - 115, 14, 115);
-        this.ctx.fillStyle = '#16a34a';
-        this.ctx.beginPath();
-        this.ctx.ellipse(x + 42, groundY - 115, 32, 10, -0.3, 0, Math.PI * 2);
-        this.ctx.ellipse(x + 92, groundY - 115, 32, 10, 0.3, 0, Math.PI * 2);
-        this.ctx.fill();
+      // Outlined Clouds
+      for (let i = 0; i < w + 420; i += 300) {
+        const x = (i - (this.scrollX * 0.09) % 300) - 300;
+        this.drawCartoonCloud(x, 70 + (i % 2) * 28, 42);
       }
 
-      // Golden Sand Ground
+      // Animated Sparkling Ocean Waves
+      this.ctx.fillStyle = '#06b6d4';
+      this.ctx.fillRect(0, groundY - 40, w, 40);
+      this.ctx.strokeStyle = '#e0f2fe';
+      this.ctx.lineWidth = 3;
+      this.ctx.beginPath();
+      for (let wx = 0; wx <= w; wx += 30) {
+        const wy = groundY - 38 + Math.sin(wx * 0.04 + t * 0.08) * 4;
+        if (wx === 0) this.ctx.moveTo(wx, wy);
+        else this.ctx.lineTo(wx, wy);
+      }
+      this.ctx.stroke();
+
+      // Outlined Cartoon Palm Trees
+      for (let i = 0; i < w + 320; i += 260) {
+        const x = (i - (this.scrollX * 0.28) % 260) - 260;
+        this.ctx.fillStyle = '#b45309';
+        this.ctx.strokeStyle = '#0f172a';
+        this.ctx.lineWidth = 3;
+        this.ctx.fillRect(x + 60, groundY - 118, 15, 118);
+        this.ctx.strokeRect(x + 60, groundY - 118, 15, 118);
+
+        this.ctx.fillStyle = '#22c55e';
+        this.ctx.beginPath();
+        this.ctx.ellipse(x + 40, groundY - 118, 34, 11, -0.35, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.stroke();
+        this.ctx.beginPath();
+        this.ctx.ellipse(x + 95, groundY - 118, 34, 11, 0.35, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.stroke();
+      }
+
+      // Golden Cartoon Sand Ground
       this.ctx.fillStyle = '#eab308';
       this.ctx.fillRect(0, groundY, w, h - groundY);
       this.ctx.fillStyle = '#fde047';
-      this.ctx.fillRect(0, groundY, w, 12);
+      this.ctx.fillRect(0, groundY, w, 14);
+      this.ctx.strokeStyle = '#0f172a';
+      this.ctx.lineWidth = 3.5;
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, groundY);
+      this.ctx.lineTo(w, groundY);
+      this.ctx.stroke();
 
     } else if (theme === 'space') {
-      // Deep Galaxy Space
+      // Cartoon Cosmic Galaxy with Nebula, Saturn, Moon & UFO
       const bgGrad = this.ctx.createLinearGradient(0, 0, 0, groundY);
       bgGrad.addColorStop(0, '#020617');
-      bgGrad.addColorStop(0.6, '#1e1b4b');
-      bgGrad.addColorStop(1, '#3b0764');
+      bgGrad.addColorStop(0.55, '#1e1b4b');
+      bgGrad.addColorStop(1, '#581c87');
       this.ctx.fillStyle = bgGrad;
       this.ctx.fillRect(0, 0, w, groundY);
 
-      // Twinkling Stars
-      this.ctx.fillStyle = '#ffffff';
-      for (let i = 0; i < 40; i++) {
+      // Soft Cosmic Nebula Blobs
+      this.ctx.fillStyle = 'rgba(236, 72, 153, 0.16)';
+      this.ctx.beginPath();
+      this.ctx.arc(w * 0.25, groundY * 0.38, 120, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.fillStyle = 'rgba(56, 189, 248, 0.14)';
+      this.ctx.beginPath();
+      this.ctx.arc(w * 0.68, groundY * 0.5, 140, 0, Math.PI * 2);
+      this.ctx.fill();
+
+      // Twinkling 4-point Cartoon Stars
+      this.ctx.fillStyle = '#fef08a';
+      for (let i = 0; i < 36; i++) {
         const sx = (i * 89 + w - (this.scrollX * 0.08) % w) % w;
-        const sy = (i * 47) % (groundY - 20);
-        this.ctx.fillRect(sx, sy, (i % 3) + 1, (i % 3) + 1);
+        const sy = (i * 47) % (groundY - 24);
+        const s = 2.5 + (i % 3);
+        this.ctx.fillRect(sx, sy, s, s);
       }
 
-      // Ringed Planet
+      // Outlined Ringed Planet with Cel Highlight
       this.ctx.save();
       this.ctx.fillStyle = '#f59e0b';
+      this.ctx.strokeStyle = '#0f172a';
+      this.ctx.lineWidth = 3.5;
       this.ctx.beginPath();
       this.ctx.arc(w * 0.72, 110, 44, 0, Math.PI * 2);
       this.ctx.fill();
+      this.ctx.stroke();
       this.ctx.strokeStyle = '#fde68a';
       this.ctx.lineWidth = 6;
       this.ctx.beginPath();
@@ -1036,67 +1167,133 @@ export class RunnerEngine {
       this.ctx.stroke();
       this.ctx.restore();
 
+      // Drifting Friendly Cartoon UFO
+      const ufoX = (w + 100) - ((t * 1.4) % (w + 220));
+      const ufoY = 90 + Math.sin(t * 0.06) * 14;
+      this.ctx.fillStyle = '#38bdf8';
+      this.ctx.strokeStyle = '#0f172a';
+      this.ctx.lineWidth = 2.5;
+      this.ctx.beginPath();
+      this.ctx.arc(ufoX, ufoY - 6, 14, Math.PI, 0);
+      this.ctx.fill();
+      this.ctx.stroke();
+      this.ctx.fillStyle = '#a855f7';
+      this.ctx.beginPath();
+      this.ctx.ellipse(ufoX, ufoY, 28, 9, 0, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.stroke();
+
       // Moon Crater Ground
       this.ctx.fillStyle = '#334155';
       this.ctx.fillRect(0, groundY, w, h - groundY);
       this.ctx.fillStyle = '#94a3b8';
-      this.ctx.fillRect(0, groundY, w, 8);
+      this.ctx.fillRect(0, groundY, w, 12);
+      this.ctx.strokeStyle = '#0f172a';
+      this.ctx.lineWidth = 3.5;
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, groundY);
+      this.ctx.lineTo(w, groundY);
+      this.ctx.stroke();
 
     } else if (theme === 'candy') {
-      // Cotton Candy World
+      // Cartoon Sugar World with Swirled Lollipops & Icing Sprinkles
       const bgGrad = this.ctx.createLinearGradient(0, 0, 0, groundY);
-      bgGrad.addColorStop(0, '#f472b6');
-      bgGrad.addColorStop(0.6, '#fbcfe8');
+      bgGrad.addColorStop(0, '#ec4899');
+      bgGrad.addColorStop(0.55, '#fbcfe8');
       bgGrad.addColorStop(1, '#fef9c3');
       this.ctx.fillStyle = bgGrad;
       this.ctx.fillRect(0, 0, w, groundY);
 
-      // Lollipop Hills
+      // Puffy Cotton-Candy Clouds
+      for (let i = 0; i < w + 400; i += 280) {
+        const x = (i - (this.scrollX * 0.1) % 280) - 280;
+        this.drawCartoonCloud(x, 72 + (i % 3) * 18, 44, '#fff1f2');
+      }
+
+      // Swirled Outlined Lollipops
       for (let i = 0; i < w + 280; i += 200) {
         const x = (i - (this.scrollX * 0.22) % 200) - 200;
         this.ctx.fillStyle = '#ffffff';
-        this.ctx.fillRect(x + 95, groundY - 120, 8, 120);
-        this.ctx.fillStyle = (i / 200) % 2 === 0 ? '#ec4899' : '#38bdf8';
         this.ctx.strokeStyle = '#0f172a';
         this.ctx.lineWidth = 3;
+        this.ctx.fillRect(x + 95, groundY - 122, 9, 122);
+        this.ctx.strokeRect(x + 95, groundY - 122, 9, 122);
+
+        this.ctx.fillStyle = (i / 200) % 2 === 0 ? '#f43f5e' : '#38bdf8';
         this.ctx.beginPath();
-        this.ctx.arc(x + 99, groundY - 120, 26, 0, Math.PI * 2);
+        this.ctx.arc(x + 99, groundY - 124, 28, 0, Math.PI * 2);
         this.ctx.fill();
+        this.ctx.stroke();
+
+        // White swirl ring inside lollipop
+        this.ctx.strokeStyle = '#ffffff';
+        this.ctx.lineWidth = 3.5;
+        this.ctx.beginPath();
+        this.ctx.arc(x + 99, groundY - 124, 15, 0, Math.PI * 1.4);
         this.ctx.stroke();
       }
 
-      // Chocolate & Icing Ground
+      // Chocolate & Strawberry Icing Ground with Sprinkles
       this.ctx.fillStyle = '#78350f';
       this.ctx.fillRect(0, groundY, w, h - groundY);
       this.ctx.fillStyle = '#f472b6';
-      this.ctx.fillRect(0, groundY, w, 14);
+      this.ctx.fillRect(0, groundY, w, 16);
+      this.ctx.strokeStyle = '#0f172a';
+      this.ctx.lineWidth = 3.5;
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, groundY);
+      this.ctx.lineTo(w, groundY);
+      this.ctx.stroke();
+
+      const sprinkleColors = ['#fde047', '#38bdf8', '#4ade80', '#ffffff'];
+      for (let i = 0; i < w + 100; i += 45) {
+        const sx = (i - (this.scrollX) % 45) - 45;
+        this.ctx.fillStyle = sprinkleColors[(i / 45) % sprinkleColors.length];
+        this.ctx.fillRect(sx + 10, groundY + 5, 10, 4);
+      }
 
     } else {
-      // Modern 2D Cartoon Meadow Sky
+      // Modern Animated Cartoon Meadow with Smiling Sun, Outlined Clouds, Trees & Hills
       const bgGrad = this.ctx.createLinearGradient(0, 0, 0, groundY);
-      bgGrad.addColorStop(0, '#38bdf8');
-      bgGrad.addColorStop(0.7, '#7dd3fc');
+      bgGrad.addColorStop(0, '#0ea5e9');
+      bgGrad.addColorStop(0.62, '#38bdf8');
       bgGrad.addColorStop(1, '#bae6fd');
       this.ctx.fillStyle = bgGrad;
       this.ctx.fillRect(0, 0, w, groundY);
 
-      // Puffy Cartoon Clouds (Layer 1)
-      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      // Smiling Cartoon Sun with Gentle Rotating Rays
+      this.drawCartoonSun(w - 110, 86, 38, t);
+
+      // Outlined Puffy Cartoon Clouds (Layer 1)
       for (let i = 0; i < w + 400; i += 280) {
         const x = (i - (this.scrollX * 0.1) % 280) - 280;
-        this.drawCartoonCloud(x, 70 + (i % 3) * 20, 50);
+        this.drawCartoonCloud(x, 72 + (i % 3) * 20, 48);
       }
 
-      // Distant Rounded Hills (Layer 2)
-      this.ctx.fillStyle = '#86efac';
-      this.ctx.strokeStyle = '#0f172a';
-      this.ctx.lineWidth = 3.5;
+      // Distant Cel-Shaded Hills (Layer 2)
       for (let i = 0; i < w + 500; i += 250) {
-        const x = (i - (this.scrollX * 0.25) % 250) - 250;
+        const x = (i - (this.scrollX * 0.22) % 250) - 250;
+        this.ctx.fillStyle = '#86efac';
+        this.ctx.strokeStyle = '#0f172a';
+        this.ctx.lineWidth = 3.5;
         this.ctx.beginPath();
-        this.ctx.arc(x + 125, groundY + 80, 160, Math.PI, 0);
+        this.ctx.arc(x + 125, groundY + 78, 165, Math.PI, 0);
         this.ctx.fill();
         this.ctx.stroke();
+
+        // Cartoon Tree on Hill
+        this.ctx.fillStyle = '#92400e';
+        this.ctx.fillRect(x + 118, groundY - 122, 14, 42);
+        this.ctx.strokeRect(x + 118, groundY - 122, 14, 42);
+        this.ctx.fillStyle = '#16a34a';
+        this.ctx.beginPath();
+        this.ctx.arc(x + 125, groundY - 138, 28, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.stroke();
+        this.ctx.fillStyle = '#4ade80';
+        this.ctx.beginPath();
+        this.ctx.arc(x + 117, groundY - 146, 12, 0, Math.PI * 2);
+        this.ctx.fill();
       }
 
       // Lush Grass Ground
@@ -1106,9 +1303,8 @@ export class RunnerEngine {
       this.ctx.fillStyle = grassGrad;
       this.ctx.fillRect(0, groundY, w, h - groundY);
 
-      // Top Grass Outline & Layer
       this.ctx.fillStyle = '#4ade80';
-      this.ctx.fillRect(0, groundY, w, 12);
+      this.ctx.fillRect(0, groundY, w, 13);
 
       this.ctx.lineWidth = 3.5;
       this.ctx.strokeStyle = '#0f172a';
@@ -1117,26 +1313,74 @@ export class RunnerEngine {
       this.ctx.lineTo(w, groundY);
       this.ctx.stroke();
 
-      // Grass tufts along the ground
-      this.ctx.fillStyle = '#16a34a';
+      // Outlined Grass Tufts & Tiny Meadow Flowers
       for (let i = 0; i < w + 100; i += 90) {
         const x = (i - (this.scrollX) % 90) - 90;
+        this.ctx.fillStyle = '#16a34a';
         this.ctx.beginPath();
         this.ctx.arc(x, groundY, 6, Math.PI, 0);
         this.ctx.arc(x + 8, groundY, 9, Math.PI, 0);
         this.ctx.arc(x + 16, groundY, 6, Math.PI, 0);
         this.ctx.fill();
+
+        if ((i / 90) % 2 === 0) {
+          this.ctx.fillStyle = '#fef08a';
+          this.ctx.beginPath();
+          this.ctx.arc(x + 45, groundY + 18, 4.5, 0, Math.PI * 2);
+          this.ctx.fill();
+        }
       }
     }
   }
 
-  drawCartoonCloud(x, y, radius) {
+  drawCartoonSun(x, y, radius, frame) {
+    this.ctx.save();
+    this.ctx.translate(x, y);
+    const rot = frame * 0.01;
+    this.ctx.strokeStyle = '#fde047';
+    this.ctx.lineWidth = 4;
+    for (let i = 0; i < 8; i++) {
+      const a = rot + (i * Math.PI) / 4;
+      this.ctx.beginPath();
+      this.ctx.moveTo(Math.cos(a) * (radius + 6), Math.sin(a) * (radius + 6));
+      this.ctx.lineTo(Math.cos(a) * (radius + 17), Math.sin(a) * (radius + 17));
+      this.ctx.stroke();
+    }
+
+    this.ctx.fillStyle = '#fde047';
+    this.ctx.strokeStyle = '#0f172a';
+    this.ctx.lineWidth = 3.5;
     this.ctx.beginPath();
-    this.ctx.arc(x, y, radius, Math.PI * 0.5, Math.PI * 1.5);
-    this.ctx.arc(x + radius, y - radius * 0.5, radius * 0.7, Math.PI, Math.PI * 1.85);
-    this.ctx.arc(x + radius * 2, y, radius * 0.8, Math.PI * 1.2, Math.PI * 0.2);
+    this.ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.stroke();
+
+    // Cute Cartoon Sun Face
+    this.ctx.fillStyle = '#0f172a';
+    this.ctx.beginPath();
+    this.ctx.arc(-10, -4, 3.2, 0, Math.PI * 2);
+    this.ctx.arc(10, -4, 3.2, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.lineWidth = 2.5;
+    this.ctx.beginPath();
+    this.ctx.arc(0, 2, 11, 0.15 * Math.PI, 0.85 * Math.PI);
+    this.ctx.stroke();
+    this.ctx.restore();
+  }
+
+  drawCartoonCloud(x, y, radius, fill = '#ffffff') {
+    this.ctx.save();
+    this.ctx.fillStyle = fill;
+    this.ctx.strokeStyle = '#0f172a';
+    this.ctx.lineWidth = 3;
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, radius * 0.65, Math.PI * 0.5, Math.PI * 1.5);
+    this.ctx.arc(x + radius * 0.75, y - radius * 0.42, radius * 0.62, Math.PI * 1.05, Math.PI * 1.9);
+    this.ctx.arc(x + radius * 1.55, y, radius * 0.68, Math.PI * 1.4, Math.PI * 0.5);
     this.ctx.closePath();
     this.ctx.fill();
+    this.ctx.stroke();
+    this.ctx.restore();
   }
 
   gameOver() {

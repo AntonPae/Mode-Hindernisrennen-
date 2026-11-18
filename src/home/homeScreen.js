@@ -341,32 +341,88 @@ export function setupHomeScreen(stateManager) {
     const state = HomeManager.getState();
 
     ctx.clearRect(0, 0, w, h);
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
 
     // Sky gradient
     const sky = ctx.createLinearGradient(0, 0, 0, groundY);
-    sky.addColorStop(0, '#38bdf8');
+    sky.addColorStop(0, '#0ea5e9');
+    sky.addColorStop(0.65, '#38bdf8');
     sky.addColorStop(1, '#bae6fd');
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, w, groundY);
 
-    // Sun & Clouds
+    // Smiling Cartoon Sun with Gentle Rays
+    ctx.save();
+    ctx.translate(w - 72, 54);
+    ctx.strokeStyle = '#fde047';
+    ctx.lineWidth = 3.5;
+    for (let r = 0; r < 8; r++) {
+      const a = animFrame * 0.01 + (r * Math.PI) / 4;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * 32, Math.sin(a) * 32);
+      ctx.lineTo(Math.cos(a) * 41, Math.sin(a) * 41);
+      ctx.stroke();
+    }
     ctx.fillStyle = '#fde047';
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(w - 75, 55, 30, 0, Math.PI * 2);
+    ctx.arc(0, 0, 27, 0, Math.PI * 2);
     ctx.fill();
-
-    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.stroke();
+    ctx.fillStyle = '#0f172a';
     ctx.beginPath();
-    ctx.arc(110, 50, 22, 0, Math.PI * 2);
-    ctx.arc(135, 45, 28, 0, Math.PI * 2);
-    ctx.arc(162, 52, 20, 0, Math.PI * 2);
+    ctx.arc(-7, -3, 2.5, 0, Math.PI * 2);
+    ctx.arc(7, -3, 2.5, 0, Math.PI * 2);
     ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 2, 8, 0.15 * Math.PI, 0.85 * Math.PI);
+    ctx.stroke();
+    ctx.restore();
 
-    // Grass Lawn
+    // Outlined Drifting Cartoon Clouds
+    [
+      { x: 115 + Math.sin(animFrame * 0.008) * 14, y: 52, r: 28 },
+      { x: 420 + Math.cos(animFrame * 0.007) * 18, y: 46, r: 24 }
+    ].forEach((c) => {
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, c.r * 0.65, Math.PI * 0.5, Math.PI * 1.5);
+      ctx.arc(c.x + c.r * 0.75, c.y - c.r * 0.4, c.r * 0.6, Math.PI * 1.05, Math.PI * 1.9);
+      ctx.arc(c.x + c.r * 1.55, c.y, c.r * 0.65, Math.PI * 1.4, Math.PI * 0.5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    });
+
+    // Soft Distant Cartoon Hills
+    ctx.fillStyle = '#86efac';
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(380, groundY + 45, 130, Math.PI, 0);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(630, groundY + 55, 155, Math.PI, 0);
+    ctx.fill();
+    ctx.stroke();
+
+    // Grass Lawn with Outlined Edge
     ctx.fillStyle = '#22c55e';
     ctx.fillRect(0, groundY, w, h - groundY);
     ctx.fillStyle = '#4ade80';
-    ctx.fillRect(0, groundY, w, 10);
+    ctx.fillRect(0, groundY, w, 11);
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, groundY);
+    ctx.lineTo(w, groundY);
+    ctx.stroke();
 
     // --- HOUSE STRUCTURE (Left Side) ---
     const hasKitchen = HomeManager.hasItem('expansions', 'kitchen');
@@ -378,6 +434,22 @@ export function setupHomeScreen(stateManager) {
     const floorH = 145;
     const houseY = groundY - floorH;
 
+    // Chimney + Animated Smoke Puffs
+    const chimX = houseX + 44;
+    const chimTopY = hasBedroom ? houseY - 155 : houseY - 52;
+    ctx.fillStyle = '#991b1b';
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 3;
+    ctx.fillRect(chimX, chimTopY, 24, 34);
+    ctx.strokeRect(chimX, chimTopY, 24, 34);
+    for (let s = 0; s < 3; s++) {
+      const cycle = ((animFrame * 0.55 + s * 22) % 66) / 66;
+      ctx.fillStyle = `rgba(255, 255, 255, ${(1 - cycle) * 0.8})`;
+      ctx.beginPath();
+      ctx.arc(chimX + 12 + Math.sin(cycle * 5) * 6, chimTopY - 8 - cycle * 32, 6 + cycle * 7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     // Upper floor (Anbau: Obergeschoss)
     if (hasBedroom) {
       const upperY = houseY - 115;
@@ -387,7 +459,7 @@ export function setupHomeScreen(stateManager) {
       ctx.fillRect(houseX + 10, upperY, 230, 115);
       ctx.strokeRect(houseX + 10, upperY, 230, 115);
 
-      // Pitched Roof on 2nd floor
+      // Pitched Roof on 2nd floor with Cel Highlight
       ctx.fillStyle = '#dc2626';
       ctx.beginPath();
       ctx.moveTo(houseX - 5, upperY);
@@ -397,10 +469,18 @@ export function setupHomeScreen(stateManager) {
       ctx.fill();
       ctx.stroke();
 
-      // Upper Window
+      // Upper Window with Glass Shine
       ctx.fillStyle = '#bae6fd';
       ctx.fillRect(houseX + 190, upperY + 25, 36, 40);
       ctx.strokeRect(houseX + 190, upperY + 25, 36, 40);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(houseX + 196, upperY + 34);
+      ctx.lineTo(houseX + 210, upperY + 52);
+      ctx.stroke();
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 3.5;
 
       // Bed upstairs if owned
       if (HomeManager.hasItem('furniture', 'bed')) {
@@ -424,11 +504,13 @@ export function setupHomeScreen(stateManager) {
       ctx.stroke();
     }
 
-    // Main Floor Room Walls
+    // Main Floor Room Walls with Subtle Wall Highlight
     ctx.fillStyle = '#fde68a';
     ctx.strokeStyle = '#0f172a';
     ctx.lineWidth = 3.5;
     ctx.fillRect(houseX, houseY, houseW, floorH);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.fillRect(houseX + 4, houseY + 4, 18, floorH - 18);
     ctx.strokeRect(houseX, houseY, houseW, floorH);
 
     // Wooden Floor inside house

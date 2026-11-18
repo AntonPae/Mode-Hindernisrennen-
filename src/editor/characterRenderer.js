@@ -37,30 +37,35 @@ export function renderCharacter(ctx, x, y, playerConfig, animationState = { fram
   let squashX = 1;
   let squashY = 1;
 
+  let leanAngle = 0;
+
   if (animationState.pose === 'run') {
     const runCycle = Math.sin(animationState.frame * 0.28);
-    leg1Angle = runCycle * 0.7;
-    leg2Angle = -runCycle * 0.7;
-    arm1Angle = -runCycle * 0.8;
-    arm2Angle = runCycle * 0.8;
-    torsoBounce = Math.abs(Math.sin(animationState.frame * 0.28)) * 4 * scaleY;
-    squashX = 1 + Math.sin(animationState.frame * 0.28) * 0.04;
-    squashY = 1 - Math.sin(animationState.frame * 0.28) * 0.04;
+    leg1Angle = runCycle * 0.72;
+    leg2Angle = -runCycle * 0.72;
+    arm1Angle = -runCycle * 0.85;
+    arm2Angle = runCycle * 0.85;
+    torsoBounce = Math.abs(Math.sin(animationState.frame * 0.28)) * 5 * scaleY;
+    squashX = 1 + Math.sin(animationState.frame * 0.28) * 0.05;
+    squashY = 1 - Math.sin(animationState.frame * 0.28) * 0.05;
+    leanAngle = 0.07;
   } else if (animationState.pose === 'jump') {
-    leg1Angle = -0.4;
-    leg2Angle = 0.3;
-    arm1Angle = -1.3;
-    arm2Angle = -0.7;
-    squashX = 0.88;
-    squashY = 1.15;
+    leg1Angle = -0.45;
+    leg2Angle = 0.35;
+    arm1Angle = -1.35;
+    arm2Angle = -0.75;
+    squashX = 0.87;
+    squashY = 1.16;
+    leanAngle = -0.04;
   } else if (animationState.pose === 'duck') {
-    squashX = 1.3;
-    squashY = 0.55;
+    squashX = 1.32;
+    squashY = 0.54;
     leg1Angle = -0.8;
     leg2Angle = -0.8;
+    leanAngle = 0.12;
   } else {
     // Idle gentle float/breath
-    torsoBounce = Math.sin(animationState.frame * 0.08) * 2;
+    torsoBounce = Math.sin(animationState.frame * 0.08) * 2.5;
   }
 
   ctx.scale(squashX, squashY);
@@ -73,8 +78,9 @@ export function renderCharacter(ctx, x, y, playerConfig, animationState = { fram
   ctx.fill();
   ctx.restore();
 
-  // Shift character according to bounce
+  // Shift character according to bounce & dynamic lean
   ctx.translate(0, -torsoBounce);
+  ctx.rotate(leanAngle);
 
   // Back Hair / Cape layer behind body
   if (playerConfig.clothes.top.style === 'cape') {
@@ -135,7 +141,8 @@ export function renderCharacter(ctx, x, y, playerConfig, animationState = { fram
   drawArm(ctx, torsoWidth / 2 + 2, torsoY + 8, armWidth, armHeight, arm1Angle, playerConfig.clothes.top);
 
   // Head & Skin & Face & Front Hair
-  drawHead(ctx, 0, headY, headRadius, playerConfig.body);
+  const isBlinking = (animationState.frame % 185) > 179;
+  drawHead(ctx, 0, headY, headRadius, playerConfig.body, isBlinking);
 
   ctx.restore();
 }
@@ -182,28 +189,55 @@ function drawArm(ctx, x, y, width, height, angle, topConfig) {
   ctx.restore();
 }
 
-function drawHead(ctx, x, y, radius, bodyConfig) {
+function drawHead(ctx, x, y, radius, bodyConfig, isBlinking = false) {
   ctx.save();
   ctx.translate(x, y);
+
+  // Cartoon Ears behind Head
+  [-1, 1].forEach((dir) => {
+    ctx.fillStyle = '#ffdbac';
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(dir * radius * 0.96, radius * 0.08, radius * 0.24, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  });
 
   // Head Base / Skin
   ctx.beginPath();
   ctx.arc(0, 0, radius, 0, Math.PI * 2);
   ctx.fillStyle = '#ffdbac';
   ctx.fill();
+
+  // Cel-shading rim highlight & soft chin shadow
+  ctx.save();
+  ctx.clip();
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+  ctx.beginPath();
+  ctx.ellipse(-radius * 0.32, -radius * 0.45, radius * 0.48, radius * 0.24, -0.45, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(217, 119, 6, 0.14)';
+  ctx.beginPath();
+  ctx.arc(radius * 0.22, radius * 0.25, radius * 0.98, 0.2, Math.PI - 0.2);
+  ctx.fill();
+  ctx.restore();
+
   ctx.lineWidth = 3.5;
   ctx.strokeStyle = '#0f172a';
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
   ctx.stroke();
 
   // Subtle Skin Highlight / Cheek Rosy Glow
-  ctx.fillStyle = 'rgba(251, 113, 133, 0.35)';
+  ctx.fillStyle = 'rgba(251, 113, 133, 0.38)';
   ctx.beginPath();
   ctx.arc(-radius * 0.45, radius * 0.22, radius * 0.22, 0, Math.PI * 2);
   ctx.arc(radius * 0.45, radius * 0.22, radius * 0.22, 0, Math.PI * 2);
   ctx.fill();
 
   // Expressive Cartoon Face
-  drawCartoonFace(ctx, radius, bodyConfig.faceId);
+  drawCartoonFace(ctx, radius, bodyConfig.faceId, isBlinking);
 
   // Front Hair / Bangs
   if (bodyConfig.hairId !== 'hair_none') {
@@ -336,7 +370,7 @@ function drawHead(ctx, x, y, radius, bodyConfig) {
   ctx.restore();
 }
 
-function drawCartoonFace(ctx, radius, faceId) {
+function drawCartoonFace(ctx, radius, faceId, isBlinking = false) {
   ctx.fillStyle = '#0f172a';
   ctx.strokeStyle = '#0f172a';
   ctx.lineWidth = 3;
@@ -349,6 +383,17 @@ function drawCartoonFace(ctx, radius, faceId) {
       ctx.roundRect(-radius * 0.75, -radius * 0.22, radius * 0.68, radius * 0.42, [4]);
       ctx.roundRect(radius * 0.07, -radius * 0.22, radius * 0.68, radius * 0.42, [4]);
       ctx.fill();
+      // Glossy diagonal lens reflection
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(-radius * 0.6, -radius * 0.14);
+      ctx.lineTo(-radius * 0.38, radius * 0.1);
+      ctx.moveTo(radius * 0.22, -radius * 0.14);
+      ctx.lineTo(radius * 0.44, radius * 0.1);
+      ctx.stroke();
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 3;
       // Bridge
       ctx.beginPath();
       ctx.moveTo(-radius * 0.1, -radius * 0.08);
@@ -372,8 +417,8 @@ function drawCartoonFace(ctx, radius, faceId) {
       ctx.stroke();
 
       // Focused Eyes with Pupils
-      drawCartoonEye(ctx, -radius * 0.3, 0, radius * 0.18);
-      drawCartoonEye(ctx, radius * 0.3, 0, radius * 0.18);
+      drawCartoonEye(ctx, -radius * 0.3, 0, radius * 0.18, isBlinking);
+      drawCartoonEye(ctx, radius * 0.3, 0, radius * 0.18, isBlinking);
 
       // Determined Mouth
       ctx.lineWidth = 3;
@@ -453,8 +498,8 @@ function drawCartoonFace(ctx, radius, faceId) {
       ctx.stroke();
 
       // Big Eyes
-      drawCartoonEye(ctx, -radius * 0.3, -radius * 0.02, radius * 0.22);
-      drawCartoonEye(ctx, radius * 0.3, -radius * 0.02, radius * 0.22);
+      drawCartoonEye(ctx, -radius * 0.3, -radius * 0.02, radius * 0.22, isBlinking);
+      drawCartoonEye(ctx, radius * 0.3, -radius * 0.02, radius * 0.22, isBlinking);
 
       // Wide Open Happy Mouth
       ctx.beginPath();
@@ -478,9 +523,19 @@ function drawCartoonFace(ctx, radius, faceId) {
   }
 }
 
-function drawCartoonEye(ctx, x, y, r) {
+function drawCartoonEye(ctx, x, y, r, isBlinking = false) {
   ctx.save();
   ctx.translate(x, y);
+
+  if (isBlinking) {
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, 2, r * 0.85, Math.PI * 1.15, Math.PI * 1.85);
+    ctx.stroke();
+    ctx.restore();
+    return;
+  }
 
   // Eye White
   ctx.beginPath();
@@ -561,12 +616,19 @@ function drawTorso(ctx, x, y, width, height, topConfig) {
   ctx.roundRect(-w / 2, 0, w, height, [8, 8, 12, 12]);
   ctx.fill();
 
-  // Cell Shading Side Shadow
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+  // Cel Shading Left Highlight & Right Shadow
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
   ctx.beginPath();
-  ctx.roundRect(w * 0.1, 0, w * 0.4, height, [0, 8, 12, 0]);
+  ctx.roundRect(-w * 0.46, 2, w * 0.25, height - 6, [6]);
   ctx.fill();
 
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+  ctx.beginPath();
+  ctx.roundRect(w * 0.12, 0, w * 0.38, height, [0, 8, 12, 0]);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.roundRect(-w / 2, 0, w, height, [8, 8, 12, 12]);
   ctx.stroke();
 
   // Style Details
