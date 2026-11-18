@@ -182,6 +182,24 @@
         <button id="pauseBtn" class="btn btn-small">⏸️ Pause</button>
       </div>
 
+      <!-- Quick-Time Event Overlay -->
+      <div id="qte-overlay" class="modal hidden qte-modal">
+        <div class="qte-container">
+          <div class="qte-header">
+            <span class="qte-badge">⚡ SCHNELLE ENTSCHEIDUNG!</span>
+          </div>
+          <div class="qte-timer-track">
+            <div id="qte-timer-bar" class="qte-timer-bar"></div>
+          </div>
+          <div id="qte-prompt" class="qte-prompt">
+            Wähle das richtige Portal:
+          </div>
+          <div id="qte-options" class="qte-options">
+            <!-- Buttons injected by QuickTimeEventManager -->
+          </div>
+        </div>
+      </div>
+
       <!-- Touch Controls Container for Mobile & On-Screen Buttons -->
       <div class="touch-controls">
         <div class="touch-group touch-left">

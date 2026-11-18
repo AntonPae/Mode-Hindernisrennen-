@@ -2,6 +2,7 @@ import { PlayerConfig, GameConfig } from '../editor/characterData.js';
 import { renderCharacter } from '../editor/characterRenderer.js';
 import { ControlsManager } from './controls.js';
 import { ObstacleManager } from './obstacles.js';
+import { QuickTimeEventManager } from './quickTimeEvent.js';
 
 class SoundManager {
   constructor() {
@@ -76,6 +77,65 @@ class SoundManager {
     osc.start();
     osc.stop(this.ctx.currentTime + 0.35);
   }
+
+  playDuck() {
+    if (!this.ctx) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(260, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(140, this.ctx.currentTime + 0.12);
+
+    gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.12);
+  }
+
+  playSuccess() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    [440, 554, 659, 880].forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+
+      gain.gain.setValueAtTime(0.3, now + idx * 0.08);
+      gain.gain.linearRampToValueAtTime(0.01, now + idx * 0.08 + 0.2);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(now + idx * 0.08);
+      osc.stop(now + idx * 0.08 + 0.2);
+    });
+  }
+
+  playFail() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    [240, 180].forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.15);
+
+      gain.gain.setValueAtTime(0.35, now + idx * 0.15);
+      gain.gain.linearRampToValueAtTime(0.01, now + idx * 0.15 + 0.25);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+
+      osc.start(now + idx * 0.15);
+      osc.stop(now + idx * 0.15 + 0.25);
+    });
+  }
 }
 
 export class RunnerEngine {
@@ -87,6 +147,7 @@ export class RunnerEngine {
     this.controls = new ControlsManager();
     this.obstacles = new ObstacleManager();
     this.sounds = new SoundManager();
+    this.qte = new QuickTimeEventManager(this);
 
     this.scoreValEl = document.getElementById('scoreVal');
     this.highScoreValEl = document.getElementById('highScoreVal');
@@ -105,6 +166,13 @@ export class RunnerEngine {
     this.scrollX = 0;
     this.baseSpeed = 5;
     this.currentSpeed = this.baseSpeed;
+
+    // Dynamic Biome / Background switching
+    this.currentBiome = 'meadow';
+    this.biomeList = ['meadow', 'cave', 'neon'];
+    this.biomeTransitionDistance = 200; // Switch biome every 200m
+    this.zoneNotificationTimer = 0;
+    this.zoneNotificationText = '';
 
     // Visual particles array (dust, stars, speedlines)
     this.particles = [];
@@ -161,6 +229,9 @@ export class RunnerEngine {
     this.isRunning = true;
     this.isPaused = false;
     this.score = 0;
+    this.currentBiome = GameConfig.background || 'meadow';
+    this.zoneNotificationTimer = 120; // 2 seconds banner at start
+    this.zoneNotificationText = this.getBiomeName(this.currentBiome);
     this.scrollX = 0;
     this.currentSpeed = this.baseSpeed;
     this.particles = [];
@@ -175,14 +246,43 @@ export class RunnerEngine {
 
     this.controls.reset();
     this.obstacles.reset();
+    this.qte.reset();
 
     this.gameOverModal.classList.add('hidden');
     this.lastTime = performance.now();
     requestAnimationFrame((t) => this.gameLoop(t));
   }
 
+  getBiomeName(biome) {
+    switch (biome) {
+      case 'cave':
+        return '🌋 Zone: Höhle & Hölle';
+      case 'neon':
+        return '🌆 Zone: Neon-City';
+      case 'meadow':
+      default:
+        return '🌱 Zone: Grüne Wiese';
+    }
+  }
+
+  addBonusScore(bonusMeters) {
+    this.scrollX += bonusMeters * 10;
+    this.score = Math.floor(this.scrollX / 10);
+    this.scoreValEl.textContent = this.score;
+
+    for (let i = 0; i < 20; i++) {
+      this.spawnCollisionStars(this.player.x + 30, this.player.y - 60);
+    }
+  }
+
+  triggerBonusSpeed() {
+    this.player.invulnerable = true;
+    this.player.invulnerableTimer = 120; // 2 sec turbo
+  }
+
   stop() {
     this.isRunning = false;
+    this.qte.hideOverlay();
   }
 
   gameLoop(timestamp) {
@@ -234,6 +334,10 @@ export class RunnerEngine {
 
     const groundY = this.displayHeight * 0.75;
 
+    // Update Quick-Time Event / Mini-puzzle
+    this.qte.update(this.score);
+    const inBulletTime = this.qte.isEventActive();
+
     // Ability: Speed Boost timer / trigger
     if (this.controls.consumeAbilityPress()) {
       if (PlayerConfig.ability === 'speed_boost' && !this.player.invulnerable) {
@@ -254,6 +358,11 @@ export class RunnerEngine {
       this.currentSpeed = this.baseSpeed + Math.floor(this.score / 100) * 0.35;
     }
 
+    // Bullet-time slow motion during QTE
+    if (inBulletTime) {
+      this.currentSpeed *= 0.35;
+    }
+
     // Controls & Horizontal movement
     if (this.controls.keys.left && this.player.x > 60) {
       this.player.x -= 4.5;
@@ -263,7 +372,11 @@ export class RunnerEngine {
     }
 
     // Duck state
+    const wasDucking = this.player.isDucking;
     this.player.isDucking = this.controls.keys.duck && this.player.isGrounded;
+    if (!wasDucking && this.player.isDucking) {
+      this.sounds.playDuck();
+    }
 
     // Jump handling
     if (this.controls.consumeJumpPress()) {
@@ -320,6 +433,20 @@ export class RunnerEngine {
     this.score = Math.floor(this.scrollX / 10);
     this.scoreValEl.textContent = this.score;
 
+    // Dynamic background biome progression
+    const biomeIndex = Math.floor(this.score / this.biomeTransitionDistance) % this.biomeList.length;
+    const nextBiome = this.biomeList[biomeIndex];
+    if (nextBiome !== this.currentBiome) {
+      this.currentBiome = nextBiome;
+      GameConfig.background = nextBiome;
+      this.zoneNotificationText = this.getBiomeName(nextBiome);
+      this.zoneNotificationTimer = 150; // show zone banner for ~2.5s
+    }
+
+    if (this.zoneNotificationTimer > 0) {
+      this.zoneNotificationTimer--;
+    }
+
     // Update Obstacles
     this.obstacles.update(this.currentSpeed, this.displayWidth, groundY);
 
@@ -348,7 +475,7 @@ export class RunnerEngine {
   draw() {
     this.ctx.clearRect(0, 0, this.displayWidth, this.displayHeight);
 
-    const theme = GameConfig.background || 'meadow';
+    const theme = this.currentBiome || GameConfig.background || 'meadow';
     const groundY = this.displayHeight * 0.75;
 
     // Draw Modern Cartoon Parallax Background
@@ -361,6 +488,11 @@ export class RunnerEngine {
 
     // Draw Obstacles
     this.obstacles.draw(this.ctx, theme);
+
+    // Draw Zone Banner notification
+    if (this.zoneNotificationTimer > 0) {
+      this.drawZoneNotification();
+    }
 
     // Draw Particles
     this.drawParticles();
@@ -380,6 +512,34 @@ export class RunnerEngine {
       frame: this.player.animFrame,
       pose: pose
     });
+    this.ctx.restore();
+  }
+
+  drawZoneNotification() {
+    this.ctx.save();
+    const alpha = Math.min(1, this.zoneNotificationTimer / 30);
+    this.ctx.globalAlpha = alpha;
+
+    const w = 340;
+    const h = 50;
+    const x = (this.displayWidth - w) / 2;
+    const y = 100;
+
+    // Banner Pill
+    this.ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+    this.ctx.strokeStyle = '#38bdf8';
+    this.ctx.lineWidth = 3;
+    this.ctx.beginPath();
+    this.ctx.roundRect(x, y, w, h, [25]);
+    this.ctx.fill();
+    this.ctx.stroke();
+
+    // Banner Text
+    this.ctx.font = 'bold 20px Fredoka, sans-serif';
+    this.ctx.fillStyle = '#fef08a';
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
+    this.ctx.fillText(this.zoneNotificationText, this.displayWidth / 2, y + h / 2);
     this.ctx.restore();
   }
 
@@ -605,6 +765,7 @@ export class RunnerEngine {
 
   gameOver() {
     this.isRunning = false;
+    this.qte.hideOverlay();
     if (this.score > this.highScore) {
       this.highScore = this.score;
       localStorage.setItem('runner_highscore', this.highScore.toString());
