@@ -1840,13 +1840,25 @@ body, html {
   box-shadow: 0 2px 6px rgba(88, 28, 135, 0.08);
 }
 
-.ice-flavor-bar {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 0.5rem;
-  padding: 0.65rem 1rem;
+.ice-station-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  padding: 0.55rem 1rem 0.1rem 1rem;
   background: #ffffff;
   border-top: 1px solid var(--hairline);
+}
+
+.ice-flavor-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  gap: 0.48rem;
+  padding: 0.55rem 1rem 0.65rem 1rem;
+  background: #ffffff;
+}
+
+.home-walk-pad {
+  flex-wrap: wrap;
 }
 
 .ice-flavor-btn {

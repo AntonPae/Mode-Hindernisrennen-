@@ -59,13 +59,13 @@ export const MISSION_DEFS = [
   },
   {
     id: 'serve_icecream',
-    title: 'Eis-Profi',
-    icon: '🍦',
+    title: 'Café- & Eis-Profi',
+    icon: '🍽️',
     baseTarget: 3,
     stepTarget: 2,
     baseReward: 40,
     stepReward: 15,
-    describe: (target) => `Bediene ${target} Gäste in der Eisdiele`
+    describe: (target) => `Bediene ${target} Tische in Café & Eisdiele`
   }
 ];
 
