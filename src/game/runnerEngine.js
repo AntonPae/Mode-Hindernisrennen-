@@ -246,6 +246,13 @@ export class RunnerEngine {
     this.initUIEvents();
     this.resizeCanvas();
     window.addEventListener('resize', () => this.resizeCanvas());
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', () => this.resizeCanvas());
+    }
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(() => this.resizeCanvas());
+      this.resizeObserver.observe(this.canvas);
+    }
   }
 
   initUIEvents() {
@@ -272,12 +279,19 @@ export class RunnerEngine {
   }
 
   resizeCanvas() {
+    const rect = this.canvas.getBoundingClientRect();
+    const w = Math.max(1, Math.round(rect.width || window.innerWidth));
+    const h = Math.max(1, Math.round(rect.height || window.innerHeight));
     const dpr = window.devicePixelRatio || 1;
-    this.canvas.width = window.innerWidth * dpr;
-    this.canvas.height = window.innerHeight * dpr;
-    this.ctx.scale(dpr, dpr);
-    this.displayWidth = window.innerWidth;
-    this.displayHeight = window.innerHeight;
+    this.canvas.width = Math.round(w * dpr);
+    this.canvas.height = Math.round(h * dpr);
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.displayWidth = w;
+    this.displayHeight = h;
+  }
+
+  getGroundY() {
+    return Math.min(this.displayHeight * 0.72, Math.max(180, this.displayHeight - 115));
   }
 
   start() {
@@ -301,7 +315,7 @@ export class RunnerEngine {
     this.currentSpeed = this.baseSpeed;
     this.particles = [];
 
-    const groundY = this.displayHeight * 0.75;
+    const groundY = this.getGroundY();
     this.player.y = groundY;
     this.player.vy = 0;
     this.player.isGrounded = true;
@@ -424,7 +438,7 @@ export class RunnerEngine {
   update() {
     if (this.isPaused) return;
 
-    const groundY = this.displayHeight * 0.75;
+    const groundY = this.getGroundY();
 
     // Update Puzzle Stop System (only trigger when grounded and on clear ground)
     const canStartPuzzle =
@@ -635,7 +649,7 @@ export class RunnerEngine {
     this.ctx.clearRect(0, 0, this.displayWidth, this.displayHeight);
 
     const theme = this.currentBiome || GameConfig.background || 'meadow';
-    const groundY = this.displayHeight * 0.75;
+    const groundY = this.getGroundY();
 
     // Draw Modern Cartoon Parallax Background
     this.drawBackground(theme, groundY);
