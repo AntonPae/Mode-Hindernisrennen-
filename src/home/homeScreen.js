@@ -536,9 +536,13 @@ export function setupHomeScreen(stateManager) {
         }
       }
 
-      // 3. Clickable Room Doors inside Canvas
+      // 3. Clickable Room Doors & Neighbor Gate inside Canvas
       for (const door of doorHotspots) {
         if (cx >= door.x && cx <= door.x + door.w && cy >= door.y && cy <= door.y + door.h) {
+          if (door.targetRoom === 'state:PETSITTING') {
+            stateManager.setState('PETSITTING');
+            return;
+          }
           switchRoom(door.targetRoom, door.entryX);
           return;
         }
@@ -563,6 +567,13 @@ export function setupHomeScreen(stateManager) {
   if (homeToIceCreamBtn) {
     homeToIceCreamBtn.addEventListener('click', () => {
       stateManager.setState('ICECREAM');
+    });
+  }
+
+  const homeToPetSitBtn = document.getElementById('homeToPetSitBtn');
+  if (homeToPetSitBtn) {
+    homeToPetSitBtn.addEventListener('click', () => {
+      stateManager.setState('PETSITTING');
     });
   }
 
@@ -1548,8 +1559,9 @@ export function setupHomeScreen(stateManager) {
       ctx.stroke();
     }
 
-    // Door back inside to Living Room
+    // Door back inside to Living Room & Gate to the Neighbors' Pet Sitting!
     drawDoorPortal(ctx, 24, floorY - 138, 66, 138, '◀ Ins Haus', 'living_room', 240);
+    drawDoorPortal(ctx, w - 98, floorY - 138, 76, 138, 'Nachbarn 🐾 ▶', 'state:PETSITTING', 140);
   }
 
   function drawActiveTaskTargets(ctx, floorY) {

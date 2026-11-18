@@ -120,6 +120,7 @@
           <div class="editor-cta-row">
             <button id="toHomeBtn" class="btn btn-home btn-large">🏡 Mein Haus &amp; Garten</button>
             <button id="toIceCreamBtn" class="btn btn-icecream btn-large">🍦 Beruf: Café &amp; Eisdiele</button>
+            <button id="toPetSitBtn" class="btn btn-petsit btn-large">🐾 Beruf: Hundesitting bei Nachbarn</button>
             <button id="toBgSelectBtn" class="btn btn-primary btn-large">Weiter zur Hintergrundauswahl ➔</button>
           </div>
         </div>
@@ -210,6 +211,7 @@
 
           <div class="home-nav-row">
             <button type="button" id="homeToEditorBtn" class="btn btn-secondary">✏️ Zurück zum Editor</button>
+            <button type="button" id="homeToPetSitBtn" class="btn btn-petsit">🐾 Zu den Nachbarn (Hundesitting)</button>
             <button type="button" id="homeToIceCreamBtn" class="btn btn-icecream">🍦 Beruf: Café &amp; Eisdiele</button>
             <button type="button" id="homeToGameBtn" class="btn btn-primary">🏃 Rennen starten &amp; Geld verdienen</button>
           </div>
@@ -273,6 +275,60 @@
           </div>
           <div id="iceStationTabs" class="ice-station-tabs"></div>
           <div id="iceFlavorBar" class="ice-flavor-bar"></div>
+        </aside>
+      </div>
+    </div>
+
+    <!-- State: Pet Sitting at Neighbors Job Overlay -->
+    <div id="pet-sitting-screen" class="screen-overlay hidden">
+      <header class="app-header ice-compact-header">
+        <h1>🐾 Beruf: Hundesitting bei den Nachbarn</h1>
+        <p>Lauf von deinem Haus zu den Nachbarn vor ihren Häusern – hol dir das Geld &amp; pass auf ihre Tiere auf!</p>
+        <div class="coin-wallet-bar">
+          <span class="coin-pill">🪙 Spielgeld: <strong id="petCoinsVal">0</strong></span>
+          <span class="level-pill">🏆 Level <strong id="petLevelVal">1</strong></span>
+          <span class="supply-pill">🐾 Betreute Tiere: <strong id="petCaredVal">0</strong></span>
+          <span class="supply-pill">💰 Schicht-Verdienst: +<strong id="petShiftEarningsVal">0</strong> 🪙</span>
+          <button type="button" id="openEarnPetBtn" class="btn btn-earn">💰 Geld verdienen</button>
+        </div>
+        <div id="petToast" class="shop-toast hidden"></div>
+      </header>
+
+      <div class="icecream-layout">
+        <div class="ice-stage-column">
+          <div class="home-canvas-card ice-stage-card">
+            <div class="home-task-banner">
+              <span id="petStatusText">Du stehst vor deinem Haus! Lauf zu einem Nachbarn, hol dir Geld &amp; Auftrag und pass auf sein Tier auf.</span>
+            </div>
+            <canvas id="petSittingCanvas" width="860" height="470"></canvas>
+            <div class="icecream-cone-bar">
+              <div class="icecream-cone-label">
+                <strong>🐾 Nachbarschaft:</strong>
+                <div id="petActiveTargetBar" class="ice-cone-slots"></div>
+              </div>
+            </div>
+            <div class="home-walk-pad">
+              <button type="button" id="petWalkLeftBtn" class="walk-pad-btn" aria-label="Nach links gehen">◀ Links</button>
+              <button type="button" id="petWalkUpBtn" class="walk-pad-btn" aria-label="Zu den Nachbarn gehen">▲ Nachbarn</button>
+              <button type="button" id="petActionBtn" class="walk-pad-btn walk-pad-action" aria-label="Geld holen oder Tier versorgen">💰 Geld holen / 🐾 Versorgen</button>
+              <button type="button" id="petWalkDownBtn" class="walk-pad-btn" aria-label="In den Vorgarten gehen">▼ Vorgarten</button>
+              <button type="button" id="petWalkRightBtn" class="walk-pad-btn" aria-label="Nach rechts gehen">Rechts ▶</button>
+            </div>
+          </div>
+
+          <div class="home-nav-row ice-nav-row">
+            <button type="button" id="petToHomeBtn" class="btn btn-home">🏡 Zurück in mein Haus</button>
+            <button type="button" id="petToEditorBtn" class="btn btn-secondary">✏️ Zurück zum Editor</button>
+          </div>
+        </div>
+
+        <aside class="ice-menu-column">
+          <div class="ice-menu-header">
+            <h2>🦴 Nachbarn &amp; Tier-Pflege</h2>
+            <span>Erst beim Nachbarn Geld &amp; Tier abholen, dann auf das Tier aufpassen!</span>
+          </div>
+          <div id="petHouseTabs" class="ice-station-tabs"></div>
+          <div id="petCareBar" class="ice-flavor-bar"></div>
         </aside>
       </div>
     </div>

@@ -66,6 +66,16 @@ export const MISSION_DEFS = [
     baseReward: 40,
     stepReward: 15,
     describe: (target) => `Bediene ${target} Tische in Café & Eisdiele`
+  },
+  {
+    id: 'pet_sitter',
+    title: 'Nachbar-Tiersitter',
+    icon: '🐕',
+    baseTarget: 3,
+    stepTarget: 2,
+    baseReward: 40,
+    stepReward: 15,
+    describe: (target) => `Passe auf ${target} Hunde & Tiere bei den Nachbarn auf`
   }
 ];
 
@@ -153,7 +163,7 @@ export const EarnMoneyManager = {
     }
   },
 
-  recordEvent({ meters = 0, riddles = 0, coins = 0, care = 0, icecream = 0, runFinished = false } = {}) {
+  recordEvent({ meters = 0, riddles = 0, coins = 0, care = 0, icecream = 0, petsit = 0, runFinished = false } = {}) {
     const state = this.getState();
 
     if (meters > 0 && state.missions.run_meters) {
@@ -170,6 +180,9 @@ export const EarnMoneyManager = {
     }
     if (icecream > 0 && state.missions.serve_icecream) {
       state.missions.serve_icecream.progress += icecream;
+    }
+    if (petsit > 0 && state.missions.pet_sitter) {
+      state.missions.pet_sitter.progress += petsit;
     }
 
     // Finishing a run refreshes quiz & treasure hunt and grants a wheel ticket if >= 40m

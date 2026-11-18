@@ -15,7 +15,8 @@ export function setupEarnMoneyUI({ onCoinsChange } = {}) {
     document.getElementById('openEarnEditorBtn'),
     document.getElementById('openEarnHomeBtn'),
     document.getElementById('openEarnBgBtn'),
-    document.getElementById('openEarnIceBtn')
+    document.getElementById('openEarnIceBtn'),
+    document.getElementById('openEarnPetBtn')
   ].filter(Boolean);
 
   let activeTab = 'missions';

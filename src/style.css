@@ -190,6 +190,12 @@ body, html {
   box-shadow: 0 8px 18px rgba(244, 63, 94, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
+.btn-petsit {
+  background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(139, 92, 246, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
 .btn-earn {
   position: relative;
   background: linear-gradient(135deg, #10b981 0%, #0d9488 100%);
@@ -1843,7 +1849,8 @@ body, html {
   color: var(--ink-body);
 }
 
-#iceCreamCanvas {
+#iceCreamCanvas,
+#petSittingCanvas {
   width: 100%;
   height: auto;
   aspect-ratio: 860 / 470;
@@ -1861,7 +1868,8 @@ body, html {
     max-width: none;
   }
 
-  #iceCreamCanvas {
+  #iceCreamCanvas,
+  #petSittingCanvas {
     max-height: 42vh;
     width: auto;
     max-width: 100%;
@@ -1973,6 +1981,11 @@ body, html {
 
 .ice-flavor-btn:active {
   transform: scale(0.97);
+}
+
+.ice-accept-btn {
+  border-color: rgba(245, 158, 11, 0.65);
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
 }
 
 .ice-item-icon {

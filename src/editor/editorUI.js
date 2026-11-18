@@ -434,6 +434,13 @@ export function setupEditorUI(stateManager) {
     });
   }
 
+  const toPetSitBtn = document.getElementById('toPetSitBtn');
+  if (toPetSitBtn) {
+    toPetSitBtn.addEventListener('click', () => {
+      stateManager.setState('PETSITTING');
+    });
+  }
+
   window.addEventListener('runner:coins-updated', () => {
     updateWalletUI();
     renderAllShopGrids();
