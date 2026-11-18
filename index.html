@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Custom Runner mit Charakter-Editor</title>
+  <title>DreamRunner Studio &amp; Mein Traumhaus</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
@@ -164,8 +164,20 @@
 
       <div class="home-layout">
         <div class="home-stage-column">
+          <!-- Room Selector: Only the chosen room is visible -->
+          <div id="homeRoomTabs" class="home-room-tabs" aria-label="Räume im Haus"></div>
+
           <div class="home-canvas-card">
-            <canvas id="homeCanvas" width="760" height="360"></canvas>
+            <div id="homeTaskBanner" class="home-task-banner">
+              <span id="homeTaskText">Bewege dich im Raum mit Klick/Tipp, ← → oder A / D!</span>
+              <button type="button" id="homeStirBtn" class="btn btn-small btn-primary hidden">🥄 Rühren!</button>
+            </div>
+            <canvas id="homeCanvas" width="760" height="390"></canvas>
+            <div class="home-walk-pad">
+              <button type="button" id="homeWalkLeftBtn" class="walk-pad-btn" aria-label="Nach links gehen">◀ Links</button>
+              <button type="button" id="homeJumpBtn" class="walk-pad-btn" aria-label="Hüpfen">▲ Hüpfen</button>
+              <button type="button" id="homeWalkRightBtn" class="walk-pad-btn" aria-label="Nach rechts gehen">Rechts ▶</button>
+            </div>
           </div>
 
           <div class="home-needs-grid">
@@ -188,8 +200,8 @@
           </div>
 
           <div class="home-actions-bar">
-            <button type="button" id="cookBtn" class="btn btn-care">🍳 Kochen</button>
-            <button type="button" id="cleanBtn" class="btn btn-care">🧹 Putzen</button>
+            <button type="button" id="cookBtn" class="btn btn-care">🍳 Kochen starten</button>
+            <button type="button" id="cleanBtn" class="btn btn-care">🧹 Zimmer putzen</button>
             <button type="button" id="feedPetsBtn" class="btn btn-care">🦴 Tiere füttern</button>
             <button type="button" id="petAnimalsBtn" class="btn btn-care">🤗 Streicheln</button>
             <button type="button" id="gardenBtn" class="btn btn-care">🚿 Garten gießen</button>

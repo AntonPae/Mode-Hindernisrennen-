@@ -6,14 +6,14 @@ const QUIZ_REGEN_MS = 45000;   // 45 seconds per quiz energy
 const TREASURE_COOLDOWN_MS = 40000; // 40 seconds cooldown (or instant reset on run end)
 
 export const WHEEL_SEGMENTS = [
-  { label: '+15 🪙', coins: 15, color: '#3b82f6', textColor: '#ffffff' },
-  { label: '+35 🪙', coins: 35, color: '#10b981', textColor: '#ffffff' },
-  { label: '+20 🪙 + 🥘', coins: 20, supply: 'food', supplyLabel: '1x Koch-Zutaten', color: '#f59e0b', textColor: '#0f172a' },
-  { label: '+60 🪙', coins: 60, color: '#8b5cf6', textColor: '#ffffff' },
-  { label: '+10 🪙', coins: 10, color: '#475569', textColor: '#ffffff' },
+  { label: '+15 🪙', coins: 15, color: '#38bdf8', textColor: '#ffffff' },
+  { label: '+35 🪙', coins: 35, color: '#34d399', textColor: '#581c87' },
+  { label: '+20 🪙 + 🥘', coins: 20, supply: 'food', supplyLabel: '1x Koch-Zutaten', color: '#fbbf24', textColor: '#581c87' },
+  { label: '+60 🪙', coins: 60, color: '#a855f7', textColor: '#ffffff' },
+  { label: '+10 🪙', coins: 10, color: '#f472b6', textColor: '#ffffff' },
   { label: '+45 🪙', coins: 45, color: '#ec4899', textColor: '#ffffff' },
-  { label: '+25 🪙 + 🦴', coins: 25, supply: 'petFood', supplyLabel: '1x Tierfutter', color: '#06b6d4', textColor: '#0f172a' },
-  { label: '100 🪙!', coins: 100, jackpot: true, color: '#eab308', textColor: '#0f172a' }
+  { label: '+25 🪙 + 🦴', coins: 25, supply: 'petFood', supplyLabel: '1x Tierfutter', color: '#22d3ee', textColor: '#581c87' },
+  { label: '100 🪙!', coins: 100, jackpot: true, color: '#fde047', textColor: '#701a75' }
 ];
 
 export const MISSION_DEFS = [

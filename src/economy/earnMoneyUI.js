@@ -236,31 +236,41 @@ export function setupEarnMoneyUI({ onCoinsChange } = {}) {
       ctx.fillStyle = seg.color;
       ctx.fill();
       ctx.lineWidth = 3;
-      ctx.strokeStyle = '#0f172a';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
       ctx.stroke();
 
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate(start + slice / 2);
       ctx.fillStyle = seg.textColor || '#ffffff';
-      ctx.font = 'bold 13px Fredoka, sans-serif';
+      ctx.font = 'bold 13px "Plus Jakarta Sans", sans-serif';
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
       ctx.fillText(seg.label, radius - 14, 0);
       ctx.restore();
     });
 
-    // Center hub
+    // Outer glossy rim
     ctx.beginPath();
-    ctx.arc(cx, cy, 20, 0, Math.PI * 2);
-    ctx.fillStyle = '#0f172a';
-    ctx.fill();
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = '#fbbf24';
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = '#ffffff';
     ctx.stroke();
 
-    ctx.fillStyle = '#fbbf24';
-    ctx.font = 'bold 14px sans-serif';
+    // Center hub
+    const hubGrad = ctx.createRadialGradient(cx - 5, cy - 5, 2, cx, cy, 22);
+    hubGrad.addColorStop(0, '#f472b6');
+    hubGrad.addColorStop(1, '#7c3aed');
+    ctx.beginPath();
+    ctx.arc(cx, cy, 20, 0, Math.PI * 2);
+    ctx.fillStyle = hubGrad;
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#fde047';
+    ctx.stroke();
+
+    ctx.fillStyle = '#fef08a';
+    ctx.font = 'bold 15px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('★', cx, cy + 1);

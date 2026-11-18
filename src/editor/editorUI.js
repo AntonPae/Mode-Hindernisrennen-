@@ -57,8 +57,99 @@ export function setupEditorUI(stateManager) {
   }
 
   function updatePreview() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    renderCharacter(ctx, canvas.width / 2, canvas.height - 50, PlayerConfig, { frame: editorFrame, pose: 'idle' });
+    const w = canvas.width;
+    const h = canvas.height;
+    const groundY = h - 76;
+    const f = editorFrame;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Sunlit Pearl-Rose & Sky Gradient Backdrop
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, groundY);
+    skyGrad.addColorStop(0, '#7dd3fc');
+    skyGrad.addColorStop(0.5, '#e0f2fe');
+    skyGrad.addColorStop(1, '#fce7f3');
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, w, groundY);
+
+    // Warm Sun Halo & Diagonal Volumetric Light Shaft
+    ctx.save();
+    const sunX = w - 42;
+    const sunY = 44;
+    const sunGlow = ctx.createRadialGradient(sunX, sunY, 6, sunX, sunY, 150);
+    sunGlow.addColorStop(0, 'rgba(255, 251, 235, 0.95)');
+    sunGlow.addColorStop(0.4, 'rgba(254, 240, 138, 0.36)');
+    sunGlow.addColorStop(1, 'rgba(254, 240, 138, 0)');
+    ctx.fillStyle = sunGlow;
+    ctx.fillRect(0, 0, w, groundY);
+    ctx.restore();
+
+    // Distant Painterly Coastal Mountains & Cherry Blossoms
+    ctx.fillStyle = 'rgba(186, 230, 253, 0.85)';
+    ctx.beginPath();
+    ctx.moveTo(0, groundY);
+    ctx.bezierCurveTo(60, groundY - 82, 120, groundY - 30, 185, groundY - 58);
+    ctx.bezierCurveTo(235, groundY - 82, 275, groundY - 35, w, groundY - 20);
+    ctx.lineTo(w, groundY);
+    ctx.closePath();
+    ctx.fill();
+
+    // Soft Midground Garden Foliage
+    const gardenGrad = ctx.createLinearGradient(0, groundY - 46, 0, groundY);
+    gardenGrad.addColorStop(0, '#6ee7b7');
+    gardenGrad.addColorStop(1, '#10b981');
+    ctx.fillStyle = gardenGrad;
+    ctx.beginPath();
+    ctx.moveTo(0, groundY);
+    ctx.bezierCurveTo(50, groundY - 40, 115, groundY - 14, 165, groundY - 30);
+    ctx.bezierCurveTo(225, groundY - 48, 270, groundY - 16, w, groundY - 22);
+    ctx.lineTo(w, groundY);
+    ctx.closePath();
+    ctx.fill();
+
+    // Warm Cream Boutique Terrace Archway Framing
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.arc(w / 2, 150, w * 0.48, Math.PI, 0);
+    ctx.stroke();
+    ctx.restore();
+
+    // Polished Warm Marble / Champagne Terrace Floor
+    const floorGrad = ctx.createLinearGradient(0, groundY, 0, h);
+    floorGrad.addColorStop(0, '#fff5f7');
+    floorGrad.addColorStop(0.35, '#fce7f3');
+    floorGrad.addColorStop(1, '#f5d0fe');
+    ctx.fillStyle = floorGrad;
+    ctx.fillRect(0, groundY, w, h - groundY);
+
+    // Subtle Floor Perspective Tile Lines & Trim
+    ctx.fillStyle = 'rgba(244, 114, 182, 0.35)';
+    ctx.fillRect(0, groundY, w, 3);
+    ctx.strokeStyle = 'rgba(244, 114, 182, 0.16)';
+    ctx.lineWidth = 1.5;
+    for (let tx = -40; tx <= w + 40; tx += 55) {
+      ctx.beginPath();
+      ctx.moveTo(tx, groundY + 3);
+      ctx.lineTo(w / 2 + (tx - w / 2) * 1.45, h);
+      ctx.stroke();
+    }
+
+    // Soft Floating Sunlit Dust Motes
+    ctx.save();
+    for (let m = 0; m < 10; m++) {
+      const mx = (m * 41 + f * 0.28) % w;
+      const my = 40 + ((m * 53 + Math.sin(f * 0.025 + m) * 16) % (groundY - 30));
+      const alpha = 0.25 + 0.3 * Math.sin(f * 0.04 + m);
+      ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0.1, alpha)})`;
+      ctx.beginPath();
+      ctx.arc(mx, my, 1.8 + (m % 2), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    renderCharacter(ctx, w / 2, groundY + 18, PlayerConfig, { frame: f, pose: 'idle', facing: 1 });
   }
 
   function startEditorAnim() {

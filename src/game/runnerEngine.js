@@ -674,7 +674,8 @@ export class RunnerEngine {
 
     renderCharacter(this.ctx, this.player.x, this.player.y, PlayerConfig, {
       frame: this.player.animFrame,
-      pose: pose
+      pose: pose,
+      facing: 1
     });
     this.ctx.restore();
 
@@ -712,29 +713,27 @@ export class RunnerEngine {
     const bubbleY = this.player.y - 165 * scaleY;
 
     this.ctx.save();
+    this.ctx.shadowColor = 'rgba(236, 72, 153, 0.35)';
+    this.ctx.shadowBlur = 12;
     this.ctx.fillStyle = '#ffffff';
-    this.ctx.strokeStyle = '#0f172a';
-    this.ctx.lineWidth = 3;
-
     this.ctx.beginPath();
-    this.ctx.roundRect(bubbleX - 46, bubbleY - 22, 92, 40, [14]);
+    this.ctx.roundRect(bubbleX - 48, bubbleY - 22, 96, 40, [20]);
     this.ctx.fill();
-    this.ctx.stroke();
 
-    // Small pointer tail
     this.ctx.beginPath();
-    this.ctx.moveTo(bubbleX - 18, bubbleY + 18);
+    this.ctx.moveTo(bubbleX - 18, bubbleY + 17);
     this.ctx.lineTo(bubbleX - 28, bubbleY + 30);
-    this.ctx.lineTo(bubbleX - 6, bubbleY + 18);
+    this.ctx.lineTo(bubbleX - 6, bubbleY + 17);
     this.ctx.closePath();
     this.ctx.fill();
-    this.ctx.stroke();
+    this.ctx.restore();
 
-    this.ctx.fillStyle = '#0f172a';
-    this.ctx.font = 'bold 16px Fredoka, sans-serif';
+    this.ctx.save();
+    this.ctx.fillStyle = '#db2777';
+    this.ctx.font = 'bold 16px Plus Jakarta Sans, sans-serif';
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
-    this.ctx.fillText('❓ Rätsel!', bubbleX, bubbleY - 2);
+    this.ctx.fillText('✨ Rätsel!', bubbleX, bubbleY - 2);
     this.ctx.restore();
   }
 
@@ -748,18 +747,24 @@ export class RunnerEngine {
     const x = (this.displayWidth - w) / 2;
     const y = 100;
 
-    // Banner Pill
-    this.ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
-    this.ctx.strokeStyle = '#38bdf8';
-    this.ctx.lineWidth = 3;
+    const pillGrad = this.ctx.createLinearGradient(x, y, x + w, y);
+    pillGrad.addColorStop(0, '#ec4899');
+    pillGrad.addColorStop(0.5, '#a855f7');
+    pillGrad.addColorStop(1, '#38bdf8');
+    this.ctx.shadowColor = 'rgba(236, 72, 153, 0.45)';
+    this.ctx.shadowBlur = 16;
+    this.ctx.fillStyle = pillGrad;
     this.ctx.beginPath();
     this.ctx.roundRect(x, y, w, h, [25]);
     this.ctx.fill();
+
+    this.ctx.shadowBlur = 0;
+    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+    this.ctx.lineWidth = 2.5;
     this.ctx.stroke();
 
-    // Banner Text
-    this.ctx.font = 'bold 20px Fredoka, sans-serif';
-    this.ctx.fillStyle = '#fef08a';
+    this.ctx.font = 'bold 20px Plus Jakarta Sans, sans-serif';
+    this.ctx.fillStyle = '#ffffff';
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
     this.ctx.fillText(this.zoneNotificationText, this.displayWidth / 2, y + h / 2);
@@ -768,7 +773,7 @@ export class RunnerEngine {
 
   drawSpeedlines() {
     this.ctx.save();
-    this.ctx.strokeStyle = 'rgba(251, 191, 36, 0.45)';
+    this.ctx.strokeStyle = 'rgba(244, 114, 182, 0.55)';
     this.ctx.lineWidth = 3;
     for (let i = 0; i < 15; i++) {
       const y = Math.random() * this.displayHeight;
@@ -787,23 +792,22 @@ export class RunnerEngine {
       this.ctx.save();
       this.ctx.globalAlpha = p.alpha;
       if (p.type === 'dust') {
-        this.ctx.fillStyle = '#e2e8f0';
-        this.ctx.strokeStyle = '#0f172a';
-        this.ctx.lineWidth = 1.5;
+        const puffGrad = this.ctx.createRadialGradient(p.x, p.y, 1, p.x, p.y, p.radius);
+        puffGrad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+        puffGrad.addColorStop(1, 'rgba(249, 168, 212, 0.35)');
+        this.ctx.fillStyle = puffGrad;
         this.ctx.beginPath();
         this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
         this.ctx.fill();
-        this.ctx.stroke();
       } else if (p.type === 'star') {
-        this.ctx.fillStyle = '#fbbf24';
+        this.ctx.fillStyle = '#fef08a';
         this.ctx.font = `${p.size}px sans-serif`;
-        this.ctx.fillText('⭐', p.x, p.y);
+        this.ctx.fillText('✨', p.x, p.y);
       } else if (p.type === 'coinText') {
-        this.ctx.font = 'bold 18px Fredoka, sans-serif';
+        this.ctx.font = 'bold 18px Plus Jakarta Sans, sans-serif';
         this.ctx.textAlign = 'center';
-        this.ctx.strokeStyle = '#0f172a';
-        this.ctx.lineWidth = 4;
-        this.ctx.strokeText(p.text, p.x, p.y);
+        this.ctx.shadowColor = 'rgba(219, 39, 119, 0.7)';
+        this.ctx.shadowBlur = 8;
         this.ctx.fillStyle = '#fef08a';
         this.ctx.fillText(p.text, p.x, p.y);
       }
@@ -820,515 +824,561 @@ export class RunnerEngine {
     this.ctx.lineCap = 'round';
 
     if (theme === 'cave') {
-      // Cartoon Volcanic Cavern with Glowing Crystals & Bubbling Lava
+      // Luminous Amethyst & Rose Quartz Crystal Cavern
       const bgGrad = this.ctx.createLinearGradient(0, 0, 0, groundY);
-      bgGrad.addColorStop(0, '#2e1065');
-      bgGrad.addColorStop(0.55, '#6b21a8');
-      bgGrad.addColorStop(1, '#b91c1c');
+      bgGrad.addColorStop(0, '#3b0764');
+      bgGrad.addColorStop(0.5, '#6b21a8');
+      bgGrad.addColorStop(1, '#db2777');
       this.ctx.fillStyle = bgGrad;
       this.ctx.fillRect(0, 0, w, groundY);
 
-      // Layer 1: Outlined Stalactites with Cel Highlight
-      for (let i = 0; i < w + 220; i += 110) {
-        const x = (i - (this.scrollX * 0.14) % 110) - 110;
-        const tipY = 65 + Math.abs(Math.sin(i * 0.7)) * 45;
-        this.ctx.fillStyle = '#4c1d95';
-        this.ctx.strokeStyle = '#0f172a';
-        this.ctx.lineWidth = 3;
-        this.ctx.beginPath();
-        this.ctx.moveTo(x, -4);
-        this.ctx.lineTo(x + 38, tipY);
-        this.ctx.lineTo(x + 76, -4);
-        this.ctx.closePath();
-        this.ctx.fill();
-        this.ctx.stroke();
+      // Far Glowing Mist Layer
+      const mistGrad = this.ctx.createLinearGradient(0, groundY - 120, 0, groundY);
+      mistGrad.addColorStop(0, 'rgba(244, 114, 182, 0)');
+      mistGrad.addColorStop(1, 'rgba(251, 207, 232, 0.32)');
+      this.ctx.fillStyle = mistGrad;
+      this.ctx.fillRect(0, groundY - 120, w, 120);
 
-        // Highlight edge
-        this.ctx.fillStyle = '#7c3aed';
-        this.ctx.beginPath();
-        this.ctx.moveTo(x + 12, 0);
-        this.ctx.lineTo(x + 38, tipY - 8);
-        this.ctx.lineTo(x + 38, 0);
-        this.ctx.closePath();
-        this.ctx.fill();
-      }
-
-      // Layer 2: Cartoon Rocky Arches & Glowing Cyan Crystals
+      // Distant Sculpted Cavern Silhouettes
+      this.ctx.fillStyle = 'rgba(88, 28, 135, 0.6)';
       for (let i = 0; i < w + 320; i += 240) {
-        const x = (i - (this.scrollX * 0.3) % 240) - 240;
-        this.ctx.fillStyle = '#7f1d1d';
-        this.ctx.strokeStyle = '#0f172a';
-        this.ctx.lineWidth = 3.5;
+        const x = (i - (this.scrollX * 0.14) % 240) - 240;
         this.ctx.beginPath();
         this.ctx.moveTo(x, groundY);
-        this.ctx.quadraticCurveTo(x + 120, groundY - 195, x + 240, groundY);
-        this.ctx.fill();
-        this.ctx.stroke();
-
-        // Cartoon Crystal Cluster
-        this.ctx.fillStyle = '#22d3ee';
-        this.ctx.beginPath();
-        this.ctx.moveTo(x + 95, groundY);
-        this.ctx.lineTo(x + 112, groundY - 46);
-        this.ctx.lineTo(x + 130, groundY);
+        this.ctx.bezierCurveTo(x + 60, groundY - 170, x + 180, groundY - 170, x + 240, groundY);
         this.ctx.closePath();
         this.ctx.fill();
-        this.ctx.stroke();
       }
 
-      // Ground: Glowing Lava Lake with Animated Bubbles
-      const lavaGrad = this.ctx.createLinearGradient(0, groundY, 0, h);
-      lavaGrad.addColorStop(0, '#f97316');
-      lavaGrad.addColorStop(0.4, '#dc2626');
-      lavaGrad.addColorStop(1, '#7f1d1d');
-      this.ctx.fillStyle = lavaGrad;
-      this.ctx.fillRect(0, groundY, w, h - groundY);
-
-      this.ctx.fillStyle = '#fef08a';
-      this.ctx.fillRect(0, groundY, w, 10);
-      for (let i = 0; i < w + 160; i += 140) {
-        const bx = (i - (this.scrollX * 0.8) % 140) - 140;
-        const pop = Math.abs(Math.sin(t * 0.06 + i)) * 8;
+      // Faceted Hanging Amethyst Formations
+      for (let i = 0; i < w + 240; i += 120) {
+        const x = (i - (this.scrollX * 0.22) % 120) - 120;
+        const tipY = 62 + Math.abs(Math.sin(i * 0.7)) * 48;
+        const sLeft = this.ctx.createLinearGradient(x, 0, x + 40, tipY);
+        sLeft.addColorStop(0, '#e879f9');
+        sLeft.addColorStop(1, '#9333ea');
+        this.ctx.fillStyle = sLeft;
         this.ctx.beginPath();
-        this.ctx.arc(bx + 60, groundY + 4, 6 + pop * 0.5, Math.PI, 0);
+        this.ctx.moveTo(x, -4);
+        this.ctx.lineTo(x + 36, tipY);
+        this.ctx.lineTo(x + 36, -4);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        this.ctx.fillStyle = '#6b21a8';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + 36, -4);
+        this.ctx.lineTo(x + 36, tipY);
+        this.ctx.lineTo(x + 72, -4);
+        this.ctx.closePath();
         this.ctx.fill();
       }
-      this.ctx.lineWidth = 3.5;
-      this.ctx.strokeStyle = '#0f172a';
-      this.ctx.beginPath();
-      this.ctx.moveTo(0, groundY);
-      this.ctx.lineTo(w, groundY);
-      this.ctx.stroke();
+
+      // Midground Faceted Glowing Aquamarine & Rose Crystals
+      for (let i = 0; i < w + 300; i += 220) {
+        const x = (i - (this.scrollX * 0.38) % 220) - 220;
+        this.ctx.save();
+        this.ctx.shadowColor = '#67e8f9';
+        this.ctx.shadowBlur = 18;
+        const cLeft = this.ctx.createLinearGradient(x + 80, groundY - 72, x + 105, groundY);
+        cLeft.addColorStop(0, '#e0f2fe');
+        cLeft.addColorStop(1, '#22d3ee');
+        this.ctx.fillStyle = cLeft;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + 82, groundY);
+        this.ctx.lineTo(x + 104, groundY - 70);
+        this.ctx.lineTo(x + 104, groundY);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        this.ctx.fillStyle = '#0891b2';
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + 104, groundY);
+        this.ctx.lineTo(x + 104, groundY - 70);
+        this.ctx.lineTo(x + 126, groundY);
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.restore();
+      }
+
+      // Shimmering Crystal Path Ground
+      const caveGround = this.ctx.createLinearGradient(0, groundY, 0, h);
+      caveGround.addColorStop(0, '#f472b6');
+      caveGround.addColorStop(0.3, '#be185d');
+      caveGround.addColorStop(1, '#500724');
+      this.ctx.fillStyle = caveGround;
+      this.ctx.fillRect(0, groundY, w, h - groundY);
+      this.ctx.fillStyle = '#fde047';
+      this.ctx.fillRect(0, groundY, w, 5);
 
     } else if (theme === 'neon') {
-      // Cartoon Synthwave Metropolis with Striped Sun & Hover Cars
+      // Sunset Promenade Pop-Star City
       const bgGrad = this.ctx.createLinearGradient(0, 0, 0, groundY);
-      bgGrad.addColorStop(0, '#090d24');
-      bgGrad.addColorStop(0.55, '#31105f');
-      bgGrad.addColorStop(1, '#be185d');
+      bgGrad.addColorStop(0, '#312e81');
+      bgGrad.addColorStop(0.45, '#9333ea');
+      bgGrad.addColorStop(0.82, '#f472b6');
+      bgGrad.addColorStop(1, '#fed7aa');
       this.ctx.fillStyle = bgGrad;
       this.ctx.fillRect(0, 0, w, groundY);
 
-      // Outlined Retro Cartoon Sun with Stripes
-      const sunY = groundY - 68;
-      const sunGrad = this.ctx.createLinearGradient(0, sunY - 90, 0, sunY + 90);
-      sunGrad.addColorStop(0, '#fb7185');
-      sunGrad.addColorStop(1, '#fde047');
+      // Soft Glowing Setting Sun
+      const sunY = groundY - 78;
       this.ctx.save();
-      this.ctx.fillStyle = sunGrad;
-      this.ctx.strokeStyle = '#0f172a';
-      this.ctx.lineWidth = 4;
+      const sunHalo = this.ctx.createRadialGradient(w * 0.55, sunY, 15, w * 0.55, sunY, 150);
+      sunHalo.addColorStop(0, 'rgba(254, 240, 138, 0.95)');
+      sunHalo.addColorStop(0.45, 'rgba(244, 114, 182, 0.45)');
+      sunHalo.addColorStop(1, 'rgba(244, 114, 182, 0)');
+      this.ctx.fillStyle = sunHalo;
       this.ctx.beginPath();
-      this.ctx.arc(w / 2, sunY, 88, 0, Math.PI * 2);
+      this.ctx.arc(w * 0.55, sunY, 150, 0, Math.PI * 2);
       this.ctx.fill();
-      this.ctx.stroke();
-      this.ctx.fillStyle = '#701a75';
-      for (let s = 12; s < 68; s += 16) {
-        this.ctx.fillRect(w / 2 - 84, sunY + s, 168, 5);
-      }
+
+      const sunCore = this.ctx.createLinearGradient(0, sunY - 70, 0, sunY + 70);
+      sunCore.addColorStop(0, '#fef9c3');
+      sunCore.addColorStop(0.55, '#fb7185');
+      sunCore.addColorStop(1, '#ec4899');
+      this.ctx.fillStyle = sunCore;
+      this.ctx.beginPath();
+      this.ctx.arc(w * 0.55, sunY, 70, 0, Math.PI * 2);
+      this.ctx.fill();
       this.ctx.restore();
 
-      // Distant City Silhouette
-      this.ctx.fillStyle = '#1e1b4b';
-      for (let i = 0; i < w + 200; i += 85) {
-        const x = (i - (this.scrollX * 0.14) % 85) - 85;
-        const bHeight = 95 + (i % 7) * 20;
-        this.ctx.fillRect(x, groundY - bHeight, 66, bHeight);
-      }
-
-      // Foreground Cartoon Neon Towers
-      for (let i = 0; i < w + 300; i += 140) {
-        const x = (i - (this.scrollX * 0.34) % 140) - 140;
-        const bHeight = 140 + (i % 5) * 28;
-        this.ctx.fillStyle = '#1e1035';
-        this.ctx.strokeStyle = '#0f172a';
-        this.ctx.lineWidth = 3.5;
-        this.ctx.fillRect(x, groundY - bHeight, 98, bHeight);
-        this.ctx.strokeRect(x, groundY - bHeight, 98, bHeight);
-
-        // Roof antenna
+      // Atmospheric Far Skyline Silhouette
+      this.ctx.fillStyle = 'rgba(76, 29, 149, 0.38)';
+      for (let i = 0; i < w + 240; i += 90) {
+        const x = (i - (this.scrollX * 0.12) % 90) - 90;
+        const bh = 90 + ((i * 13) % 75);
         this.ctx.beginPath();
-        this.ctx.moveTo(x + 49, groundY - bHeight);
-        this.ctx.lineTo(x + 49, groundY - bHeight - 18);
-        this.ctx.stroke();
-
-        // Lit Cartoon Windows
-        this.ctx.fillStyle = (i % 2 === 0) ? '#22d3ee' : '#f472b6';
-        this.ctx.fillRect(x + 14, groundY - bHeight + 20, 22, 16);
-        this.ctx.fillRect(x + 56, groundY - bHeight + 20, 22, 16);
-        this.ctx.fillRect(x + 14, groundY - bHeight + 54, 22, 16);
-        this.ctx.fillRect(x + 56, groundY - bHeight + 54, 22, 16);
+        this.ctx.roundRect(x, groundY - bh, 72, bh, [8, 8, 0, 0]);
+        this.ctx.fill();
       }
 
-      // Flying Neon Hover-Car in Sky
-      const carX = (w + 120) - ((t * 3.2) % (w + 240));
-      this.ctx.fillStyle = '#38bdf8';
-      this.ctx.strokeStyle = '#0f172a';
-      this.ctx.lineWidth = 2.5;
-      this.ctx.beginPath();
-      this.ctx.roundRect(carX, 85, 38, 14, [7]);
-      this.ctx.fill();
-      this.ctx.stroke();
+      // Midground Glassy Towers with Lit Windows & Rim Highlights
+      for (let i = 0; i < w + 280; i += 145) {
+        const x = (i - (this.scrollX * 0.32) % 145) - 145;
+        const bh = 135 + ((i * 7) % 60);
+        const bGrad = this.ctx.createLinearGradient(x, groundY - bh, x + 100, groundY);
+        bGrad.addColorStop(0, '#6b21a8');
+        bGrad.addColorStop(1, '#3b0764');
+        this.ctx.fillStyle = bGrad;
+        this.ctx.beginPath();
+        this.ctx.roundRect(x, groundY - bh, 96, bh, [10, 10, 0, 0]);
+        this.ctx.fill();
 
-      // Cyber Grid Ground
-      this.ctx.fillStyle = '#09090b';
+        // Warm sunset edge highlight on tower
+        this.ctx.fillStyle = 'rgba(251, 207, 232, 0.35)';
+        this.ctx.fillRect(x, groundY - bh + 8, 4, bh - 8);
+
+        // Glowing glass window strips
+        this.ctx.fillStyle = (i % 2 === 0) ? 'rgba(103, 232, 249, 0.8)' : 'rgba(253, 224, 71, 0.78)';
+        for (let wy = groundY - bh + 20; wy < groundY - 24; wy += 24) {
+          this.ctx.beginPath();
+          this.ctx.roundRect(x + 14, wy, 26, 12, [3]);
+          this.ctx.roundRect(x + 54, wy, 26, 12, [3]);
+          this.ctx.fill();
+        }
+      }
+
+      // Sleek Boulevard Ground with Perspective Lines
+      const roadGrad = this.ctx.createLinearGradient(0, groundY, 0, h);
+      roadGrad.addColorStop(0, '#581c87');
+      roadGrad.addColorStop(0.4, '#3b0764');
+      roadGrad.addColorStop(1, '#1e1b4b');
+      this.ctx.fillStyle = roadGrad;
       this.ctx.fillRect(0, groundY, w, h - groundY);
-      this.ctx.strokeStyle = 'rgba(34, 211, 238, 0.35)';
+
+      this.ctx.fillStyle = '#67e8f9';
+      this.ctx.fillRect(0, groundY, w, 4);
+      this.ctx.strokeStyle = 'rgba(244, 114, 182, 0.32)';
       this.ctx.lineWidth = 2;
-      for (let gx = 0; gx < w + 80; gx += 60) {
-        const sx = (gx - (this.scrollX % 60));
+      for (let gx = 0; gx < w + 80; gx += 64) {
+        const sx = (gx - (this.scrollX % 64));
         this.ctx.beginPath();
-        this.ctx.moveTo(sx, groundY + 6);
-        this.ctx.lineTo(sx - 40, h);
+        this.ctx.moveTo(sx, groundY + 4);
+        this.ctx.lineTo(sx - 45, h);
         this.ctx.stroke();
       }
-      this.ctx.fillStyle = '#22d3ee';
-      this.ctx.fillRect(0, groundY, w, 7);
 
     } else if (theme === 'ice') {
-      // Cartoon Arctic Aurora & Cel-Shaded Peaks
+      // Crystal Aurora Alpine Kingdom
       const bgGrad = this.ctx.createLinearGradient(0, 0, 0, groundY);
-      bgGrad.addColorStop(0, '#0f172a');
-      bgGrad.addColorStop(0.45, '#0284c7');
-      bgGrad.addColorStop(1, '#bae6fd');
+      bgGrad.addColorStop(0, '#0284c7');
+      bgGrad.addColorStop(0.55, '#7dd3fc');
+      bgGrad.addColorStop(1, '#f0f9ff');
       this.ctx.fillStyle = bgGrad;
       this.ctx.fillRect(0, 0, w, groundY);
 
-      // Waving Cartoon Aurora Ribbon
+      // Soft Painted Aurora Ribbons
       this.ctx.save();
-      this.ctx.strokeStyle = 'rgba(74, 222, 128, 0.45)';
-      this.ctx.lineWidth = 22;
+      const aurGrad = this.ctx.createLinearGradient(0, 30, w, 130);
+      aurGrad.addColorStop(0, 'rgba(244, 114, 182, 0.25)');
+      aurGrad.addColorStop(0.5, 'rgba(167, 243, 208, 0.35)');
+      aurGrad.addColorStop(1, 'rgba(103, 232, 249, 0.25)');
+      this.ctx.strokeStyle = aurGrad;
+      this.ctx.lineWidth = 34;
       this.ctx.beginPath();
-      for (let ax = 0; ax <= w; ax += 40) {
-        const ay = 75 + Math.sin(ax * 0.012 + t * 0.03) * 24;
+      for (let ax = 0; ax <= w; ax += 35) {
+        const ay = 70 + Math.sin(ax * 0.01 + t * 0.025) * 22;
         if (ax === 0) this.ctx.moveTo(ax, ay);
         else this.ctx.lineTo(ax, ay);
       }
       this.ctx.stroke();
       this.ctx.restore();
 
-      // Cel-Shaded Snow Peaks with Left Sunlit Side & Right Ice Shadow
-      for (let i = 0; i < w + 320; i += 220) {
-        const x = (i - (this.scrollX * 0.2) % 220) - 220;
-        this.ctx.fillStyle = '#f0f9ff';
-        this.ctx.strokeStyle = '#0f172a';
-        this.ctx.lineWidth = 3.5;
+      // Far Misty Glacial Peaks
+      this.ctx.fillStyle = 'rgba(224, 242, 254, 0.72)';
+      for (let i = 0; i < w + 360; i += 240) {
+        const x = (i - (this.scrollX * 0.12) % 240) - 240;
         this.ctx.beginPath();
         this.ctx.moveTo(x, groundY);
-        this.ctx.lineTo(x + 110, groundY - 155);
-        this.ctx.lineTo(x + 220, groundY);
+        this.ctx.lineTo(x + 120, groundY - 175);
+        this.ctx.lineTo(x + 240, groundY);
         this.ctx.closePath();
         this.ctx.fill();
-
-        this.ctx.fillStyle = '#bae6fd';
-        this.ctx.beginPath();
-        this.ctx.moveTo(x + 110, groundY - 155);
-        this.ctx.lineTo(x + 220, groundY);
-        this.ctx.lineTo(x + 110, groundY);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        this.ctx.beginPath();
-        this.ctx.moveTo(x, groundY);
-        this.ctx.lineTo(x + 110, groundY - 155);
-        this.ctx.lineTo(x + 220, groundY);
-        this.ctx.stroke();
       }
 
-      // Crisp Outlined Snowflakes
-      this.ctx.fillStyle = '#ffffff';
+      // Midground Faceted Ice Ridges
+      for (let i = 0; i < w + 300; i += 210) {
+        const x = (i - (this.scrollX * 0.24) % 210) - 210;
+        const leftG = this.ctx.createLinearGradient(x, groundY - 140, x + 105, groundY);
+        leftG.addColorStop(0, '#ffffff');
+        leftG.addColorStop(1, '#bae6fd');
+        this.ctx.fillStyle = leftG;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, groundY);
+        this.ctx.lineTo(x + 105, groundY - 140);
+        this.ctx.lineTo(x + 105, groundY);
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        const rightG = this.ctx.createLinearGradient(x + 105, groundY - 140, x + 210, groundY);
+        rightG.addColorStop(0, '#e0f2fe');
+        rightG.addColorStop(1, '#38bdf8');
+        this.ctx.fillStyle = rightG;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + 105, groundY - 140);
+        this.ctx.lineTo(x + 210, groundY);
+        this.ctx.lineTo(x + 105, groundY);
+        this.ctx.closePath();
+        this.ctx.fill();
+      }
+
+      // Drifting Soft Snow Bokeh
       for (let i = 0; i < 24; i++) {
-        const sx = ((i * 97 + t * 0.7) % w);
-        const sy = ((i * 53 + t * 1.6) % groundY);
+        const sx = ((i * 97 + t * 0.65) % w);
+        const sy = ((i * 53 + t * 1.35) % groundY);
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
         this.ctx.beginPath();
-        this.ctx.arc(sx, sy, 3.5 + (i % 3), 0, Math.PI * 2);
+        this.ctx.arc(sx, sy, 2.2 + (i % 3), 0, Math.PI * 2);
         this.ctx.fill();
       }
 
-      // Icy Ground with Thick Cartoon Snow Top
-      const iceGrad = this.ctx.createLinearGradient(0, groundY, 0, h);
-      iceGrad.addColorStop(0, '#7dd3fc');
-      iceGrad.addColorStop(1, '#0284c7');
-      this.ctx.fillStyle = iceGrad;
+      const iceGround = this.ctx.createLinearGradient(0, groundY, 0, h);
+      iceGround.addColorStop(0, '#f0f9ff');
+      iceGround.addColorStop(0.25, '#bae6fd');
+      iceGround.addColorStop(1, '#0284c7');
+      this.ctx.fillStyle = iceGround;
       this.ctx.fillRect(0, groundY, w, h - groundY);
-      this.ctx.fillStyle = '#f0f9ff';
-      this.ctx.fillRect(0, groundY, w, 14);
-      this.ctx.strokeStyle = '#0f172a';
-      this.ctx.lineWidth = 3.5;
-      this.ctx.beginPath();
-      this.ctx.moveTo(0, groundY);
-      this.ctx.lineTo(w, groundY);
-      this.ctx.stroke();
+      this.ctx.fillStyle = '#ffffff';
+      this.ctx.fillRect(0, groundY, w, 6);
 
     } else if (theme === 'beach') {
-      // Sunny Animated Cartoon Beach
+      // Sunlit Riviera Dream Coast
       const bgGrad = this.ctx.createLinearGradient(0, 0, 0, groundY);
       bgGrad.addColorStop(0, '#0284c7');
-      bgGrad.addColorStop(0.6, '#38bdf8');
-      bgGrad.addColorStop(1, '#fef08a');
+      bgGrad.addColorStop(0.55, '#67e8f9');
+      bgGrad.addColorStop(1, '#fef3c7');
       this.ctx.fillStyle = bgGrad;
       this.ctx.fillRect(0, 0, w, groundY);
 
-      // Smiling Cartoon Sun with Rays
-      this.drawCartoonSun(w - 105, 82, 36, t);
+      this.drawCartoonSun(w - 110, 80, 38, t);
 
-      // Outlined Clouds
       for (let i = 0; i < w + 420; i += 300) {
-        const x = (i - (this.scrollX * 0.09) % 300) - 300;
-        this.drawCartoonCloud(x, 70 + (i % 2) * 28, 42);
+        const x = (i - (this.scrollX * 0.08) % 300) - 300;
+        this.drawCartoonCloud(x, 70 + (i % 2) * 24, 42);
       }
 
-      // Animated Sparkling Ocean Waves
-      this.ctx.fillStyle = '#06b6d4';
-      this.ctx.fillRect(0, groundY - 40, w, 40);
-      this.ctx.strokeStyle = '#e0f2fe';
+      // Distant Headland Silhouette
+      this.ctx.fillStyle = 'rgba(56, 189, 248, 0.45)';
+      this.ctx.beginPath();
+      this.ctx.moveTo(0, groundY - 38);
+      this.ctx.bezierCurveTo(w * 0.25, groundY - 82, w * 0.5, groundY - 45, w * 0.85, groundY - 72);
+      this.ctx.lineTo(w, groundY - 42);
+      this.ctx.lineTo(w, groundY - 38);
+      this.ctx.closePath();
+      this.ctx.fill();
+
+      // Turquoise Sea with Foam Crest
+      const oceanGrad = this.ctx.createLinearGradient(0, groundY - 44, 0, groundY);
+      oceanGrad.addColorStop(0, '#0891b2');
+      oceanGrad.addColorStop(1, '#22d3ee');
+      this.ctx.fillStyle = oceanGrad;
+      this.ctx.fillRect(0, groundY - 42, w, 42);
+
+      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.82)';
       this.ctx.lineWidth = 3;
       this.ctx.beginPath();
-      for (let wx = 0; wx <= w; wx += 30) {
-        const wy = groundY - 38 + Math.sin(wx * 0.04 + t * 0.08) * 4;
+      for (let wx = 0; wx <= w; wx += 28) {
+        const wy = groundY - 22 + Math.sin(wx * 0.04 + t * 0.07) * 3.5;
         if (wx === 0) this.ctx.moveTo(wx, wy);
         else this.ctx.lineTo(wx, wy);
       }
       this.ctx.stroke();
 
-      // Outlined Cartoon Palm Trees
-      for (let i = 0; i < w + 320; i += 260) {
-        const x = (i - (this.scrollX * 0.28) % 260) - 260;
-        this.ctx.fillStyle = '#b45309';
-        this.ctx.strokeStyle = '#0f172a';
-        this.ctx.lineWidth = 3;
-        this.ctx.fillRect(x + 60, groundY - 118, 15, 118);
-        this.ctx.strokeRect(x + 60, groundY - 118, 15, 118);
+      // Sculpted Curved Palm Trees
+      for (let i = 0; i < w + 320; i += 280) {
+        const x = (i - (this.scrollX * 0.28) % 280) - 280;
+        this.ctx.strokeStyle = '#b45309';
+        this.ctx.lineWidth = 12;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + 70, groundY);
+        this.ctx.quadraticCurveTo(x + 58, groundY - 62, x + 78, groundY - 122);
+        this.ctx.stroke();
 
-        this.ctx.fillStyle = '#22c55e';
-        this.ctx.beginPath();
-        this.ctx.ellipse(x + 40, groundY - 118, 34, 11, -0.35, 0, Math.PI * 2);
-        this.ctx.fill();
-        this.ctx.stroke();
-        this.ctx.beginPath();
-        this.ctx.ellipse(x + 95, groundY - 118, 34, 11, 0.35, 0, Math.PI * 2);
-        this.ctx.fill();
-        this.ctx.stroke();
+        // Lush arched palm fronds
+        const frondGrad = this.ctx.createLinearGradient(x + 25, groundY - 150, x + 130, groundY - 105);
+        frondGrad.addColorStop(0, '#4ade80');
+        frondGrad.addColorStop(1, '#059669');
+        this.ctx.fillStyle = frondGrad;
+        [-0.75, -0.25, 0.3, 0.8].forEach((ang) => {
+          this.ctx.save();
+          this.ctx.translate(x + 78, groundY - 122);
+          this.ctx.rotate(ang);
+          this.ctx.beginPath();
+          this.ctx.ellipse(24, 0, 30, 8.5, 0, 0, Math.PI * 2);
+          this.ctx.fill();
+          this.ctx.restore();
+        });
       }
 
-      // Golden Cartoon Sand Ground
-      this.ctx.fillStyle = '#eab308';
+      const sandGrad = this.ctx.createLinearGradient(0, groundY, 0, h);
+      sandGrad.addColorStop(0, '#fef08a');
+      sandGrad.addColorStop(0.3, '#fcd34d');
+      sandGrad.addColorStop(1, '#d97706');
+      this.ctx.fillStyle = sandGrad;
       this.ctx.fillRect(0, groundY, w, h - groundY);
-      this.ctx.fillStyle = '#fde047';
-      this.ctx.fillRect(0, groundY, w, 14);
-      this.ctx.strokeStyle = '#0f172a';
-      this.ctx.lineWidth = 3.5;
-      this.ctx.beginPath();
-      this.ctx.moveTo(0, groundY);
-      this.ctx.lineTo(w, groundY);
-      this.ctx.stroke();
+      this.ctx.fillStyle = '#fef9c3';
+      this.ctx.fillRect(0, groundY, w, 6);
 
     } else if (theme === 'space') {
-      // Cartoon Cosmic Galaxy with Nebula, Saturn, Moon & UFO
+      // Luminous Cosmic Nebula World
       const bgGrad = this.ctx.createLinearGradient(0, 0, 0, groundY);
-      bgGrad.addColorStop(0, '#020617');
-      bgGrad.addColorStop(0.55, '#1e1b4b');
-      bgGrad.addColorStop(1, '#581c87');
+      bgGrad.addColorStop(0, '#1e1b4b');
+      bgGrad.addColorStop(0.55, '#581c87');
+      bgGrad.addColorStop(1, '#be185d');
       this.ctx.fillStyle = bgGrad;
       this.ctx.fillRect(0, 0, w, groundY);
 
-      // Soft Cosmic Nebula Blobs
-      this.ctx.fillStyle = 'rgba(236, 72, 153, 0.16)';
-      this.ctx.beginPath();
-      this.ctx.arc(w * 0.25, groundY * 0.38, 120, 0, Math.PI * 2);
-      this.ctx.fill();
-      this.ctx.fillStyle = 'rgba(56, 189, 248, 0.14)';
-      this.ctx.beginPath();
-      this.ctx.arc(w * 0.68, groundY * 0.5, 140, 0, Math.PI * 2);
-      this.ctx.fill();
+      // Soft Nebula Glow Clouds
+      const neb1 = this.ctx.createRadialGradient(w * 0.28, groundY * 0.4, 10, w * 0.28, groundY * 0.4, 170);
+      neb1.addColorStop(0, 'rgba(244, 114, 182, 0.38)');
+      neb1.addColorStop(1, 'rgba(244, 114, 182, 0)');
+      this.ctx.fillStyle = neb1;
+      this.ctx.fillRect(0, 0, w, groundY);
 
-      // Twinkling 4-point Cartoon Stars
-      this.ctx.fillStyle = '#fef08a';
-      for (let i = 0; i < 36; i++) {
+      const neb2 = this.ctx.createRadialGradient(w * 0.72, groundY * 0.55, 10, w * 0.72, groundY * 0.55, 180);
+      neb2.addColorStop(0, 'rgba(56, 189, 248, 0.34)');
+      neb2.addColorStop(1, 'rgba(56, 189, 248, 0)');
+      this.ctx.fillStyle = neb2;
+      this.ctx.fillRect(0, 0, w, groundY);
+
+      // Shimmering Stars
+      for (let i = 0; i < 42; i++) {
         const sx = (i * 89 + w - (this.scrollX * 0.08) % w) % w;
         const sy = (i * 47) % (groundY - 24);
-        const s = 2.5 + (i % 3);
-        this.ctx.fillRect(sx, sy, s, s);
+        const alpha = 0.5 + 0.5 * Math.sin(t * 0.05 + i);
+        this.ctx.fillStyle = `rgba(254, 249, 195, ${alpha})`;
+        this.ctx.beginPath();
+        this.ctx.arc(sx, sy, 1.5 + (i % 2), 0, Math.PI * 2);
+        this.ctx.fill();
       }
 
-      // Outlined Ringed Planet with Cel Highlight
+      // 3D Shaded Ringed Planet
       this.ctx.save();
-      this.ctx.fillStyle = '#f59e0b';
-      this.ctx.strokeStyle = '#0f172a';
-      this.ctx.lineWidth = 3.5;
+      const px = w * 0.72;
+      const py = 105;
+      const planetGrad = this.ctx.createRadialGradient(px - 16, py - 16, 4, px, py, 48);
+      planetGrad.addColorStop(0, '#fef9c3');
+      planetGrad.addColorStop(0.55, '#f472b6');
+      planetGrad.addColorStop(1, '#7e22ce');
+      this.ctx.fillStyle = planetGrad;
       this.ctx.beginPath();
-      this.ctx.arc(w * 0.72, 110, 44, 0, Math.PI * 2);
+      this.ctx.arc(px, py, 44, 0, Math.PI * 2);
       this.ctx.fill();
-      this.ctx.stroke();
-      this.ctx.strokeStyle = '#fde68a';
+      this.ctx.strokeStyle = 'rgba(165, 243, 252, 0.85)';
       this.ctx.lineWidth = 6;
       this.ctx.beginPath();
-      this.ctx.ellipse(w * 0.72, 110, 74, 16, -0.25, 0, Math.PI * 2);
+      this.ctx.ellipse(px, py, 76, 16, -0.22, 0, Math.PI * 2);
       this.ctx.stroke();
       this.ctx.restore();
 
-      // Drifting Friendly Cartoon UFO
-      const ufoX = (w + 100) - ((t * 1.4) % (w + 220));
-      const ufoY = 90 + Math.sin(t * 0.06) * 14;
-      this.ctx.fillStyle = '#38bdf8';
-      this.ctx.strokeStyle = '#0f172a';
-      this.ctx.lineWidth = 2.5;
-      this.ctx.beginPath();
-      this.ctx.arc(ufoX, ufoY - 6, 14, Math.PI, 0);
-      this.ctx.fill();
-      this.ctx.stroke();
-      this.ctx.fillStyle = '#a855f7';
-      this.ctx.beginPath();
-      this.ctx.ellipse(ufoX, ufoY, 28, 9, 0, 0, Math.PI * 2);
-      this.ctx.fill();
-      this.ctx.stroke();
-
-      // Moon Crater Ground
-      this.ctx.fillStyle = '#334155';
+      const moonGrad = this.ctx.createLinearGradient(0, groundY, 0, h);
+      moonGrad.addColorStop(0, '#a855f7');
+      moonGrad.addColorStop(1, '#3b0764');
+      this.ctx.fillStyle = moonGrad;
       this.ctx.fillRect(0, groundY, w, h - groundY);
-      this.ctx.fillStyle = '#94a3b8';
-      this.ctx.fillRect(0, groundY, w, 12);
-      this.ctx.strokeStyle = '#0f172a';
-      this.ctx.lineWidth = 3.5;
-      this.ctx.beginPath();
-      this.ctx.moveTo(0, groundY);
-      this.ctx.lineTo(w, groundY);
-      this.ctx.stroke();
+      this.ctx.fillStyle = '#fbcfe8';
+      this.ctx.fillRect(0, groundY, w, 5);
 
     } else if (theme === 'candy') {
-      // Cartoon Sugar World with Swirled Lollipops & Icing Sprinkles
+      // Sunlit Patisserie & Macaron Dreamland
       const bgGrad = this.ctx.createLinearGradient(0, 0, 0, groundY);
-      bgGrad.addColorStop(0, '#ec4899');
+      bgGrad.addColorStop(0, '#f472b6');
       bgGrad.addColorStop(0.55, '#fbcfe8');
-      bgGrad.addColorStop(1, '#fef9c3');
+      bgGrad.addColorStop(1, '#fef3c7');
       this.ctx.fillStyle = bgGrad;
       this.ctx.fillRect(0, 0, w, groundY);
 
-      // Puffy Cotton-Candy Clouds
       for (let i = 0; i < w + 400; i += 280) {
-        const x = (i - (this.scrollX * 0.1) % 280) - 280;
+        const x = (i - (this.scrollX * 0.09) % 280) - 280;
         this.drawCartoonCloud(x, 72 + (i % 3) * 18, 44, '#fff1f2');
       }
 
-      // Swirled Outlined Lollipops
-      for (let i = 0; i < w + 280; i += 200) {
-        const x = (i - (this.scrollX * 0.22) % 200) - 200;
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.strokeStyle = '#0f172a';
-        this.ctx.lineWidth = 3;
-        this.ctx.fillRect(x + 95, groundY - 122, 9, 122);
-        this.ctx.strokeRect(x + 95, groundY - 122, 9, 122);
-
-        this.ctx.fillStyle = (i / 200) % 2 === 0 ? '#f43f5e' : '#38bdf8';
+      // Soft Rolling Pastel Strawberry Hills
+      for (let i = 0; i < w + 500; i += 260) {
+        const x = (i - (this.scrollX * 0.16) % 260) - 260;
+        const hGrad = this.ctx.createLinearGradient(x, groundY - 95, x, groundY);
+        hGrad.addColorStop(0, '#fbcfe8');
+        hGrad.addColorStop(1, '#f472b6');
+        this.ctx.fillStyle = hGrad;
         this.ctx.beginPath();
-        this.ctx.arc(x + 99, groundY - 124, 28, 0, Math.PI * 2);
+        this.ctx.moveTo(x - 30, groundY);
+        this.ctx.bezierCurveTo(x + 50, groundY - 105, x + 210, groundY - 105, x + 290, groundY);
+        this.ctx.closePath();
         this.ctx.fill();
-        this.ctx.stroke();
+      }
 
-        // White swirl ring inside lollipop
-        this.ctx.strokeStyle = '#ffffff';
+      // Glossy 3D Swirl Lollipops
+      for (let i = 0; i < w + 280; i += 210) {
+        const x = (i - (this.scrollX * 0.25) % 210) - 210;
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.beginPath();
+        this.ctx.roundRect(x + 95, groundY - 125, 8, 125, [4]);
+        this.ctx.fill();
+
+        const popGrad = this.ctx.createRadialGradient(x + 90, groundY - 135, 4, x + 99, groundY - 125, 30);
+        if ((i / 210) % 2 === 0) {
+          popGrad.addColorStop(0, '#fff1f2');
+          popGrad.addColorStop(0.45, '#f472b6');
+          popGrad.addColorStop(1, '#db2777');
+        } else {
+          popGrad.addColorStop(0, '#ecfeff');
+          popGrad.addColorStop(0.45, '#22d3ee');
+          popGrad.addColorStop(1, '#0891b2');
+        }
+        this.ctx.fillStyle = popGrad;
+        this.ctx.beginPath();
+        this.ctx.arc(x + 99, groundY - 125, 28, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.88)';
         this.ctx.lineWidth = 3.5;
         this.ctx.beginPath();
-        this.ctx.arc(x + 99, groundY - 124, 15, 0, Math.PI * 1.4);
+        this.ctx.arc(x + 99, groundY - 125, 14, 0, Math.PI * 1.45);
         this.ctx.stroke();
       }
 
-      // Chocolate & Strawberry Icing Ground with Sprinkles
-      this.ctx.fillStyle = '#78350f';
+      const cakeGrad = this.ctx.createLinearGradient(0, groundY, 0, h);
+      cakeGrad.addColorStop(0, '#f472b6');
+      cakeGrad.addColorStop(1, '#be185d');
+      this.ctx.fillStyle = cakeGrad;
       this.ctx.fillRect(0, groundY, w, h - groundY);
-      this.ctx.fillStyle = '#f472b6';
-      this.ctx.fillRect(0, groundY, w, 16);
-      this.ctx.strokeStyle = '#0f172a';
-      this.ctx.lineWidth = 3.5;
-      this.ctx.beginPath();
-      this.ctx.moveTo(0, groundY);
-      this.ctx.lineTo(w, groundY);
-      this.ctx.stroke();
-
-      const sprinkleColors = ['#fde047', '#38bdf8', '#4ade80', '#ffffff'];
-      for (let i = 0; i < w + 100; i += 45) {
-        const sx = (i - (this.scrollX) % 45) - 45;
-        this.ctx.fillStyle = sprinkleColors[(i / 45) % sprinkleColors.length];
-        this.ctx.fillRect(sx + 10, groundY + 5, 10, 4);
-      }
+      this.ctx.fillStyle = '#fff5f7';
+      this.ctx.fillRect(0, groundY, w, 10);
 
     } else {
-      // Modern Animated Cartoon Meadow with Smiling Sun, Outlined Clouds, Trees & Hills
+      // Sunlit Cherry-Blossom & Emerald Meadow (Multi-Plane Aerial Perspective)
       const bgGrad = this.ctx.createLinearGradient(0, 0, 0, groundY);
-      bgGrad.addColorStop(0, '#0ea5e9');
-      bgGrad.addColorStop(0.62, '#38bdf8');
-      bgGrad.addColorStop(1, '#bae6fd');
+      bgGrad.addColorStop(0, '#38bdf8');
+      bgGrad.addColorStop(0.55, '#bae6fd');
+      bgGrad.addColorStop(1, '#fef3c7');
       this.ctx.fillStyle = bgGrad;
       this.ctx.fillRect(0, 0, w, groundY);
 
-      // Smiling Cartoon Sun with Gentle Rotating Rays
-      this.drawCartoonSun(w - 110, 86, 38, t);
+      this.drawCartoonSun(w - 110, 84, 38, t);
 
-      // Outlined Puffy Cartoon Clouds (Layer 1)
-      for (let i = 0; i < w + 400; i += 280) {
-        const x = (i - (this.scrollX * 0.1) % 280) - 280;
-        this.drawCartoonCloud(x, 72 + (i % 3) * 20, 48);
+      for (let i = 0; i < w + 420; i += 300) {
+        const x = (i - (this.scrollX * 0.08) % 300) - 300;
+        this.drawCartoonCloud(x, 70 + (i % 3) * 20, 44);
       }
 
-      // Distant Cel-Shaded Hills (Layer 2)
+      // Far Misty Blue-Green Mountains
+      this.ctx.fillStyle = 'rgba(125, 211, 252, 0.72)';
+      for (let i = 0; i < w + 480; i += 360) {
+        const x = (i - (this.scrollX * 0.11) % 360) - 360;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, groundY);
+        this.ctx.bezierCurveTo(x + 90, groundY - 135, x + 220, groundY - 75, x + 360, groundY);
+        this.ctx.closePath();
+        this.ctx.fill();
+      }
+
+      // Midground Undulating Emerald Hills + Sculpted Multi-Cluster Trees
       for (let i = 0; i < w + 500; i += 250) {
-        const x = (i - (this.scrollX * 0.22) % 250) - 250;
-        this.ctx.fillStyle = '#86efac';
-        this.ctx.strokeStyle = '#0f172a';
-        this.ctx.lineWidth = 3.5;
+        const x = (i - (this.scrollX * 0.24) % 250) - 250;
+        const hillGrad = this.ctx.createLinearGradient(x, groundY - 82, x, groundY);
+        hillGrad.addColorStop(0, '#6ee7b7');
+        hillGrad.addColorStop(1, '#10b981');
+        this.ctx.fillStyle = hillGrad;
         this.ctx.beginPath();
-        this.ctx.arc(x + 125, groundY + 78, 165, Math.PI, 0);
+        this.ctx.moveTo(x - 40, groundY);
+        this.ctx.bezierCurveTo(x + 40, groundY - 86, x + 210, groundY - 86, x + 290, groundY);
+        this.ctx.closePath();
         this.ctx.fill();
-        this.ctx.stroke();
 
-        // Cartoon Tree on Hill
+        // Tapered Curved Tree Trunk
         this.ctx.fillStyle = '#92400e';
-        this.ctx.fillRect(x + 118, groundY - 122, 14, 42);
-        this.ctx.strokeRect(x + 118, groundY - 122, 14, 42);
-        this.ctx.fillStyle = '#16a34a';
         this.ctx.beginPath();
-        this.ctx.arc(x + 125, groundY - 138, 28, 0, Math.PI * 2);
+        this.ctx.moveTo(x + 116, groundY - 62);
+        this.ctx.quadraticCurveTo(x + 121, groundY - 96, x + 120, groundY - 126);
+        this.ctx.lineTo(x + 130, groundY - 126);
+        this.ctx.quadraticCurveTo(x + 129, groundY - 96, x + 136, groundY - 62);
+        this.ctx.closePath();
         this.ctx.fill();
-        this.ctx.stroke();
-        this.ctx.fillStyle = '#4ade80';
-        this.ctx.beginPath();
-        this.ctx.arc(x + 117, groundY - 146, 12, 0, Math.PI * 2);
-        this.ctx.fill();
+
+        // Multi-cluster Lush Cherry Blossom / Emerald Canopy
+        const isBlossom = (i / 250) % 2 === 0;
+        const clusters = [
+          { dx: -16, dy: -124, r: 22 },
+          { dx: 16, dy: -124, r: 22 },
+          { dx: 0, dy: -144, r: 27 }
+        ];
+        clusters.forEach((cl) => {
+          const cg = this.ctx.createRadialGradient(x + 125 + cl.dx - 6, groundY + cl.dy - 8, 3, x + 125 + cl.dx, groundY + cl.dy, cl.r);
+          if (isBlossom) {
+            cg.addColorStop(0, '#fff1f2');
+            cg.addColorStop(0.5, '#f9a8d4');
+            cg.addColorStop(1, '#db2777');
+          } else {
+            cg.addColorStop(0, '#bbf7d0');
+            cg.addColorStop(0.5, '#34d399');
+            cg.addColorStop(1, '#047857');
+          }
+          this.ctx.fillStyle = cg;
+          this.ctx.beginPath();
+          this.ctx.arc(x + 125 + cl.dx, groundY + cl.dy, cl.r, 0, Math.PI * 2);
+          this.ctx.fill();
+        });
       }
 
-      // Lush Grass Ground
+      // Rich Layered Sunlit Garden Lawn Path
       const grassGrad = this.ctx.createLinearGradient(0, groundY, 0, h);
-      grassGrad.addColorStop(0, '#22c55e');
-      grassGrad.addColorStop(1, '#15803d');
+      grassGrad.addColorStop(0, '#34d399');
+      grassGrad.addColorStop(0.25, '#10b981');
+      grassGrad.addColorStop(1, '#065f46');
       this.ctx.fillStyle = grassGrad;
       this.ctx.fillRect(0, groundY, w, h - groundY);
+      this.ctx.fillStyle = '#a7f3d0';
+      this.ctx.fillRect(0, groundY, w, 6);
 
-      this.ctx.fillStyle = '#4ade80';
-      this.ctx.fillRect(0, groundY, w, 13);
-
-      this.ctx.lineWidth = 3.5;
-      this.ctx.strokeStyle = '#0f172a';
-      this.ctx.beginPath();
-      this.ctx.moveTo(0, groundY);
-      this.ctx.lineTo(w, groundY);
-      this.ctx.stroke();
-
-      // Outlined Grass Tufts & Tiny Meadow Flowers
-      for (let i = 0; i < w + 100; i += 90) {
-        const x = (i - (this.scrollX) % 90) - 90;
-        this.ctx.fillStyle = '#16a34a';
+      // Painted Wildflower Accents
+      const flowerColors = ['#f472b6', '#fde047', '#ffffff', '#c084fc'];
+      for (let i = 0; i < w + 100; i += 85) {
+        const x = (i - (this.scrollX) % 85) - 85;
+        this.ctx.fillStyle = flowerColors[(i / 85) % flowerColors.length];
         this.ctx.beginPath();
-        this.ctx.arc(x, groundY, 6, Math.PI, 0);
-        this.ctx.arc(x + 8, groundY, 9, Math.PI, 0);
-        this.ctx.arc(x + 16, groundY, 6, Math.PI, 0);
+        this.ctx.arc(x + 35, groundY + 18, 4.5, 0, Math.PI * 2);
         this.ctx.fill();
-
-        if ((i / 90) % 2 === 0) {
-          this.ctx.fillStyle = '#fef08a';
-          this.ctx.beginPath();
-          this.ctx.arc(x + 45, groundY + 18, 4.5, 0, Math.PI * 2);
-          this.ctx.fill();
-        }
       }
     }
   }
@@ -1336,50 +1386,41 @@ export class RunnerEngine {
   drawCartoonSun(x, y, radius, frame) {
     this.ctx.save();
     this.ctx.translate(x, y);
-    const rot = frame * 0.01;
-    this.ctx.strokeStyle = '#fde047';
-    this.ctx.lineWidth = 4;
-    for (let i = 0; i < 8; i++) {
-      const a = rot + (i * Math.PI) / 4;
-      this.ctx.beginPath();
-      this.ctx.moveTo(Math.cos(a) * (radius + 6), Math.sin(a) * (radius + 6));
-      this.ctx.lineTo(Math.cos(a) * (radius + 17), Math.sin(a) * (radius + 17));
-      this.ctx.stroke();
-    }
+    const pulse = 1 + Math.sin(frame * 0.035) * 0.05;
 
-    this.ctx.fillStyle = '#fde047';
-    this.ctx.strokeStyle = '#0f172a';
-    this.ctx.lineWidth = 3.5;
+    const halo = this.ctx.createRadialGradient(0, 0, radius * 0.3, 0, 0, radius * 2.5 * pulse);
+    halo.addColorStop(0, 'rgba(255, 251, 235, 0.95)');
+    halo.addColorStop(0.45, 'rgba(253, 224, 71, 0.35)');
+    halo.addColorStop(1, 'rgba(253, 224, 71, 0)');
+    this.ctx.fillStyle = halo;
+    this.ctx.beginPath();
+    this.ctx.arc(0, 0, radius * 2.5 * pulse, 0, Math.PI * 2);
+    this.ctx.fill();
+
+    const sunGrad = this.ctx.createRadialGradient(-radius * 0.22, -radius * 0.22, 3, 0, 0, radius);
+    sunGrad.addColorStop(0, '#ffffff');
+    sunGrad.addColorStop(0.5, '#fef08a');
+    sunGrad.addColorStop(1, '#fbbf24');
+    this.ctx.fillStyle = sunGrad;
     this.ctx.beginPath();
     this.ctx.arc(0, 0, radius, 0, Math.PI * 2);
     this.ctx.fill();
-    this.ctx.stroke();
-
-    // Cute Cartoon Sun Face
-    this.ctx.fillStyle = '#0f172a';
-    this.ctx.beginPath();
-    this.ctx.arc(-10, -4, 3.2, 0, Math.PI * 2);
-    this.ctx.arc(10, -4, 3.2, 0, Math.PI * 2);
-    this.ctx.fill();
-    this.ctx.lineWidth = 2.5;
-    this.ctx.beginPath();
-    this.ctx.arc(0, 2, 11, 0.15 * Math.PI, 0.85 * Math.PI);
-    this.ctx.stroke();
     this.ctx.restore();
   }
 
   drawCartoonCloud(x, y, radius, fill = '#ffffff') {
     this.ctx.save();
-    this.ctx.fillStyle = fill;
-    this.ctx.strokeStyle = '#0f172a';
-    this.ctx.lineWidth = 3;
+    const cGrad = this.ctx.createLinearGradient(x, y - radius, x, y + radius * 0.6);
+    cGrad.addColorStop(0, fill);
+    cGrad.addColorStop(0.75, '#f0f9ff');
+    cGrad.addColorStop(1, '#fbcfe8');
+    this.ctx.fillStyle = cGrad;
     this.ctx.beginPath();
-    this.ctx.arc(x, y, radius * 0.65, Math.PI * 0.5, Math.PI * 1.5);
-    this.ctx.arc(x + radius * 0.75, y - radius * 0.42, radius * 0.62, Math.PI * 1.05, Math.PI * 1.9);
-    this.ctx.arc(x + radius * 1.55, y, radius * 0.68, Math.PI * 1.4, Math.PI * 0.5);
-    this.ctx.closePath();
+    this.ctx.arc(x, y, radius * 0.62, 0, Math.PI * 2);
+    this.ctx.arc(x + radius * 0.68, y - radius * 0.32, radius * 0.72, 0, Math.PI * 2);
+    this.ctx.arc(x + radius * 1.45, y - radius * 0.08, radius * 0.58, 0, Math.PI * 2);
+    this.ctx.arc(x + radius * 0.72, y + radius * 0.08, radius * 0.6, 0, Math.PI * 2);
     this.ctx.fill();
-    this.ctx.stroke();
     this.ctx.restore();
   }
 
