@@ -686,3 +686,362 @@ body, html {
   flex-direction: column;
   gap: 0.9rem;
 }
+
+/* Shop & Spielgeld Styles */
+.coin-wallet-bar {
+  margin-top: 0.75rem;
+  display: flex;
+  justify-content: center;
+}
+
+.coin-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  border: 3px solid var(--accent-gold);
+  box-shadow: var(--shadow-cartoon-sm);
+  border-radius: 9999px;
+  padding: 0.45rem 1.2rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fef08a;
+}
+
+.shop-toast {
+  margin: 0.75rem auto 0 auto;
+  max-width: 560px;
+  padding: 0.55rem 1rem;
+  border-radius: 12px;
+  border: var(--border-cartoon);
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.shop-toast.hidden {
+  display: none;
+}
+
+.shop-toast-success {
+  background: #14532d;
+  color: #86efac;
+}
+
+.shop-toast-warn {
+  background: #4c0519;
+  color: #fda4af;
+}
+
+.shop-toast-info {
+  background: #1e3a8a;
+  color: #bfdbfe;
+}
+
+.shop-category-block {
+  margin-top: 0.85rem;
+}
+
+.shop-category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #e2e8f0;
+  margin-bottom: 0.5rem;
+}
+
+.inline-color-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: #cbd5e1;
+}
+
+.inline-color-label input[type="color"] {
+  width: 34px;
+  height: 28px;
+  padding: 2px;
+  border-radius: 8px;
+  border: var(--border-cartoon);
+  background: #1e293b;
+  cursor: pointer;
+}
+
+.shop-items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 0.55rem;
+}
+
+.shop-item-btn {
+  background: #1e293b;
+  border: 2.5px solid #334155;
+  box-shadow: 0 3px 0 #0f172a;
+  border-radius: 12px;
+  padding: 0.55rem 0.4rem;
+  color: #f8fafc;
+  font-family: 'Fredoka', cursive, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  cursor: pointer;
+  transition: transform 0.1s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.shop-item-btn:hover {
+  transform: translateY(-2px);
+  border-color: #60a5fa;
+}
+
+.shop-item-btn.selected {
+  border-color: #38bdf8;
+  background: linear-gradient(180deg, #1e3a8a 0%, #1d4ed8 100%);
+}
+
+.shop-item-btn.locked {
+  opacity: 0.82;
+  background: #0f172a;
+}
+
+.shop-item-btn.locked.affordable {
+  border-color: var(--accent-gold);
+  opacity: 1;
+}
+
+.shop-item-icon {
+  font-size: 1.45rem;
+  line-height: 1.1;
+}
+
+.shop-item-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.shop-item-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+  border-radius: 9999px;
+  background: rgba(15, 23, 42, 0.7);
+  color: #cbd5e1;
+}
+
+.shop-item-btn.selected .shop-item-badge {
+  background: #fbbf24;
+  color: #0f172a;
+}
+
+.shop-item-btn.locked.affordable .shop-item-badge {
+  color: #fef08a;
+}
+
+.ability-shop-card {
+  background: #1e293b;
+  border: var(--border-cartoon);
+  box-shadow: var(--shadow-cartoon-sm);
+  border-radius: 14px;
+  padding: 0.85rem;
+  color: #f8fafc;
+  font-family: 'Fredoka', cursive, sans-serif;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.ability-shop-card:hover {
+  transform: translateY(-2px);
+}
+
+.ability-shop-card.selected {
+  background: linear-gradient(180deg, #1e3a8a 0%, #1d4ed8 100%);
+}
+
+.ability-shop-card.locked {
+  background: #0f172a;
+  opacity: 0.85;
+}
+
+.ability-shop-card.locked.affordable {
+  border-color: var(--accent-gold);
+  opacity: 1;
+}
+
+.ability-shop-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.3rem;
+}
+
+.ability-shop-top strong {
+  font-size: 0.96rem;
+  color: #60a5fa;
+}
+
+.ability-shop-card.selected .ability-shop-top strong {
+  color: #fbbf24;
+}
+
+.ability-shop-card p {
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  line-height: 1.25;
+}
+
+.shop-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.12rem 0.45rem;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+
+.shop-tag-active {
+  background: #fbbf24;
+  color: #0f172a;
+}
+
+.shop-tag-owned {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.shop-tag-price {
+  background: #1e293b;
+  color: #fef08a;
+  border: 1.5px solid var(--accent-gold);
+}
+
+.hud-coins {
+  color: #fef08a;
+}
+
+.gameover-coins-box {
+  background: rgba(15, 23, 42, 0.75);
+  border: 2.5px solid var(--accent-gold);
+  border-radius: 14px;
+  padding: 0.8rem 1rem;
+  margin-bottom: 1.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 1rem;
+  color: #fef08a;
+}
+
+.coin-wallet-bar {
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.level-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: linear-gradient(180deg, #312e81 0%, #1e1b4b 100%);
+  border: 3px solid #38bdf8;
+  box-shadow: var(--shadow-cartoon-sm);
+  border-radius: 9999px;
+  padding: 0.45rem 1rem;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #e0f2fe;
+}
+
+.btn-mystery {
+  background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+  color: #0f172a;
+  border-radius: 9999px;
+  padding: 0.45rem 1.05rem;
+  font-size: 0.95rem;
+}
+
+.btn-mystery:hover {
+  background: linear-gradient(180deg, #fde047 0%, #f59e0b 100%);
+}
+
+.shop-item-btn {
+  position: relative;
+}
+
+.item-corner-tag {
+  position: absolute;
+  top: -7px;
+  right: -6px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 9999px;
+  border: 2px solid #0f172a;
+}
+
+.item-corner-tag.new {
+  background: #38bdf8;
+  color: #0f172a;
+}
+
+.item-corner-tag.deal {
+  background: #f43f5e;
+  color: #ffffff;
+}
+
+.bg-card {
+  position: relative;
+}
+
+.bg-card.locked {
+  border-color: #475569;
+}
+
+.bg-corner-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  border: 2px solid #0f172a;
+  z-index: 2;
+}
+
+.bg-corner-badge.new {
+  background: #38bdf8;
+  color: #0f172a;
+}
+
+.bg-corner-badge.deal {
+  background: #f43f5e;
+  color: #ffffff;
+}
+
+.ice-preview {
+  background: linear-gradient(180deg, #0284c7 0%, #bae6fd 65%, #7dd3fc 100%);
+}
+
+.beach-preview {
+  background: linear-gradient(180deg, #0ea5e9 0%, #06b6d4 60%, #eab308 100%);
+}
+
+.space-preview {
+  background: linear-gradient(180deg, #020617 0%, #3b0764 65%, #334155 100%);
+}
+
+.candy-preview {
+  background: linear-gradient(180deg, #f472b6 0%, #fbcfe8 65%, #78350f 100%);
+}
+
+.surprise-preview {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.8rem;
+}

@@ -133,16 +133,71 @@ export class ObstacleManager {
           ctx.textAlign = 'center';
           ctx.fillText('⚡ LASER - DUCK! ⚡', obs.x + obs.width / 2, obs.y - 6);
 
+        } else if (theme === 'ice') {
+          ctx.fillStyle = '#7dd3fc';
+          ctx.beginPath();
+          ctx.roundRect(obs.x, obs.y, obs.width, obs.height * 0.75, [8]);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#e0f2fe';
+          for (let i = 0; i < 4; i++) {
+            const tw = obs.width / 4;
+            ctx.beginPath();
+            ctx.moveTo(obs.x + i * tw, obs.y + obs.height * 0.75);
+            ctx.lineTo(obs.x + (i + 0.5) * tw, obs.y + obs.height + 8);
+            ctx.lineTo(obs.x + (i + 1) * tw, obs.y + obs.height * 0.75);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+          }
+
+          ctx.fillStyle = '#e0f2fe';
+          ctx.font = 'bold 12px Fredoka, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('❄️ DUCKEN! ❄️', obs.x + obs.width / 2, obs.y - 6);
+
+        } else if (theme === 'space') {
+          ctx.fillStyle = '#312e81';
+          ctx.strokeStyle = '#38bdf8';
+          ctx.beginPath();
+          ctx.roundRect(obs.x, obs.y, obs.width, obs.height * 0.8, [10]);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#a855f7';
+          ctx.fillRect(obs.x + 8, obs.y + 10, obs.width - 16, 10);
+
+          ctx.fillStyle = '#38bdf8';
+          ctx.font = 'bold 12px Fredoka, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('🛸 DUCKEN! 🛸', obs.x + obs.width / 2, obs.y - 6);
+
+        } else if (theme === 'candy') {
+          ctx.fillStyle = '#f472b6';
+          ctx.beginPath();
+          ctx.roundRect(obs.x, obs.y, obs.width, obs.height * 0.82, [12]);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(obs.x + 12, obs.y + 4, 10, obs.height * 0.72);
+          ctx.fillRect(obs.x + obs.width - 22, obs.y + 4, 10, obs.height * 0.72);
+
+          ctx.fillStyle = '#fef08a';
+          ctx.font = 'bold 12px Fredoka, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('🍬 DUCKEN! 🍬', obs.x + obs.width / 2, obs.y - 6);
+
         } else {
-          // Stylized Low Tree Branch / Wooden Beam
-          ctx.fillStyle = '#78350f';
+          // Stylized Low Tree Branch / Wooden Beam (meadow & beach)
+          ctx.fillStyle = theme === 'beach' ? '#a16207' : '#78350f';
           ctx.beginPath();
           ctx.roundRect(obs.x, obs.y + 4, obs.width, obs.height - 8, [8]);
           ctx.fill();
           ctx.stroke();
 
-          // Green hanging leaves
-          ctx.fillStyle = '#16a34a';
+          ctx.fillStyle = theme === 'beach' ? '#22c55e' : '#16a34a';
           ctx.beginPath();
           ctx.arc(obs.x + 15, obs.y + obs.height, 10, 0, Math.PI * 2);
           ctx.arc(obs.x + obs.width * 0.5, obs.y + obs.height + 4, 12, 0, Math.PI * 2);
@@ -150,7 +205,6 @@ export class ObstacleManager {
           ctx.fill();
           ctx.stroke();
 
-          // Duck cue
           ctx.fillStyle = '#fbbf24';
           ctx.font = 'bold 13px Fredoka, sans-serif';
           ctx.textAlign = 'center';
@@ -204,20 +258,46 @@ export class ObstacleManager {
           ctx.fillRect(obs.x + 4, obs.y + 8, obs.width - 8, 6);
           ctx.fillRect(obs.x + 4, obs.y + obs.height - 14, obs.width - 8, 6);
 
+        } else if (theme === 'ice') {
+          ctx.fillStyle = '#38bdf8';
+          ctx.beginPath();
+          ctx.roundRect(obs.x, obs.y, obs.width, obs.height, [6]);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = '#e0f2fe';
+          ctx.fillRect(obs.x + 4, obs.y + 4, obs.width - 8, 10);
+        } else if (theme === 'space') {
+          ctx.fillStyle = '#64748b';
+          ctx.beginPath();
+          ctx.roundRect(obs.x, obs.y, obs.width, obs.height, [10]);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = '#475569';
+          ctx.beginPath();
+          ctx.arc(obs.x + 12, obs.y + 16, 5, 0, Math.PI * 2);
+          ctx.arc(obs.x + 24, obs.y + 30, 4, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (theme === 'candy') {
+          ctx.fillStyle = '#ec4899';
+          ctx.beginPath();
+          ctx.roundRect(obs.x, obs.y, obs.width, obs.height, [8]);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(obs.x + 4, obs.y + 8, obs.width - 8, 7);
+          ctx.fillRect(obs.x + 4, obs.y + 24, obs.width - 8, 7);
         } else {
-          // Stylized Wooden Cartoon Hurdle
-          ctx.fillStyle = '#b45309';
+          // Stylized Wooden Cartoon Hurdle (meadow & beach)
+          ctx.fillStyle = theme === 'beach' ? '#ca8a04' : '#b45309';
           ctx.beginPath();
           ctx.roundRect(obs.x, obs.y, obs.width, obs.height, [6]);
           ctx.fill();
           ctx.stroke();
 
-          // Wooden planks & bolts
           ctx.fillStyle = '#f59e0b';
           ctx.fillRect(obs.x + 4, obs.y + 8, obs.width - 8, 8);
           ctx.fillRect(obs.x + 4, obs.y + obs.height - 16, obs.width - 8, 8);
 
-          // Bolts
           ctx.fillStyle = '#0f172a';
           ctx.beginPath();
           ctx.arc(obs.x + 8, obs.y + 12, 2.5, 0, Math.PI * 2);
@@ -312,5 +392,179 @@ export class ObstacleManager {
       }
     }
     return false;
+  }
+}
+
+export class CoinManager {
+  constructor() {
+    this.coins = [];
+    this.spawnTimer = 0;
+    this.animFrame = 0;
+  }
+
+  reset() {
+    this.coins = [];
+    this.spawnTimer = 0;
+    this.animFrame = 0;
+  }
+
+  update(speed, canvasWidth, groundY, playerCenter, magnetActive) {
+    this.animFrame++;
+    this.spawnTimer++;
+
+    if (this.spawnTimer > 55 + Math.random() * 45) {
+      this.spawnTimer = 0;
+      this.spawnCoinGroup(canvasWidth, groundY);
+    }
+
+    for (let i = this.coins.length - 1; i >= 0; i--) {
+      const c = this.coins[i];
+
+      if (magnetActive && playerCenter) {
+        const dx = playerCenter.x - c.x;
+        const dy = playerCenter.y - c.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < 260 && dist > 1) {
+          const pull = 10;
+          c.x += (dx / dist) * pull;
+          c.y += (dy / dist) * pull;
+        } else {
+          c.x -= speed;
+        }
+      } else {
+        c.x -= speed;
+      }
+
+      if (c.x < -40) {
+        this.coins.splice(i, 1);
+      }
+    }
+  }
+
+  spawnCoinGroup(canvasWidth, groundY) {
+    const pattern = Math.random();
+    const startX = canvasWidth + 30;
+
+    if (pattern < 0.45) {
+      // Ground row of 3 gold coins
+      for (let i = 0; i < 3; i++) {
+        this.coins.push({
+          x: startX + i * 42,
+          y: groundY - 26,
+          radius: 14,
+          value: 5,
+          kind: 'gold'
+        });
+      }
+    } else if (pattern < 0.85) {
+      // Jump arc of 3 coins
+      const offsets = [0, -45, 0];
+      for (let i = 0; i < 3; i++) {
+        this.coins.push({
+          x: startX + i * 44,
+          y: groundY - 85 + offsets[i],
+          radius: 14,
+          value: 5,
+          kind: 'gold'
+        });
+      }
+    } else {
+      // Rare high diamond coin (+15)
+      this.coins.push({
+        x: startX,
+        y: groundY - 125,
+        radius: 16,
+        value: 15,
+        kind: 'gem'
+      });
+    }
+  }
+
+  spawnRainCoin(x, y) {
+    this.coins.push({
+      x,
+      y,
+      radius: 14,
+      value: 5,
+      kind: 'gold'
+    });
+  }
+
+  checkPickups(playerRect) {
+    let gained = 0;
+    const picked = [];
+    const px = playerRect.x + playerRect.width / 2;
+    const py = playerRect.y + playerRect.height / 2;
+
+    for (let i = this.coins.length - 1; i >= 0; i--) {
+      const c = this.coins[i];
+      const hitX = Math.abs(px - c.x) < playerRect.width * 0.65 + c.radius;
+      const hitY = Math.abs(py - c.y) < playerRect.height * 0.55 + c.radius;
+      if (hitX && hitY) {
+        gained += c.value;
+        picked.push({ x: c.x, y: c.y, value: c.value, kind: c.kind });
+        this.coins.splice(i, 1);
+      }
+    }
+    return { gained, picked };
+  }
+
+  draw(ctx) {
+    const pulse = Math.sin(this.animFrame * 0.14);
+    this.coins.forEach((c) => {
+      ctx.save();
+      ctx.translate(c.x, c.y + pulse * 3);
+
+      if (c.kind === 'gem') {
+        // Glowing Cyan Bonus Gem (+15)
+        ctx.fillStyle = '#38bdf8';
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 3;
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.moveTo(0, -15);
+        ctx.lineTo(13, 0);
+        ctx.lineTo(0, 15);
+        ctx.lineTo(-13, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#e0f2fe';
+        ctx.beginPath();
+        ctx.moveTo(0, -8);
+        ctx.lineTo(6, 0);
+        ctx.lineTo(0, 8);
+        ctx.lineTo(-6, 0);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        // Cartoon Gold Coin (+5)
+        const scaleX = 0.72 + Math.abs(Math.sin(this.animFrame * 0.1 + c.x * 0.02)) * 0.28;
+        ctx.scale(scaleX, 1);
+
+        ctx.fillStyle = '#fbbf24';
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, c.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#fde68a';
+        ctx.beginPath();
+        ctx.arc(-3, -3, c.radius * 0.55, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#92400e';
+        ctx.font = 'bold 13px Fredoka, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('$', 0, 1);
+      }
+
+      ctx.restore();
+    });
   }
 }

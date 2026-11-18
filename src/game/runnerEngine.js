@@ -1,7 +1,8 @@
 import { PlayerConfig, GameConfig } from '../editor/characterData.js';
+import { ShopManager } from '../editor/shopData.js';
 import { renderCharacter } from '../editor/characterRenderer.js';
 import { ControlsManager } from './controls.js';
-import { ObstacleManager } from './obstacles.js';
+import { ObstacleManager, CoinManager } from './obstacles.js';
 import { QuickTimeEventManager } from './quickTimeEvent.js';
 
 class SoundManager {
@@ -136,6 +137,42 @@ class SoundManager {
       osc.stop(now + idx * 0.15 + 0.25);
     });
   }
+
+  playCoin(isGem = false) {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(isGem ? 880 : 660, now);
+    osc.frequency.setValueAtTime(isGem ? 1320 : 990, now + 0.06);
+
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.linearRampToValueAtTime(0.01, now + 0.18);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.18);
+  }
+
+  playShieldBreak() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(520, now);
+    osc.frequency.exponentialRampToValueAtTime(160, now + 0.28);
+
+    gain.gain.setValueAtTime(0.4, now);
+    gain.gain.linearRampToValueAtTime(0.01, now + 0.28);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.28);
+  }
 }
 
 export class RunnerEngine {
@@ -146,12 +183,16 @@ export class RunnerEngine {
 
     this.controls = new ControlsManager();
     this.obstacles = new ObstacleManager();
+    this.coins = new CoinManager();
     this.sounds = new SoundManager();
     this.qte = new QuickTimeEventManager(this);
 
     this.scoreValEl = document.getElementById('scoreVal');
+    this.runCoinsValEl = document.getElementById('runCoinsVal');
     this.highScoreValEl = document.getElementById('highScoreVal');
     this.finalScoreEl = document.getElementById('finalScore');
+    this.earnedCoinsValEl = document.getElementById('earnedCoinsVal');
+    this.totalCoinsValEl = document.getElementById('totalCoinsVal');
     this.gameOverModal = document.getElementById('game-over-modal');
 
     this.restartBtn = document.getElementById('restartBtn');
@@ -160,8 +201,14 @@ export class RunnerEngine {
     this.isRunning = false;
     this.isPaused = false;
     this.score = 0;
+    this.runCoins = 0;
     this.highScore = parseInt(localStorage.getItem('runner_highscore') || '0', 10);
     this.highScoreValEl.textContent = this.highScore;
+
+    this.magnetTimer = 0;
+    this.coinRainTimer = 0;
+    this.shieldActive = false;
+    this.shieldCooldown = 0;
 
     this.scrollX = 0;
     this.baseSpeed = 5;
@@ -169,7 +216,7 @@ export class RunnerEngine {
 
     // Dynamic Biome / Background switching
     this.currentBiome = 'meadow';
-    this.biomeList = ['meadow', 'cave', 'neon'];
+    this.biomeList = ['meadow', 'cave', 'neon', 'ice', 'beach', 'space', 'candy'];
     this.biomeTransitionDistance = 200; // Switch biome every 200m
     this.zoneNotificationTimer = 0;
     this.zoneNotificationText = '';
@@ -229,7 +276,14 @@ export class RunnerEngine {
     this.isRunning = true;
     this.isPaused = false;
     this.score = 0;
+    this.runCoins = 0;
+    if (this.runCoinsValEl) this.runCoinsValEl.textContent = '0';
+    this.magnetTimer = 0;
+    this.coinRainTimer = 0;
+    this.shieldActive = false;
+    this.shieldCooldown = 0;
     this.currentBiome = GameConfig.background || 'meadow';
+    this.biomeStartIndex = Math.max(0, this.biomeList.indexOf(this.currentBiome));
     this.zoneNotificationTimer = 120; // 2 seconds banner at start
     this.zoneNotificationText = this.getBiomeName(this.currentBiome);
     this.scrollX = 0;
@@ -246,6 +300,7 @@ export class RunnerEngine {
 
     this.controls.reset();
     this.obstacles.reset();
+    this.coins.reset();
     this.qte.reset();
 
     this.gameOverModal.classList.add('hidden');
@@ -255,10 +310,12 @@ export class RunnerEngine {
 
   getBiomeName(biome) {
     switch (biome) {
-      case 'cave':
-        return '🌋 Zone: Höhle & Hölle';
-      case 'neon':
-        return '🌆 Zone: Neon-City';
+      case 'cave': return '🌋 Zone: Höhle & Hölle';
+      case 'neon': return '🌆 Zone: Neon-City';
+      case 'ice': return '❄️ Zone: Eiswelt';
+      case 'beach': return '🏖️ Zone: Tropen-Strand';
+      case 'space': return '🚀 Zone: Weltraum';
+      case 'candy': return '🍬 Zone: Candy-Land';
       case 'meadow':
       default:
         return '🌱 Zone: Grüne Wiese';
@@ -273,6 +330,24 @@ export class RunnerEngine {
     for (let i = 0; i < 20; i++) {
       this.spawnCollisionStars(this.player.x + 30, this.player.y - 60);
     }
+  }
+
+  addRunCoins(amount, x = this.player.x + 20, y = this.player.y - 80) {
+    if (amount <= 0) return;
+    this.runCoins += amount;
+    if (this.runCoinsValEl) {
+      this.runCoinsValEl.textContent = this.runCoins;
+    }
+    this.particles.push({
+      type: 'coinText',
+      text: `+${amount} 🪙`,
+      x,
+      y,
+      vx: 0,
+      vy: -1.6,
+      alpha: 1,
+      life: 40
+    });
   }
 
   triggerBonusSpeed() {
@@ -370,12 +445,32 @@ export class RunnerEngine {
       return;
     }
 
-    // Ability: Speed Boost timer / trigger
+    // Ability trigger (Speed Boost / Coin Magnet / Shield / Coin Rain)
     if (this.controls.consumeAbilityPress()) {
       if (PlayerConfig.ability === 'speed_boost' && !this.player.invulnerable) {
         this.player.invulnerable = true;
         this.player.invulnerableTimer = 180; // ~3 seconds at 60fps
         this.sounds.playSprint();
+      } else if (PlayerConfig.ability === 'coin_magnet' && this.magnetTimer <= 0) {
+        this.magnetTimer = 360; // 6 seconds magnet
+        this.sounds.playSprint();
+      } else if (PlayerConfig.ability === 'shield' && !this.shieldActive && this.shieldCooldown <= 0) {
+        this.shieldActive = true;
+        this.sounds.playSprint();
+      } else if (PlayerConfig.ability === 'coin_rain' && this.coinRainTimer <= 0) {
+        this.coinRainTimer = 210; // 3.5 seconds of coin rain!
+        this.sounds.playSprint();
+      }
+    }
+
+    if (this.magnetTimer > 0) this.magnetTimer--;
+    if (this.shieldCooldown > 0) this.shieldCooldown--;
+    if (this.coinRainTimer > 0) {
+      this.coinRainTimer--;
+      if (this.coinRainTimer % 16 === 0) {
+        const spawnX = this.player.x + 140 + Math.random() * 260;
+        const spawnY = groundY - 35 - Math.random() * 110;
+        this.coins.spawnRainCoin(spawnX, spawnY);
       }
     }
 
@@ -460,41 +555,67 @@ export class RunnerEngine {
     this.score = Math.floor(this.scrollX / 10);
     this.scoreValEl.textContent = this.score;
 
-    // Dynamic background biome progression
-    const biomeIndex = Math.floor(this.score / this.biomeTransitionDistance) % this.biomeList.length;
-    const nextBiome = this.biomeList[biomeIndex];
+    // Dynamic background biome progression through unlocked worlds
+    const unlockedBiomes = this.biomeList.filter((b) => ShopManager.isUnlocked('background', b));
+    const activePool = unlockedBiomes.length > 0 ? unlockedBiomes : ['meadow'];
+    const startIdx = Math.max(0, activePool.indexOf(GameConfig.background || 'meadow'));
+    const biomeIndex = (startIdx + Math.floor(this.score / this.biomeTransitionDistance)) % activePool.length;
+    const nextBiome = activePool[biomeIndex];
     if (nextBiome !== this.currentBiome) {
       this.currentBiome = nextBiome;
-      GameConfig.background = nextBiome;
       this.zoneNotificationText = this.getBiomeName(nextBiome);
-      this.zoneNotificationTimer = 150; // show zone banner for ~2.5s
+      this.zoneNotificationTimer = 150;
     }
 
     if (this.zoneNotificationTimer > 0) {
       this.zoneNotificationTimer--;
     }
 
-    // Update Obstacles
+    // Update Obstacles & Coins
     this.obstacles.update(this.currentSpeed, this.displayWidth, groundY);
+    this.coins.update(
+      this.currentSpeed,
+      this.displayWidth,
+      groundY,
+      { x: this.player.x, y: this.player.y - 50 },
+      this.magnetTimer > 0
+    );
+
+    const charScaleX = PlayerConfig.body.width || 1.0;
+    const charScaleY = PlayerConfig.body.height || 1.0;
+    const playerWidth = 36 * charScaleX;
+    const playerHeight = (this.player.isDucking ? 55 : 110) * charScaleY;
+
+    const playerRect = {
+      x: this.player.x - playerWidth / 2,
+      y: this.player.y - playerHeight,
+      width: playerWidth,
+      height: playerHeight
+    };
+
+    // Coin Pickup Check
+    const pickup = this.coins.checkPickups(playerRect);
+    if (pickup.gained > 0) {
+      const hasGem = pickup.picked.some((p) => p.kind === 'gem');
+      this.sounds.playCoin(hasGem);
+      pickup.picked.forEach((p) => this.addRunCoins(p.value, p.x, p.y - 16));
+    }
 
     // Collision Check
     if (!this.player.invulnerable) {
-      const charScaleX = PlayerConfig.body.width || 1.0;
-      const charScaleY = PlayerConfig.body.height || 1.0;
-      const playerWidth = 36 * charScaleX;
-      const playerHeight = (this.player.isDucking ? 55 : 110) * charScaleY;
-
-      const playerRect = {
-        x: this.player.x - playerWidth / 2,
-        y: this.player.y - playerHeight,
-        width: playerWidth,
-        height: playerHeight
-      };
-
       if (this.obstacles.checkCollisions(playerRect)) {
-        this.sounds.playCollision();
-        this.spawnCollisionStars(this.player.x, this.player.y - 40);
-        this.gameOver();
+        if (this.shieldActive) {
+          this.shieldActive = false;
+          this.shieldCooldown = 480; // 8s cooldown before next shield
+          this.player.invulnerable = true;
+          this.player.invulnerableTimer = 60;
+          this.sounds.playShieldBreak();
+          this.spawnCollisionStars(this.player.x, this.player.y - 50);
+        } else {
+          this.sounds.playCollision();
+          this.spawnCollisionStars(this.player.x, this.player.y - 40);
+          this.gameOver();
+        }
       }
     }
   }
@@ -513,8 +634,9 @@ export class RunnerEngine {
       this.drawSpeedlines();
     }
 
-    // Draw Obstacles
+    // Draw Obstacles & Coins
     this.obstacles.draw(this.ctx, theme);
+    this.coins.draw(this.ctx);
 
     // Draw Zone Banner notification
     if (this.zoneNotificationTimer > 0) {
@@ -544,6 +666,29 @@ export class RunnerEngine {
       pose: pose
     });
     this.ctx.restore();
+
+    if (this.shieldActive) {
+      this.ctx.save();
+      this.ctx.strokeStyle = '#38bdf8';
+      this.ctx.fillStyle = 'rgba(56, 189, 248, 0.18)';
+      this.ctx.lineWidth = 3.5;
+      this.ctx.beginPath();
+      this.ctx.arc(this.player.x, this.player.y - 60, 68, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.stroke();
+      this.ctx.restore();
+    }
+
+    if (this.magnetTimer > 0) {
+      this.ctx.save();
+      this.ctx.strokeStyle = '#c084fc';
+      this.ctx.lineWidth = 2.5;
+      this.ctx.setLineDash([8, 6]);
+      this.ctx.beginPath();
+      this.ctx.arc(this.player.x, this.player.y - 55, 76 + Math.sin(this.player.animFrame * 0.2) * 5, 0, Math.PI * 2);
+      this.ctx.stroke();
+      this.ctx.restore();
+    }
 
     if (this.qte.isEventActive()) {
       this.drawPuzzleBubble();
@@ -642,6 +787,14 @@ export class RunnerEngine {
         this.ctx.fillStyle = '#fbbf24';
         this.ctx.font = `${p.size}px sans-serif`;
         this.ctx.fillText('⭐', p.x, p.y);
+      } else if (p.type === 'coinText') {
+        this.ctx.font = 'bold 18px Fredoka, sans-serif';
+        this.ctx.textAlign = 'center';
+        this.ctx.strokeStyle = '#0f172a';
+        this.ctx.lineWidth = 4;
+        this.ctx.strokeText(p.text, p.x, p.y);
+        this.ctx.fillStyle = '#fef08a';
+        this.ctx.fillText(p.text, p.x, p.y);
       }
       this.ctx.restore();
     });
@@ -762,6 +915,151 @@ export class RunnerEngine {
       this.ctx.fillRect(0, groundY, w, 6);
       this.ctx.shadowBlur = 0;
 
+    } else if (theme === 'ice') {
+      // Arctic Ice World
+      const bgGrad = this.ctx.createLinearGradient(0, 0, 0, groundY);
+      bgGrad.addColorStop(0, '#0c4a6e');
+      bgGrad.addColorStop(0.55, '#0284c7');
+      bgGrad.addColorStop(1, '#bae6fd');
+      this.ctx.fillStyle = bgGrad;
+      this.ctx.fillRect(0, 0, w, groundY);
+
+      // Snow Peaks Parallax
+      this.ctx.fillStyle = '#e0f2fe';
+      this.ctx.strokeStyle = '#0f172a';
+      this.ctx.lineWidth = 3;
+      for (let i = 0; i < w + 320; i += 220) {
+        const x = (i - (this.scrollX * 0.2) % 220) - 220;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, groundY);
+        this.ctx.lineTo(x + 110, groundY - 150);
+        this.ctx.lineTo(x + 220, groundY);
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.stroke();
+      }
+
+      // Falling Snowflakes
+      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      for (let i = 0; i < 24; i++) {
+        const sx = ((i * 97 + this.player.animFrame * 0.7) % w);
+        const sy = ((i * 53 + this.player.animFrame * 1.6) % groundY);
+        this.ctx.beginPath();
+        this.ctx.arc(sx, sy, 3 + (i % 3), 0, Math.PI * 2);
+        this.ctx.fill();
+      }
+
+      // Icy Ground
+      const iceGrad = this.ctx.createLinearGradient(0, groundY, 0, h);
+      iceGrad.addColorStop(0, '#7dd3fc');
+      iceGrad.addColorStop(1, '#0284c7');
+      this.ctx.fillStyle = iceGrad;
+      this.ctx.fillRect(0, groundY, w, h - groundY);
+      this.ctx.fillStyle = '#f0f9ff';
+      this.ctx.fillRect(0, groundY, w, 10);
+
+    } else if (theme === 'beach') {
+      // Sunny Tropical Beach
+      const bgGrad = this.ctx.createLinearGradient(0, 0, 0, groundY);
+      bgGrad.addColorStop(0, '#0ea5e9');
+      bgGrad.addColorStop(0.65, '#38bdf8');
+      bgGrad.addColorStop(1, '#fef08a');
+      this.ctx.fillStyle = bgGrad;
+      this.ctx.fillRect(0, 0, w, groundY);
+
+      // Sun
+      this.ctx.fillStyle = '#fde047';
+      this.ctx.beginPath();
+      this.ctx.arc(w - 110, 90, 42, 0, Math.PI * 2);
+      this.ctx.fill();
+
+      // Turquoise Ocean Strip
+      this.ctx.fillStyle = '#06b6d4';
+      this.ctx.fillRect(0, groundY - 36, w, 36);
+
+      // Distant Palm Trees
+      for (let i = 0; i < w + 320; i += 260) {
+        const x = (i - (this.scrollX * 0.28) % 260) - 260;
+        this.ctx.fillStyle = '#92400e';
+        this.ctx.fillRect(x + 60, groundY - 115, 14, 115);
+        this.ctx.fillStyle = '#16a34a';
+        this.ctx.beginPath();
+        this.ctx.ellipse(x + 42, groundY - 115, 32, 10, -0.3, 0, Math.PI * 2);
+        this.ctx.ellipse(x + 92, groundY - 115, 32, 10, 0.3, 0, Math.PI * 2);
+        this.ctx.fill();
+      }
+
+      // Golden Sand Ground
+      this.ctx.fillStyle = '#eab308';
+      this.ctx.fillRect(0, groundY, w, h - groundY);
+      this.ctx.fillStyle = '#fde047';
+      this.ctx.fillRect(0, groundY, w, 12);
+
+    } else if (theme === 'space') {
+      // Deep Galaxy Space
+      const bgGrad = this.ctx.createLinearGradient(0, 0, 0, groundY);
+      bgGrad.addColorStop(0, '#020617');
+      bgGrad.addColorStop(0.6, '#1e1b4b');
+      bgGrad.addColorStop(1, '#3b0764');
+      this.ctx.fillStyle = bgGrad;
+      this.ctx.fillRect(0, 0, w, groundY);
+
+      // Twinkling Stars
+      this.ctx.fillStyle = '#ffffff';
+      for (let i = 0; i < 40; i++) {
+        const sx = (i * 89 + w - (this.scrollX * 0.08) % w) % w;
+        const sy = (i * 47) % (groundY - 20);
+        this.ctx.fillRect(sx, sy, (i % 3) + 1, (i % 3) + 1);
+      }
+
+      // Ringed Planet
+      this.ctx.save();
+      this.ctx.fillStyle = '#f59e0b';
+      this.ctx.beginPath();
+      this.ctx.arc(w * 0.72, 110, 44, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.strokeStyle = '#fde68a';
+      this.ctx.lineWidth = 6;
+      this.ctx.beginPath();
+      this.ctx.ellipse(w * 0.72, 110, 74, 16, -0.25, 0, Math.PI * 2);
+      this.ctx.stroke();
+      this.ctx.restore();
+
+      // Moon Crater Ground
+      this.ctx.fillStyle = '#334155';
+      this.ctx.fillRect(0, groundY, w, h - groundY);
+      this.ctx.fillStyle = '#94a3b8';
+      this.ctx.fillRect(0, groundY, w, 8);
+
+    } else if (theme === 'candy') {
+      // Cotton Candy World
+      const bgGrad = this.ctx.createLinearGradient(0, 0, 0, groundY);
+      bgGrad.addColorStop(0, '#f472b6');
+      bgGrad.addColorStop(0.6, '#fbcfe8');
+      bgGrad.addColorStop(1, '#fef9c3');
+      this.ctx.fillStyle = bgGrad;
+      this.ctx.fillRect(0, 0, w, groundY);
+
+      // Lollipop Hills
+      for (let i = 0; i < w + 280; i += 200) {
+        const x = (i - (this.scrollX * 0.22) % 200) - 200;
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.fillRect(x + 95, groundY - 120, 8, 120);
+        this.ctx.fillStyle = (i / 200) % 2 === 0 ? '#ec4899' : '#38bdf8';
+        this.ctx.strokeStyle = '#0f172a';
+        this.ctx.lineWidth = 3;
+        this.ctx.beginPath();
+        this.ctx.arc(x + 99, groundY - 120, 26, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.stroke();
+      }
+
+      // Chocolate & Icing Ground
+      this.ctx.fillStyle = '#78350f';
+      this.ctx.fillRect(0, groundY, w, h - groundY);
+      this.ctx.fillStyle = '#f472b6';
+      this.ctx.fillRect(0, groundY, w, 14);
+
     } else {
       // Modern 2D Cartoon Meadow Sky
       const bgGrad = this.ctx.createLinearGradient(0, 0, 0, groundY);
@@ -838,6 +1136,16 @@ export class RunnerEngine {
       localStorage.setItem('runner_highscore', this.highScore.toString());
       this.highScoreValEl.textContent = this.highScore;
     }
+
+    // Distance bonus coins (+1 coin per 25m run) + Level progress
+    const distanceBonusCoins = Math.floor(this.score / 25);
+    const prog = ShopManager.recordProgress(this.score, 0);
+    const totalRunEarned = this.runCoins + distanceBonusCoins + prog.levelUpBonus;
+    const newBalance = ShopManager.addCoins(this.runCoins + distanceBonusCoins);
+
+    if (this.earnedCoinsValEl) this.earnedCoinsValEl.textContent = totalRunEarned;
+    if (this.totalCoinsValEl) this.totalCoinsValEl.textContent = newBalance;
+
     this.finalScoreEl.textContent = this.score;
     this.gameOverModal.classList.remove('hidden');
   }

@@ -1,7 +1,9 @@
+import { ShopManager } from '../editor/shopData.js';
+
 /**
  * Interactive Puzzle / Rätsel Stop System
- * When triggered, the character stops running and stands still first,
- * then a riddle appears. The player must solve the riddle before they can continue!
+ * Combines curated German riddles with a procedural riddle generator
+ * (sequences, math, emoji patterns, odd-one-out, word puzzles) so there are always new riddles!
  */
 
 const RIDDLE_BANK = [
@@ -96,33 +98,6 @@ const RIDDLE_BANK = [
     correctId: 'kangaroo'
   },
   {
-    prompt: 'Wie viele Beine haben 2 Katzen und 1 Vogel zusammen?',
-    options: [
-      { id: '6', icon: '6️⃣', text: '6 Beine' },
-      { id: '8', icon: '8️⃣', text: '8 Beine' },
-      { id: '10', icon: '🔟', text: '10 Beine' }
-    ],
-    correctId: '10'
-  },
-  {
-    prompt: 'Welche Zahl fehlt in der Reihe? 2, 4, 6, __, 10',
-    options: [
-      { id: '7', icon: '7️⃣', text: '7' },
-      { id: '8', icon: '8️⃣', text: '8' },
-      { id: '9', icon: '9️⃣', text: '9' }
-    ],
-    correctId: '8'
-  },
-  {
-    prompt: 'Welche Zahl fehlt? 5, 10, 15, __, 25',
-    options: [
-      { id: '18', icon: '🔢', text: '18' },
-      { id: '20', icon: '🎯', text: '20' },
-      { id: '22', icon: '🔢', text: '22' }
-    ],
-    correctId: '20'
-  },
-  {
     prompt: 'Wenn du beim Rennen den 2. überholst, auf welchem Platz bist du dann?',
     options: [
       { id: '1st', icon: '🥇', text: 'Auf dem 1. Platz' },
@@ -166,8 +141,137 @@ const RIDDLE_BANK = [
       { id: 'table', icon: '🪑', text: 'Ein Tisch' }
     ],
     correctId: 'river'
+  },
+  {
+    prompt: 'Was hat 4 Beine, kann aber trotzdem nicht laufen?',
+    options: [
+      { id: 'table', icon: '🪑', text: 'Ein Tisch' },
+      { id: 'horse', icon: '🐎', text: 'Ein Pferd' },
+      { id: 'frog', icon: '🐸', text: 'Ein Frosch' }
+    ],
+    correctId: 'table'
+  },
+  {
+    prompt: 'Je heißer es wird, desto frischer wird es. Was ist gemeint?',
+    options: [
+      { id: 'bread', icon: '🍞', text: 'Frisches Brot im Ofen' },
+      { id: 'snowman', icon: '⛄', text: 'Ein Schneemann' },
+      { id: 'icecream', icon: '🍦', text: 'Eine Eiskugel' }
+    ],
+    correctId: 'bread'
+  },
+  {
+    prompt: 'Welcher Planet ist der Sonne am nächsten?',
+    options: [
+      { id: 'mercury', icon: '🪐', text: 'Merkur' },
+      { id: 'mars', icon: '🔴', text: 'Mars' },
+      { id: 'neptune', icon: '🔵', text: 'Neptun' }
+    ],
+    correctId: 'mercury'
   }
 ];
+
+function generateDynamicRiddle() {
+  const mode = Math.floor(Math.random() * 5);
+
+  if (mode === 0) {
+    // Dynamic number sequence
+    const start = 2 + Math.floor(Math.random() * 10);
+    const step = 2 + Math.floor(Math.random() * 7);
+    const missingIdx = 2 + Math.floor(Math.random() * 2); // index 2 or 3
+    const seq = [0, 1, 2, 3, 4].map((i) => (i === missingIdx ? '__' : start + i * step));
+    const answer = start + missingIdx * step;
+    const wrong1 = answer + (Math.random() < 0.5 ? 1 : -1) * (1 + Math.floor(Math.random() * 2));
+    const wrong2 = answer + step + (Math.random() < 0.5 ? 2 : -2);
+
+    return {
+      isDynamic: true,
+      prompt: `Welche Zahl fehlt in der Reihe? ${seq.join(', ')}`,
+      options: [
+        { id: 'ans', icon: '🎯', text: String(answer) },
+        { id: 'w1', icon: '🔢', text: String(wrong1) },
+        { id: 'w2', icon: '🔢', text: String(wrong2 === wrong1 ? wrong2 + 3 : wrong2) }
+      ],
+      correctId: 'ans'
+    };
+  }
+
+  if (mode === 1) {
+    // Dynamic coin / animal math riddle
+    const goldCount = 2 + Math.floor(Math.random() * 5);
+    const gemCount = 1 + Math.floor(Math.random() * 2);
+    const total = goldCount * 5 + gemCount * 15;
+    return {
+      isDynamic: true,
+      prompt: `Du sammelst ${goldCount} Goldmünzen (je 5 🪙) und ${gemCount} Juwel${gemCount > 1 ? 'en' : ''} (je 15 🪙). Wie viel Spielgeld ist das?`,
+      options: [
+        { id: 'ans', icon: '🪙', text: `${total} Münzen` },
+        { id: 'w1', icon: '🪙', text: `${total + 5} Münzen` },
+        { id: 'w2', icon: '🪙', text: `${Math.max(5, total - 10)} Münzen` }
+      ],
+      correctId: 'ans'
+    };
+  }
+
+  if (mode === 2) {
+    // Dynamic animal legs math
+    const cats = 1 + Math.floor(Math.random() * 3);
+    const birds = 1 + Math.floor(Math.random() * 3);
+    const legs = cats * 4 + birds * 2;
+    return {
+      isDynamic: true,
+      prompt: `Wie viele Beine haben ${cats} Katze${cats > 1 ? 'n' : ''} und ${birds} Vogel${birds > 1 ? ' (Vögel)' : ''} zusammen?`,
+      options: [
+        { id: 'ans', icon: '🐾', text: `${legs} Beine` },
+        { id: 'w1', icon: '🐾', text: `${legs + 2} Beine` },
+        { id: 'w2', icon: '🐾', text: `${Math.max(2, legs - 2)} Beine` }
+      ],
+      correctId: 'ans'
+    };
+  }
+
+  if (mode === 3) {
+    // Dynamic emoji pattern
+    const sets = [
+      [{ icon: '⭐', text: 'Stern' }, { icon: '🔥', text: 'Flamme' }, { icon: '❄️', text: 'Schnee' }],
+      [{ icon: '🍎', text: 'Apfel' }, { icon: '🍌', text: 'Banane' }, { icon: '🍇', text: 'Traube' }],
+      [{ icon: '🚀', text: 'Rakete' }, { icon: '🪐', text: 'Planet' }, { icon: '🌙', text: 'Mond' }],
+      [{ icon: '🐱', text: 'Katze' }, { icon: '🐶', text: 'Hund' }, { icon: '🐸', text: 'Frosch' }]
+    ];
+    const chosen = sets[Math.floor(Math.random() * sets.length)].sort(() => Math.random() - 0.5);
+    const [a, b, c] = chosen;
+    return {
+      isDynamic: true,
+      prompt: `Welches Symbol setzt das Muster fort? ${a.icon} ${b.icon} ${a.icon} ${b.icon} ${a.icon} __`,
+      options: [
+        { id: 'ans', icon: b.icon, text: b.text },
+        { id: 'w1', icon: a.icon, text: a.text },
+        { id: 'w2', icon: c.icon, text: c.text }
+      ],
+      correctId: 'ans'
+    };
+  }
+
+  // Reverse word / odd-one-out
+  const wordPairs = [
+    { forward: 'TOR', backward: 'ROT', wrong1: 'ORT', wrong2: 'BROT' },
+    { forward: 'NEBEL', backward: 'LEBEN', wrong1: 'EBEN', wrong2: 'REGEN' },
+    { forward: 'LAGER', backward: 'REGAL', wrong1: 'GELB', wrong2: 'LAGE' },
+    { forward: 'EIS', backward: 'SIE', wrong1: 'SEIN', wrong2: 'EINS' },
+    { forward: 'REH', backward: 'HER', wrong1: 'EHE', wrong2: 'ERDE' }
+  ];
+  const wp = wordPairs[Math.floor(Math.random() * wordPairs.length)];
+  return {
+    isDynamic: true,
+    prompt: `Welches Wort entsteht, wenn man "${wp.forward}" rückwärts liest?`,
+    options: [
+      { id: 'ans', icon: '🔤', text: wp.backward },
+      { id: 'w1', icon: '🔤', text: wp.wrong1 },
+      { id: 'w2', icon: '🔤', text: wp.wrong2 }
+    ],
+    correctId: 'ans'
+  };
+}
 
 export class QuickTimeEventManager {
   constructor(runnerEngine) {
@@ -180,7 +284,7 @@ export class QuickTimeEventManager {
     this.options = [];
     this.wrongIndices = new Set();
     this.usedRiddles = new Set();
-    this.nextSpawnDistance = 150; // First puzzle around 150m, then every ~220-290m
+    this.nextSpawnDistance = 150;
 
     this.containerEl = document.getElementById('qte-overlay');
     this.promptEl = document.getElementById('qte-prompt');
@@ -216,6 +320,14 @@ export class QuickTimeEventManager {
   }
 
   pickNextRiddle() {
+    // 50% freshly generated puzzle, 50% classic curated riddle
+    if (Math.random() < 0.5) {
+      const dyn = generateDynamicRiddle();
+      this.currentRiddle = dyn;
+      this.options = [...dyn.options].sort(() => Math.random() - 0.5);
+      return;
+    }
+
     if (this.usedRiddles.size >= RIDDLE_BANK.length) {
       this.usedRiddles.clear();
     }
@@ -235,7 +347,6 @@ export class QuickTimeEventManager {
     this.wrongIndices.clear();
     this.active = true;
     this.phase = 'stopping';
-    // Character visibly stops and stands still for ~0.55s before the riddle modal opens
     this.stopDelayTimer = 34;
     this.resultTimer = 0;
   }
@@ -243,8 +354,9 @@ export class QuickTimeEventManager {
   renderOverlay() {
     if (!this.containerEl || !this.promptEl || !this.optionsContainer) return;
 
+    const tagText = this.currentRiddle.isDynamic ? '✨ Frisches Zufalls-Rätsel:' : 'Löse das Rätsel, um weiterzulaufen:';
     this.promptEl.innerHTML = `
-      <span class="qte-sublabel">Löse das Rätsel, um weiterzulaufen:</span>
+      <span class="qte-sublabel">${tagText}</span>
       <div class="qte-question">${this.currentRiddle.prompt}</div>
     `;
     this.optionsContainer.innerHTML = '';
@@ -308,13 +420,17 @@ export class QuickTimeEventManager {
 
   onSuccess() {
     this.phase = 'solved';
-    this.resultTimer = 52; // ~0.85s celebration before resuming run
+    this.resultTimer = 52;
     this.runner.sounds.playSuccess();
     this.runner.addBonusScore(50);
+    this.runner.addRunCoins(25);
+    const prog = ShopManager.recordProgress(0, 1);
 
     if (this.feedbackEl) {
       this.feedbackEl.className = 'qte-feedback qte-success-text';
-      this.feedbackEl.textContent = '🎉 Richtig gelöst! +50m Bonus — Weiter geht\'s!';
+      this.feedbackEl.textContent = prog.levelUpBonus > 0
+        ? `🎉 Richtig! +50m, +25 🪙 & LEVEL UP (+${prog.levelUpBonus} 🪙)!`
+        : '🎉 Richtig! +50m & +25 🪙 — Weiter geht\'s!';
     }
   }
 
@@ -328,7 +444,6 @@ export class QuickTimeEventManager {
   }
 
   update(currentScore, canStartStop = true) {
-    // Check spawn trigger when running freely on safe ground
     if (!this.active && canStartStop && currentScore >= this.nextSpawnDistance) {
       this.triggerPuzzleStop();
       this.nextSpawnDistance = currentScore + 220 + Math.floor(Math.random() * 70);
