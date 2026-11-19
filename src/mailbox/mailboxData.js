@@ -12,11 +12,11 @@ export const MAIL_CONTACTS = [
 ];
 
 export const INVITE_EVENT_TYPES = [
-  { id: 'party', icon: '🥳', label: 'Party bei mir zu Hause', defaultMsg: 'Ich feiere eine fröhliche Party bei mir im Haus! Es gibt Musik und Snacks.' },
-  { id: 'cafe', icon: '🍰', label: 'Eis & Waffeln im Café', defaultMsg: 'Lass uns gemeinsam leckeres Eis und warme Waffeln im Traum-Café essen!' },
-  { id: 'garden', icon: '🌳', label: 'Garten-Picknick', defaultMsg: 'Komm durchs Gartentor zu meinem Picknick im Garten – wir können auch spielen!' },
-  { id: 'race', icon: '🏆', label: 'Freundschafts-Wettbewerb', defaultMsg: 'Hast du Lust auf einen spannenden kleinen Lauf-Wettbewerb im Stadion?' },
-  { id: 'trip', icon: '🚌', label: 'Gemeinsamer Ausflug', defaultMsg: 'Wir machen einen schönen Ausflug durch die Traumstadt – kommst du mit?' }
+  { id: 'party', icon: '🥳', label: 'Party bei mir zu Hause', defaultMsg: 'Ich feiere eine fröhliche Party bei mir im Haus! Es gibt Musik und Snacks.', activity: { kind: 'party', theme: 'home_party', title: 'Party bei mir zu Hause', reward: 26 } },
+  { id: 'cafe', icon: '🍰', label: 'Eis & Waffeln im Café', defaultMsg: 'Lass uns gemeinsam leckeres Eis und warme Waffeln im Traum-Café essen!', activity: { kind: 'cafe_contest', theme: 'cafe', title: 'Eis- & Waffel-Treffen', reward: 26 } },
+  { id: 'garden', icon: '🌳', label: 'Garten-Picknick', defaultMsg: 'Komm durchs Gartentor zu meinem Picknick im Garten – wir können auch spielen!', activity: { kind: 'trip', theme: 'garden', title: 'Garten-Picknick', reward: 24 } },
+  { id: 'race', icon: '🏆', label: 'Freundschafts-Wettbewerb', defaultMsg: 'Hast du Lust auf einen spannenden kleinen Lauf-Wettbewerb im Stadion?', activity: { kind: 'race', theme: 'stadium', title: 'Freundschafts-Wettbewerb', reward: 30 } },
+  { id: 'trip', icon: '🚌', label: 'Gemeinsamer Ausflug', defaultMsg: 'Wir machen einen schönen Ausflug durch die Traumstadt – kommst du mit?', activity: { kind: 'trip', theme: 'forest', title: 'Gemeinsamer Ausflug', reward: 26 } }
 ];
 
 export const INVITE_TIMES = [
@@ -45,7 +45,8 @@ const LETTER_TEMPLATES = [
     eventTime: 'Heute im Renn-Stadion',
     isInvitation: true,
     rewardCoins: 30,
-    targetState: 'BACKGROUND_SELECT'
+    targetState: 'BACKGROUND_SELECT',
+    activity: { kind: 'race', theme: 'stadium', title: 'Großer Stadtlauf-Wettbewerb', reward: 35 }
   },
   {
     category: 'competition',
@@ -56,7 +57,8 @@ const LETTER_TEMPLATES = [
     eventTime: 'Heute um 15:30 Uhr',
     isInvitation: true,
     rewardCoins: 28,
-    targetState: 'ICECREAM'
+    targetState: 'ICECREAM',
+    activity: { kind: 'cafe_contest', theme: 'cafe', title: 'Eis- & Waffel-Meisterschaft', reward: 32 }
   },
   {
     category: 'competition',
@@ -67,7 +69,8 @@ const LETTER_TEMPLATES = [
     eventTime: 'Morgen um 14:00 Uhr',
     isInvitation: true,
     rewardCoins: 28,
-    targetState: 'PETSITTING'
+    targetState: 'PETSITTING',
+    activity: { kind: 'pet_show', theme: 'meadow', title: 'Hunde-Trick-Wettbewerb', reward: 32 }
   },
   {
     category: 'competition',
@@ -79,7 +82,8 @@ const LETTER_TEMPLATES = [
     isInvitation: true,
     rewardCoins: 26,
     targetState: 'HOME',
-    targetPayload: { room: 'garden' }
+    targetPayload: { room: 'garden' },
+    activity: { kind: 'garden_contest', theme: 'garden', title: 'Schönster-Garten-Wettbewerb', reward: 30 }
   },
 
   // Partys
@@ -92,7 +96,8 @@ const LETTER_TEMPLATES = [
     eventTime: 'Heute um 16:00 Uhr',
     isInvitation: true,
     rewardCoins: 24,
-    targetState: 'PETSITTING'
+    targetState: 'PETSITTING',
+    activity: { kind: 'party', theme: 'garden_party', title: 'Oma Friedas Erdbeerkuchen-Party', reward: 28 }
   },
   {
     category: 'party',
@@ -103,7 +108,8 @@ const LETTER_TEMPLATES = [
     eventTime: 'Heute Abend um 18:00 Uhr',
     isInvitation: true,
     rewardCoins: 25,
-    targetState: 'ICECREAM'
+    targetState: 'ICECREAM',
+    activity: { kind: 'party', theme: 'ice_party', title: 'Sommer-Eisparty', reward: 28 }
   },
   {
     category: 'party',
@@ -114,7 +120,8 @@ const LETTER_TEMPLATES = [
     eventTime: 'Morgen um 17:00 Uhr',
     isInvitation: true,
     rewardCoins: 22,
-    targetState: 'EDITOR'
+    targetState: 'EDITOR',
+    activity: { kind: 'party', theme: 'boutique_party', title: 'Überraschungs-Party', reward: 26 }
   },
 
   // Ausflüge
@@ -127,7 +134,8 @@ const LETTER_TEMPLATES = [
     eventTime: 'Morgen Vormittag',
     isInvitation: true,
     rewardCoins: 26,
-    targetState: 'BACKGROUND_SELECT'
+    targetState: 'BACKGROUND_SELECT',
+    activity: { kind: 'trip', theme: 'beach', title: 'Ausflug an den Tropen-Strand', reward: 30 }
   },
   {
     category: 'trip',
@@ -138,7 +146,8 @@ const LETTER_TEMPLATES = [
     eventTime: 'Heute Nachmittag',
     isInvitation: true,
     rewardCoins: 24,
-    targetState: 'PETSITTING'
+    targetState: 'PETSITTING',
+    activity: { kind: 'trip', theme: 'forest', title: 'Wald-Spaziergang & Picknick', reward: 28 }
   },
   {
     category: 'trip',
@@ -149,7 +158,8 @@ const LETTER_TEMPLATES = [
     eventTime: 'Am Wochenende',
     isInvitation: true,
     rewardCoins: 28,
-    targetState: 'BACKGROUND_SELECT'
+    targetState: 'BACKGROUND_SELECT',
+    activity: { kind: 'trip', theme: 'ice', title: 'Ausflug in die Eiswelt', reward: 32 }
   },
 
   // Sonstiges / Briefe & Geschenke
@@ -200,6 +210,7 @@ function getDefaultMailboxState() {
   return {
     inbox: [],
     sent: [],
+    completedEvents: [],
     lastDeliveryDate: '',
     deliveredToday: 0,
     nextTemplateIdx: 0
@@ -227,6 +238,7 @@ function createMailFromTemplate(tpl, dateKey) {
     giftClaimed: false,
     targetState: tpl.targetState || null,
     targetPayload: tpl.targetPayload || null,
+    activity: tpl.activity || null,
     read: false
   };
 }
@@ -240,6 +252,7 @@ export const MailboxManager = {
       return {
         inbox: Array.isArray(parsed.inbox) ? parsed.inbox : [],
         sent: Array.isArray(parsed.sent) ? parsed.sent : [],
+        completedEvents: Array.isArray(parsed.completedEvents) ? parsed.completedEvents : [],
         lastDeliveryDate: parsed.lastDeliveryDate || '',
         deliveredToday: parsed.deliveredToday || 0,
         nextTemplateIdx: parsed.nextTemplateIdx || 0
@@ -449,9 +462,11 @@ export const MailboxManager = {
         recipientName: contact.name,
         recipientIcon: contact.icon,
         title: `Einladung: ${evt.label}`,
+        eventTypeId: evt.id,
         eventWhen: whenLabel || INVITE_TIMES[0],
         body: cleanNote,
-        replyStatus: accepted ? 'accepted' : 'declined'
+        replyStatus: accepted ? 'accepted' : 'declined',
+        activity: evt.activity
       };
       state.sent.unshift(sentEntry);
 
@@ -474,6 +489,8 @@ export const MailboxManager = {
         rsvpStatus: accepted ? 'accepted' : 'declined',
         rewardCoins: accepted ? 14 : 5,
         giftClaimed: false,
+        eventTypeId: evt.id,
+        activity: accepted ? evt.activity : null,
         read: false
       };
       state.inbox.unshift(replyMail);
@@ -489,6 +506,54 @@ export const MailboxManager = {
       replies,
       acceptedCount: replies.filter((r) => r.accepted).length,
       declinedCount: replies.filter((r) => !r.accepted).length,
+      levelUpBonus: prog.levelUpBonus
+    };
+  },
+
+  getActivityForEntry(entry) {
+    if (!entry) return null;
+    if (entry.activity) return entry.activity;
+
+    if (entry.eventTypeId) {
+      const evt = INVITE_EVENT_TYPES.find((e) => e.id === entry.eventTypeId);
+      if (evt) return evt.activity;
+    }
+
+    const title = entry.title || '';
+    const tplMatch = LETTER_TEMPLATES.find((t) => t.title === title && t.activity);
+    if (tplMatch) return tplMatch.activity;
+
+    const invMatch = INVITE_EVENT_TYPES.find((e) => title.includes(e.label));
+    if (invMatch) return invMatch.activity;
+
+    if (entry.category === 'party') return { kind: 'party', theme: 'garden_party', title: title || 'Party mit Freunden', reward: 26 };
+    if (entry.category === 'trip') return { kind: 'trip', theme: 'forest', title: title || 'Gemeinsamer Ausflug', reward: 26 };
+    if (entry.category === 'competition') return { kind: 'race', theme: 'stadium', title: title || 'Freundschafts-Wettbewerb', reward: 30 };
+    return null;
+  },
+
+  isEventCompleted(eventId) {
+    if (!eventId) return false;
+    return this.getState().completedEvents.includes(eventId);
+  },
+
+  completeEvent(eventId, baseReward = 25) {
+    const state = this.getState();
+    const firstTime = !!(eventId && !state.completedEvents.includes(eventId));
+    if (eventId && firstTime) {
+      state.completedEvents.push(eventId);
+      if (state.completedEvents.length > 60) {
+        state.completedEvents = state.completedEvents.slice(-60);
+      }
+      this.saveState(state);
+    }
+    const coinsEarned = firstTime ? baseReward : 10;
+    ShopManager.addCoins(coinsEarned);
+    const prog = ShopManager.recordProgress(0, firstTime ? 3 : 1);
+    return {
+      ok: true,
+      firstTime,
+      coinsEarned,
       levelUpBonus: prog.levelUpBonus
     };
   }

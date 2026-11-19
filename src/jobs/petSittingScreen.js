@@ -35,7 +35,15 @@ export const NEIGHBOR_HOUSES = [
     door: '#fb7185',
     yardX: 300,
     yardY: 365,
-    appearance: { skin: '#f5c6a5', hair: '#78350f', shirt: '#0284c7', hairStyle: 'short' }
+    appearance: { skin: '#f5c6a5', hair: '#78350f', shirt: '#0284c7', hairStyle: 'short' },
+    charConfig: {
+      body: { height: 1.0, width: 1.0, faceId: 'face_1', hairId: 'hair_1', hairColor: '#78350f' },
+      clothes: {
+        top: { style: 'jacket', color: '#0284c7', stickers: [{ type: 'star', x: 0, y: 0.45, scale: 1 }] },
+        pants: { style: 'cargo', color: '#334155' },
+        shoes: { style: 'sneakers', color: '#f8fafc' }
+      }
+    }
   },
   {
     id: 1,
@@ -50,7 +58,15 @@ export const NEIGHBOR_HOUSES = [
     door: '#34d399',
     yardX: 530,
     yardY: 365,
-    appearance: { skin: '#ffdecb', hair: '#cbd5e1', shirt: '#a855f7', hairStyle: 'bun' }
+    appearance: { skin: '#ffdecb', hair: '#cbd5e1', shirt: '#a855f7', hairStyle: 'bun' },
+    charConfig: {
+      body: { height: 1.0, width: 1.0, faceId: 'face_6', hairId: 'hair_flower', hairColor: '#cbd5e1' },
+      clothes: {
+        top: { style: 'princess_coat', color: '#a855f7', stickers: [{ type: 'heart', x: 0, y: 0.45, scale: 1 }] },
+        pants: { style: 'jeans', color: '#475569' },
+        shoes: { style: 'glitter_boots', color: '#be185d' }
+      }
+    }
   },
   {
     id: 2,
@@ -65,7 +81,15 @@ export const NEIGHBOR_HOUSES = [
     door: '#a855f7',
     yardX: 752,
     yardY: 365,
-    appearance: { skin: '#d99b72', hair: '#1e1b4b', shirt: '#10b981', hairStyle: 'ponytail' }
+    appearance: { skin: '#d99b72', hair: '#1e1b4b', shirt: '#10b981', hairStyle: 'ponytail' },
+    charConfig: {
+      body: { height: 1.0, width: 1.0, faceId: 'face_8', hairId: 'hair_crown', hairColor: '#1e1b4b' },
+      clothes: {
+        top: { style: 'sparkle_top', color: '#10b981', stickers: [{ type: 'rainbow', x: 0, y: 0.45, scale: 1 }] },
+        pants: { style: 'star_jeans', color: '#1e3a8a' },
+        shoes: { style: 'wings', color: '#fef08a' }
+      }
+    }
   }
 ];
 
@@ -1123,92 +1147,47 @@ export function setupPetSittingScreen(stateManager) {
   }
 
   function drawNeighborPerson(h, visit) {
-    const app = h.appearance;
     const isOffering = visit && visit.state === 'offering';
     const isHappy = visit && visit.state === 'happy_leaving';
     const nx = h.neighborX;
-    const ny = 232;
-    const wave = isOffering || isHappy ? Math.sin(animFrame * 0.16 + h.id) * 6 : 0;
+    const ny = 244;
+    const bob = isOffering || isHappy ? Math.abs(Math.sin(animFrame * 0.12 + h.id)) * 5 : 0;
+
+    const matchedCfg = {
+      ...h.charConfig,
+      body: {
+        ...h.charConfig.body,
+        height: PlayerConfig.body.height || 1.0,
+        width: PlayerConfig.body.width || 1.0
+      }
+    };
 
     ctx.save();
-    ctx.translate(nx, ny);
+    ctx.translate(nx, ny - bob);
 
-    // Shadow
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.16)';
-    ctx.beginPath();
-    ctx.ellipse(0, 2, 16, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Legs
-    ctx.fillStyle = '#334155';
-    ctx.beginPath();
-    ctx.roundRect(-8, -18, 6, 19, [3]);
-    ctx.roundRect(2, -18, 6, 19, [3]);
-    ctx.fill();
-
-    // Waving arm (holding coins when offering!)
-    ctx.strokeStyle = app.skin;
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(-11, -40);
-    ctx.lineTo(-20, -48 + wave);
-    ctx.stroke();
+    ctx.save();
+    ctx.scale(0.84, 0.84);
+    renderCharacter(ctx, 0, 0, matchedCfg, {
+      frame: animFrame + h.id * 15,
+      pose: isHappy ? 'jump' : isOffering ? 'pet' : 'idle',
+      facing: player.x < nx ? -1 : 1
+    });
+    ctx.restore();
 
     if (isOffering) {
+      const waveCoin = Math.sin(animFrame * 0.16 + h.id) * 4;
       ctx.fillStyle = '#fbbf24';
       ctx.beginPath();
-      ctx.arc(-22, -50 + wave, 6.5, 0, Math.PI * 2);
+      ctx.arc(-28, -62 + waveCoin, 7.5, 0, Math.PI * 2);
       ctx.fill();
       ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 2;
       ctx.stroke();
-    }
 
-    // Torso
-    ctx.fillStyle = app.shirt;
-    ctx.beginPath();
-    ctx.roundRect(-12, -46, 24, 30, [8]);
-    ctx.fill();
-
-    // Head
-    ctx.fillStyle = app.skin;
-    ctx.beginPath();
-    ctx.arc(0, -58, 12, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Hair
-    ctx.fillStyle = app.hair;
-    ctx.beginPath();
-    ctx.arc(0, -63, 12.5, Math.PI * 0.92, Math.PI * 2.08);
-    ctx.fill();
-    if (app.hairStyle === 'bun') {
-      ctx.beginPath();
-      ctx.arc(0, -76, 6, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (app.hairStyle === 'ponytail') {
-      ctx.beginPath();
-      ctx.arc(12, -62, 5.5, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Eyes & Smile
-    ctx.fillStyle = '#1e1b4b';
-    ctx.beginPath();
-    ctx.arc(-4, -59, 1.8, 0, Math.PI * 2);
-    ctx.arc(4, -59, 1.8, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#9f1239';
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    ctx.arc(0, -54, 3.5, 0.15, Math.PI - 0.15);
-    ctx.stroke();
-
-    // Offering speech bubble right above the Neighbor!
-    if (isOffering) {
-      const bw = 152;
+      const bw = 156;
       const bh = 52;
-      const bx = -bw / 2 + 12;
-      const by = -132;
+      const bx = -bw / 2 + 10;
+      const by = -182;
 
       ctx.shadowColor = 'rgba(245, 158, 11, 0.35)';
       ctx.shadowBlur = 12;
@@ -1242,7 +1221,7 @@ export function setupPetSittingScreen(stateManager) {
     } else if (isHappy) {
       ctx.fillStyle = '#ecfdf5';
       ctx.beginPath();
-      ctx.roundRect(-55, -108, 110, 26, [12]);
+      ctx.roundRect(-55, -156, 110, 26, [12]);
       ctx.fill();
       ctx.strokeStyle = '#10b981';
       ctx.lineWidth = 2;
@@ -1250,7 +1229,7 @@ export function setupPetSittingScreen(stateManager) {
       ctx.font = '800 11px "Plus Jakarta Sans", sans-serif';
       ctx.fillStyle = '#047857';
       ctx.textAlign = 'center';
-      ctx.fillText('❤️ Danke dir!', 0, -95);
+      ctx.fillText('❤️ Danke dir!', 0, -143);
     }
 
     ctx.restore();

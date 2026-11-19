@@ -5,6 +5,7 @@ export const State = {
   HOME: 'HOME',
   ICECREAM: 'ICECREAM',
   PETSITTING: 'PETSITTING',
+  EVENT: 'EVENT',
   GAME: 'GAME'
 };
 
@@ -19,6 +20,7 @@ export class StateManager {
     this.homeScreen = document.getElementById('home-screen');
     this.iceCreamScreen = document.getElementById('icecream-screen');
     this.petSittingScreen = document.getElementById('pet-sitting-screen');
+    this.eventScreen = document.getElementById('event-screen');
     this.gameScreen = document.getElementById('game-screen');
   }
 
@@ -47,6 +49,7 @@ export class StateManager {
     if (this.homeScreen) this.homeScreen.classList.add('hidden');
     if (this.iceCreamScreen) this.iceCreamScreen.classList.add('hidden');
     if (this.petSittingScreen) this.petSittingScreen.classList.add('hidden');
+    if (this.eventScreen) this.eventScreen.classList.add('hidden');
     if (this.gameScreen) this.gameScreen.classList.add('hidden');
 
     if (this.editorScreen) this.editorScreen.classList.remove('active');
@@ -55,6 +58,7 @@ export class StateManager {
     if (this.homeScreen) this.homeScreen.classList.remove('active');
     if (this.iceCreamScreen) this.iceCreamScreen.classList.remove('active');
     if (this.petSittingScreen) this.petSittingScreen.classList.remove('active');
+    if (this.eventScreen) this.eventScreen.classList.remove('active');
     if (this.gameScreen) this.gameScreen.classList.remove('active');
 
     switch (this.currentState) {
@@ -92,6 +96,12 @@ export class StateManager {
         if (this.petSittingScreen) {
           this.petSittingScreen.classList.remove('hidden');
           this.petSittingScreen.classList.add('active');
+        }
+        break;
+      case State.EVENT:
+        if (this.eventScreen) {
+          this.eventScreen.classList.remove('hidden');
+          this.eventScreen.classList.add('active');
         }
         break;
       case State.GAME:

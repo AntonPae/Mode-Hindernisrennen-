@@ -8,6 +8,7 @@ import { setupIceCreamScreen } from './jobs/iceCreamScreen.js';
 import { setupPetSittingScreen } from './jobs/petSittingScreen.js';
 import { setupEarnMoneyUI } from './economy/earnMoneyUI.js';
 import { setupMailboxUI } from './mailbox/mailboxUI.js';
+import { setupEventScreen } from './mailbox/eventScreen.js';
 import { RunnerEngine } from './game/runnerEngine.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -20,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupHomeScreen(stateManager);
   setupIceCreamScreen(stateManager);
   setupPetSittingScreen(stateManager);
+  setupEventScreen(stateManager);
 
   const earnMoneyUI = setupEarnMoneyUI({
     onCoinsChange: () => {

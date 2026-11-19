@@ -181,6 +181,9 @@ export function setupMailboxUI(stateManager) {
 
       const actionsRow = card.querySelector('.mail-actions-row');
 
+      const activity = MailboxManager.getActivityForEntry(mail);
+      const isDone = activity && MailboxManager.isEventCompleted(mail.id);
+
       if (mail.isInvitation && mail.rsvpStatus === 'pending') {
         const acceptBtn = document.createElement('button');
         acceptBtn.type = 'button';
@@ -193,7 +196,7 @@ export function setupMailboxUI(stateManager) {
             renderTabs();
             renderBody();
             const bonusMsg = res.levelUpBonus > 0 ? ` & LEVEL UP (+${res.levelUpBonus} 🪙)!` : '!';
-            showToast(`🎉 Einladung angenommen! +${res.coinsEarned} 🪙 erhalten${bonusMsg}`, 'success');
+            showToast(`🎉 Einladung angenommen! +${res.coinsEarned} 🪙${bonusMsg} Tippe jetzt auf „🎉 Mitmachen!“`, 'success');
           }
         });
 
@@ -213,14 +216,19 @@ export function setupMailboxUI(stateManager) {
 
         actionsRow.appendChild(acceptBtn);
         actionsRow.appendChild(declineBtn);
-      } else if (mail.isInvitation && mail.rsvpStatus === 'accepted' && mail.targetState) {
+      } else if (mail.isInvitation && mail.rsvpStatus === 'accepted' && activity) {
         const goBtn = document.createElement('button');
         goBtn.type = 'button';
         goBtn.className = 'btn btn-primary';
-        goBtn.textContent = '🚀 Jetzt zum Event starten';
+        goBtn.textContent = isDone ? '🏆 Geschafft! Nochmal spielen' : '🎉 Jetzt beim Event mitmachen!';
         goBtn.addEventListener('click', () => {
           closeModal();
-          stateManager.setState(mail.targetState, mail.targetPayload || undefined);
+          stateManager.setState('EVENT', {
+            eventId: mail.id,
+            title: activity.title || mail.title,
+            senderName: mail.senderName,
+            activity
+          });
         });
         actionsRow.appendChild(goBtn);
       } else if (!mail.isInvitation && !mail.giftClaimed) {
@@ -241,6 +249,23 @@ export function setupMailboxUI(stateManager) {
           }
         });
         actionsRow.appendChild(claimBtn);
+      }
+
+      if (!mail.isInvitation && mail.rsvpStatus === 'accepted' && activity) {
+        const startOwnEventBtn = document.createElement('button');
+        startOwnEventBtn.type = 'button';
+        startOwnEventBtn.className = 'btn btn-primary';
+        startOwnEventBtn.textContent = isDone ? '🏆 Event nochmal feiern' : '🎉 Jetzt zusammen feiern!';
+        startOwnEventBtn.addEventListener('click', () => {
+          closeModal();
+          stateManager.setState('EVENT', {
+            eventId: mail.id,
+            title: activity.title || mail.title,
+            senderName: mail.senderName,
+            activity
+          });
+        });
+        actionsRow.appendChild(startOwnEventBtn);
       }
 
       const replyQuickBtn = document.createElement('button');
@@ -461,6 +486,11 @@ export function setupMailboxUI(stateManager) {
           ? '<span class="mail-status declined">❌ Abgesagt</span>'
           : '<span class="mail-status pending">💌 Gesendet</span>';
 
+      const sentActivity = entry.kind === 'invite' && entry.replyStatus === 'accepted'
+        ? MailboxManager.getActivityForEntry(entry)
+        : null;
+      const sentDone = sentActivity && MailboxManager.isEventCompleted(entry.id);
+
       card.innerHTML = `
         <div class="mail-card-head">
           <div class="mail-sender-block">
@@ -474,7 +504,25 @@ export function setupMailboxUI(stateManager) {
         </div>
         <h3 class="mail-title">${entry.title}</h3>
         <p class="mail-text">${entry.body}</p>
+        ${sentActivity ? '<div class="mail-actions-row"></div>' : ''}
       `;
+      if (sentActivity) {
+        const row = card.querySelector('.mail-actions-row');
+        const playBtn = document.createElement('button');
+        playBtn.type = 'button';
+        playBtn.className = 'btn btn-primary';
+        playBtn.textContent = sentDone ? '🏆 Event nochmal spielen' : '🎉 Jetzt zusammen starten!';
+        playBtn.addEventListener('click', () => {
+          closeModal();
+          stateManager.setState('EVENT', {
+            eventId: entry.id,
+            title: sentActivity.title || entry.title,
+            senderName: entry.recipientName,
+            activity: sentActivity
+          });
+        });
+        row.appendChild(playBtn);
+      }
       wrap.appendChild(card);
     });
 

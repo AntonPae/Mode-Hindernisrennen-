@@ -392,6 +392,69 @@
       </div>
     </div>
 
+    <!-- State: Interactive Invitation Event Overlay -->
+    <div id="event-screen" class="screen-overlay hidden">
+      <header class="app-header ice-compact-header">
+        <h1 id="eventTitleEl">🎉 Gemeinsames Event</h1>
+        <p id="eventSubtitleEl">Mach aktiv beim Wettbewerb, der Party oder dem Ausflug mit!</p>
+        <div class="coin-wallet-bar">
+          <span class="coin-pill">🪙 Spielgeld: <strong id="eventCoinsVal">0</strong></span>
+          <span class="level-pill">🏆 Level <strong id="eventLevelVal">1</strong></span>
+          <span class="supply-pill">✨ Ziel: <strong id="eventProgressText">0 / 6</strong></span>
+        </div>
+        <div id="eventToast" class="shop-toast hidden"></div>
+      </header>
+
+      <div class="icecream-layout">
+        <div class="ice-stage-column">
+          <div class="home-canvas-card ice-stage-card">
+            <div class="home-task-banner">
+              <span id="eventStatusText">Tippe ins Bild oder benutze die Aktions-Buttons rechts!</span>
+            </div>
+            <canvas id="eventCanvas" width="860" height="470"></canvas>
+            <div class="icecream-cone-bar">
+              <div class="icecream-cone-label">
+                <strong>🎯 Aufgabe:</strong>
+                <div id="eventGoalChips" class="ice-cone-slots"></div>
+              </div>
+            </div>
+            <div id="eventChatBox" class="event-chat-box">
+              <div class="event-chat-top">
+                <div id="eventFriendPills" class="event-friend-pills"></div>
+                <div id="eventChatReplyLine" class="event-chat-line">💬 Tippe auf einen Freund im Bild oder wähle oben jemanden zum Sprechen!</div>
+              </div>
+              <div id="eventQuickChatRow" class="event-quick-chat-row"></div>
+              <div class="event-chat-input-row">
+                <input type="text" id="eventChatInput" class="event-chat-input" placeholder="Schreibe hier etwas an deine Freunde..." maxlength="90" />
+                <button type="button" id="eventChatSendBtn" class="btn btn-small btn-primary">💬 Sagen</button>
+              </div>
+            </div>
+            <div class="home-walk-pad">
+              <button type="button" id="eventWalkLeftBtn" class="walk-pad-btn" aria-label="Nach links gehen">◀ Links</button>
+              <button type="button" id="eventWalkUpBtn" class="walk-pad-btn" aria-label="Nach hinten gehen">▲ Hoch</button>
+              <button type="button" id="eventMainActionBtn" class="walk-pad-btn walk-pad-action" aria-label="Event Aktion ausführen">✨ Mitmachen!</button>
+              <button type="button" id="eventWalkDownBtn" class="walk-pad-btn" aria-label="Nach vorne gehen">▼ Runter</button>
+              <button type="button" id="eventWalkRightBtn" class="walk-pad-btn" aria-label="Nach rechts gehen">Rechts ▶</button>
+            </div>
+          </div>
+
+          <div class="home-nav-row ice-nav-row">
+            <button type="button" id="eventBackToMailBtn" class="btn btn-mailbox">📬 Zurück zum Briefkasten</button>
+            <button type="button" id="eventToHomeBtn" class="btn btn-home">🏡 Mein Haus &amp; Garten</button>
+            <button type="button" id="eventToTownBtn" class="btn btn-town">🏙️ In die Traumstadt</button>
+          </div>
+        </div>
+
+        <aside class="ice-menu-column">
+          <div class="ice-menu-header">
+            <h2>✨ Aktionen beim Event</h2>
+            <span>Tippe direkt auf die großen Buttons oder ins Spielbild!</span>
+          </div>
+          <div id="eventActionBar" class="ice-flavor-bar"></div>
+        </aside>
+      </div>
+    </div>
+
     <!-- State: Game HUD Overlay -->
     <div id="game-screen" class="screen-overlay hidden game-hud">
       <div class="top-hud">
