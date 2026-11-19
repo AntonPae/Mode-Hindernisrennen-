@@ -51,8 +51,20 @@ export function setupEditorUI(stateManager) {
     if (editorCoinsVal) {
       editorCoinsVal.textContent = ShopManager.getCoins();
     }
+    const level = ShopManager.getStats().level;
     if (editorLevelVal) {
-      editorLevelVal.textContent = ShopManager.getStats().level;
+      editorLevelVal.textContent = level;
+    }
+    const nextHintEl = document.getElementById('editorNextLevelHint');
+    if (nextHintEl) {
+      const nextLv = level + 1;
+      const nextShop = ShopManager.getItemsForLevel(nextLv);
+      if (nextShop.length > 0) {
+        const names = nextShop.slice(0, 3).map((i) => `${i.icon} ${i.name}`).join(' · ');
+        nextHintEl.textContent = `✨ Ab Level ${nextLv} neu im Shop: ${names}${nextShop.length > 3 ? ' …' : ''}`;
+      } else {
+        nextHintEl.textContent = `🏆 Level ${level}: Alle Charakter-Stufen freigeschaltet!`;
+      }
     }
   }
 
@@ -198,6 +210,11 @@ export function setupEditorUI(stateManager) {
       return;
     }
 
+    if (!ShopManager.isLevelUnlocked(item)) {
+      showToast(`🔒 "${item.name}" schaltest du ab Level ${item.unlockLevel} frei! Sammle Punkte durch Laufen, Jobs oder Briefe.`, 'warn');
+      return;
+    }
+
     const res = ShopManager.buyItem(category, item.id);
     if (res.ok) {
       setSelectedId(category, item.id);
@@ -207,6 +224,8 @@ export function setupEditorUI(stateManager) {
       showToast(`🎉 "${item.name}" für ${res.price} 🪙 gekauft & ausgerüstet!`, 'success');
     } else if (res.reason === 'insufficient_funds') {
       showToast(`🔒 Noch ${res.missing} 🪙 nötig für "${item.name}"! Sammle Münzen im Lauf oder löse Rätsel.`, 'warn');
+    } else if (res.reason === 'level_locked') {
+      showToast(`🔒 Ab Level ${res.requiredLevel} kaufbar!`, 'warn');
     }
   }
 
@@ -219,21 +238,24 @@ export function setupEditorUI(stateManager) {
     container.innerHTML = '';
     items.forEach((item) => {
       const unlocked = ShopManager.isUnlocked(category, item.id);
+      const levelOk = ShopManager.isLevelUnlocked(item);
       const selected = currentId === item.id;
       const effectivePrice = ShopManager.getEffectivePrice(category, item);
-      const isDeal = !unlocked && ShopManager.isDailyDeal(category, item.id);
-      const canAfford = coins >= effectivePrice;
+      const isDeal = !unlocked && levelOk && ShopManager.isDailyDeal(category, item.id);
+      const canAfford = levelOk && coins >= effectivePrice;
 
       const btn = document.createElement('button');
       btn.type = 'button';
 
       if (category === 'ability') {
-        btn.className = `ability-shop-card${selected ? ' selected' : ''}${!unlocked ? ' locked' : ''}${!unlocked && canAfford ? ' affordable' : ''}`;
+        btn.className = `ability-shop-card${selected ? ' selected' : ''}${!unlocked ? ' locked' : ''}${!unlocked && canAfford ? ' affordable' : ''}${!unlocked && !levelOk ? ' level-locked' : ''}`;
         const statusHtml = selected
           ? '<span class="shop-tag shop-tag-active">Aktiv</span>'
           : unlocked
             ? '<span class="shop-tag shop-tag-owned">Besitz</span>'
-            : `<span class="shop-tag shop-tag-price">${isDeal ? '🔥 ' : '🔒 '}${effectivePrice} 🪙</span>`;
+            : !levelOk
+              ? `<span class="shop-tag shop-tag-owned">🔒 Level ${item.unlockLevel}</span>`
+              : `<span class="shop-tag shop-tag-price">${isDeal ? '🔥 ' : '🔒 '}${effectivePrice} 🪙</span>`;
 
         btn.innerHTML = `
           <div class="ability-shop-top">
@@ -243,20 +265,24 @@ export function setupEditorUI(stateManager) {
           <p>${item.description}</p>
         `;
       } else {
-        btn.className = `shop-item-btn${selected ? ' selected' : ''}${!unlocked ? ' locked' : ''}${!unlocked && canAfford ? ' affordable' : ''}`;
+        btn.className = `shop-item-btn${selected ? ' selected' : ''}${!unlocked ? ' locked' : ''}${!unlocked && canAfford ? ' affordable' : ''}${!unlocked && !levelOk ? ' level-locked' : ''}`;
         const badgeText = selected
           ? '✓ Aktiv'
           : unlocked
             ? 'Frei'
-            : isDeal
-              ? `🔥 ${effectivePrice} 🪙`
-              : `🔒 ${effectivePrice} 🪙`;
+            : !levelOk
+              ? `🔒 Ab Lv.${item.unlockLevel}`
+              : isDeal
+                ? `🔥 ${effectivePrice} 🪙`
+                : `🔒 ${effectivePrice} 🪙`;
 
-        const cornerBadge = !unlocked && isDeal
-          ? '<span class="item-corner-tag deal">-30%</span>'
-          : item.isNew && !unlocked
-            ? '<span class="item-corner-tag new">NEU</span>'
-            : '';
+        const cornerBadge = !unlocked && !levelOk
+          ? `<span class="item-corner-tag new">Lv.${item.unlockLevel}</span>`
+          : !unlocked && isDeal
+            ? '<span class="item-corner-tag deal">-30%</span>'
+            : item.isNew && !unlocked
+              ? '<span class="item-corner-tag new">NEU</span>'
+              : '';
 
         btn.innerHTML = `
           ${cornerBadge}
@@ -451,6 +477,17 @@ export function setupEditorUI(stateManager) {
   window.addEventListener('runner:coins-updated', () => {
     updateWalletUI();
     renderAllShopGrids();
+  });
+
+  window.addEventListener('runner:level-up', (e) => {
+    const lv = e.detail?.level;
+    const newItems = lv ? ShopManager.getItemsForLevel(lv) : [];
+    const listText = newItems.length > 0 ? ` Neu: ${newItems.map((i) => `${i.icon} ${i.name}`).join(', ')}` : '';
+    updateWalletUI();
+    renderAllShopGrids();
+    if (stateManager.getState() === 'EDITOR' && lv) {
+      showToast(`🎉 Level ${lv} erreicht! (+${e.detail.bonusCoins} 🪙)${listText}`, 'success');
+    }
   });
 
   // Refresh coin wallet & unlock affordability whenever returning to Editor

@@ -2,6 +2,7 @@ import { PlayerConfig } from '../editor/characterData.js';
 import { renderCharacter } from '../editor/characterRenderer.js';
 import { ShopManager } from '../editor/shopData.js';
 import { HomeManager } from '../home/homeData.js';
+import { MailboxManager } from '../mailbox/mailboxData.js';
 
 const WORLD_WIDTH = 2240;
 const GARDEN_LEFT_X = 280;
@@ -209,6 +210,12 @@ export function setupTownScreen(stateManager) {
       const worldX = screenX + cameraX;
       const worldY = (e.clientY - rect.top) * scaleY;
 
+      // Clicked directly on the Mailbox outside Dein Haus?
+      if (HomeManager.hasMailbox() && worldX >= 220 && worldX <= 268 && worldY >= 165 && worldY <= 250) {
+        window.dispatchEvent(new CustomEvent('runner:open-mailbox', { detail: { tab: 'inbox' } }));
+        return;
+      }
+
       // Clicked directly on one of the town landmarks?
       for (const p of TOWN_PLACES) {
         if (Math.abs(worldX - p.x) <= 96 && worldY >= 55 && worldY <= 360) {
@@ -244,6 +251,9 @@ export function setupTownScreen(stateManager) {
 
   window.addEventListener('keydown', (e) => {
     if (stateManager.getState() !== 'TOWN') return;
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+    if (document.querySelector('.modal:not(.hidden)')) return;
     if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
       keys.left = true;
       player.waypoints = [];
@@ -489,6 +499,37 @@ export function setupTownScreen(stateManager) {
     }
     drawTownHouseBuilding(155, 76, 178, 146, '#ec4899', '#fff1f2', '🏡 Dein Haus (Offen!)', true);
 
+    // Physical Mailbox in front of Dein Haus in Traumstadt!
+    if (HomeManager.hasMailbox()) {
+      const isGold = HomeManager.hasItem('garden', 'gold_mailbox');
+      const unread = MailboxManager.getUnreadCount();
+      ctx.save();
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(242, 206, 6, 28);
+      ctx.fillStyle = isGold ? '#fbbf24' : '#ec4899';
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(232, 188, 26, 18, [8, 8, 3, 3]);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = unread > 0 ? '#ef4444' : '#cbd5e1';
+      ctx.fillRect(256, unread > 0 ? 178 : 192, 3, 14);
+      if (unread > 0) {
+        const bob = Math.sin(animFrame * 0.12) * 3;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.roundRect(226, 160 + bob, 38, 18, [9]);
+        ctx.fill();
+        ctx.font = '800 10px "Plus Jakarta Sans", sans-serif';
+        ctx.fillStyle = '#be185d';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`📩 ${unread}`, 245, 169 + bob);
+      }
+      ctx.restore();
+    }
+
     // --- ZONE 2: EINGEZÄUNTER GARTEN MIT GARTENTOR (right beside Dein Haus!) ---
     // Garden lush lawn patch inside fence
     ctx.fillStyle = '#22c55e';
@@ -692,6 +733,7 @@ export function setupTownScreen(stateManager) {
       }
       player.waypoints = [];
       player.pendingPlace = null;
+      MailboxManager.ensureDailyMail();
       updateCoinsUI();
       renderDistrictBar();
       startLoop();

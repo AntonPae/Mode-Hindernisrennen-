@@ -2,6 +2,7 @@ import { PlayerConfig } from '../editor/characterData.js';
 import { renderCharacter } from '../editor/characterRenderer.js';
 import { ShopManager } from '../editor/shopData.js';
 import { HOME_CATALOG, HomeManager } from './homeData.js';
+import { MailboxManager } from '../mailbox/mailboxData.js';
 
 const CATEGORY_TABS = [
   { id: 'expansions', label: '🏗️ Anbau' },
@@ -179,8 +180,21 @@ export function setupHomeScreen(stateManager) {
 
   function updateUI() {
     const state = HomeManager.getState();
+    const level = ShopManager.getStats().level;
     if (coinsVal) coinsVal.textContent = ShopManager.getCoins();
-    if (levelVal) levelVal.textContent = ShopManager.getStats().level;
+    if (levelVal) levelVal.textContent = level;
+
+    const nextHintEl = document.getElementById('homeNextLevelHint');
+    if (nextHintEl) {
+      const nextLv = level + 1;
+      const nextHome = HomeManager.getItemsForLevel(nextLv);
+      if (nextHome.length > 0) {
+        const names = nextHome.slice(0, 3).map((i) => `${i.icon} ${i.name}`).join(' · ');
+        nextHintEl.textContent = `✨ Ab Level ${nextLv} neu im Haus-Shop: ${names}${nextHome.length > 3 ? ' …' : ''}`;
+      } else {
+        nextHintEl.textContent = `🏆 Level ${level}: Alle Haus- & Garten-Stufen freigeschaltet!`;
+      }
+    }
 
     const setBar = (bar, pctEl, val) => {
       const clamped = Math.max(0, Math.min(100, Math.round(val)));
@@ -285,6 +299,11 @@ export function setupHomeScreen(stateManager) {
             updateUI();
             renderRoomTabs();
             renderShopGrid();
+            notifyMoneyOrMissionChange();
+            if (item.id === 'mailbox' || item.id === 'gold_mailbox') {
+              MailboxManager.ensureDailyMail();
+              window.dispatchEvent(new CustomEvent('runner:mailbox-updated'));
+            }
             spawnFX('sparkle', player.x, 220, 12);
             showToast(`🎉 "${item.name}" gekauft!`, 'success');
           } else if (res.reason === 'insufficient_funds') {
@@ -538,9 +557,13 @@ export function setupHomeScreen(stateManager) {
         }
       }
 
-      // 3. Clickable Open Archways & Garden Gates inside Canvas
+      // 3. Clickable Open Archways, Mailbox & Garden Gates inside Canvas
       for (const door of doorHotspots) {
         if (cx >= door.x && cx <= door.x + door.w && cy >= door.y && cy <= door.y + door.h) {
+          if (door.targetRoom === 'action:MAILBOX') {
+            window.dispatchEvent(new CustomEvent('runner:open-mailbox', { detail: { tab: 'inbox' } }));
+            return;
+          }
           if (door.targetRoom === 'state:PETSITTING') {
             stateManager.setState('PETSITTING');
             return;
@@ -1105,6 +1128,30 @@ export function setupHomeScreen(stateManager) {
       }
     }
 
+    // Crystal Chandelier (Level 4)
+    if (HomeManager.hasItem('decor', 'chandelier')) {
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(368, 0);
+      ctx.lineTo(368, 22);
+      ctx.stroke();
+      ctx.fillStyle = '#e0f2fe';
+      ctx.beginPath();
+      ctx.moveTo(338, 22);
+      ctx.lineTo(398, 22);
+      ctx.lineTo(384, 38);
+      ctx.lineTo(352, 38);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#fef08a';
+      [346, 368, 390].forEach((cx) => {
+        ctx.beginPath();
+        ctx.arc(cx, 20, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
     // Framed Landscape Painting
     if (HomeManager.hasItem('decor', 'painting')) {
       ctx.fillStyle = '#fbbf24';
@@ -1133,8 +1180,21 @@ export function setupHomeScreen(stateManager) {
       });
     }
 
-    // Smart TV on wall
-    if (HomeManager.hasItem('furniture', 'tv')) {
+    // Smart TV or Home Cinema (Level 5) on wall
+    if (HomeManager.hasItem('furniture', 'home_cinema')) {
+      ctx.fillStyle = '#1e1b4b';
+      ctx.beginPath();
+      ctx.roundRect(160, 118, 130, 78, [10]);
+      ctx.fill();
+      const cinGrad = ctx.createLinearGradient(168, 126, 282, 188);
+      cinGrad.addColorStop(0, '#fb7185');
+      cinGrad.addColorStop(0.5, '#a855f7');
+      cinGrad.addColorStop(1, '#38bdf8');
+      ctx.fillStyle = cinGrad;
+      ctx.beginPath();
+      ctx.roundRect(168, 126, 114, 62, [6]);
+      ctx.fill();
+    } else if (HomeManager.hasItem('furniture', 'tv')) {
       ctx.fillStyle = '#1e1b4b';
       ctx.beginPath();
       ctx.roundRect(176, 134, 96, 58, [8]);
@@ -1242,6 +1302,19 @@ export function setupHomeScreen(stateManager) {
       ctx.fillStyle = '#38bdf8';
       ctx.beginPath();
       ctx.roundRect(374, floorY - 82, 48, 30, [4]);
+      ctx.fill();
+    }
+
+    // DJ Booth (Level 3)
+    if (HomeManager.hasItem('furniture', 'dj_booth')) {
+      ctx.fillStyle = '#7e22ce';
+      ctx.beginPath();
+      ctx.roundRect(450, floorY - 52, 82, 52, [8, 8, 0, 0]);
+      ctx.fill();
+      ctx.fillStyle = '#1e1b4b';
+      ctx.beginPath();
+      ctx.arc(474, floorY - 54, 12, 0, Math.PI * 2);
+      ctx.arc(508, floorY - 54, 12, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -1653,9 +1726,57 @@ export function setupHomeScreen(stateManager) {
     ctx.textBaseline = 'middle';
     ctx.fillText('🏡 Dein Traumhaus', 99, floorY - 145);
 
+    // Observatory glass dome on roof (Level 6)
+    if (HomeManager.hasItem('expansions', 'observatory')) {
+      ctx.fillStyle = 'rgba(186, 230, 253, 0.85)';
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(146, hasUpper ? 64 : 114, 24, Math.PI, 0);
+      ctx.fill();
+      ctx.stroke();
+    }
+
     // Open House Archway leading straight inside (no door blocking!)
     drawDoorPortal(ctx, 102, floorY - 108, 58, 108, '◀ Ins Haus', 'living_room', w - 130, 'arch');
     ctx.restore();
+
+    // Physical Mailbox outside Dein Traumhaus (with clickable hotspot!)
+    if (HomeManager.hasMailbox()) {
+      const isGold = HomeManager.hasItem('garden', 'gold_mailbox');
+      const unread = MailboxManager.getUnreadCount();
+      const mbX = 204;
+      const mbY = floorY;
+      doorHotspots.push({ x: mbX - 24, y: mbY - 68, w: 48, h: 72, targetRoom: 'action:MAILBOX' });
+      ctx.save();
+      // Post
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(mbX - 4, mbY - 38, 8, 38);
+      // Mailbox box
+      ctx.fillStyle = isGold ? '#fbbf24' : '#ec4899';
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.roundRect(mbX - 18, mbY - 60, 36, 24, [12, 12, 4, 4]);
+      ctx.fill();
+      ctx.stroke();
+      // Flag up if mail waiting
+      ctx.fillStyle = unread > 0 ? '#ef4444' : '#cbd5e1';
+      ctx.fillRect(mbX + 16, unread > 0 ? mbY - 72 : mbY - 54, 4, 18);
+      if (unread > 0) {
+        const bob = Math.sin(animFrame * 0.12) * 3;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.roundRect(mbX - 24, mbY - 88 + bob, 48, 20, [10]);
+        ctx.fill();
+        ctx.font = '800 10px "Plus Jakarta Sans", sans-serif';
+        ctx.fillStyle = '#be185d';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`📩 ${unread}`, mbX, mbY - 78 + bob);
+      }
+      ctx.restore();
+    }
 
     // Crisp White Garden Picket Fence along background & dividing House Terrace from Garden
     ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
@@ -1797,6 +1918,55 @@ export function setupHomeScreen(stateManager) {
       ctx.stroke();
     }
 
+    // Garden Fountain (Level 4)
+    if (HomeManager.hasItem('garden', 'fountain')) {
+      ctx.fillStyle = '#e2e8f0';
+      ctx.beginPath();
+      ctx.ellipse(348, floorY + 26, 28, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.ellipse(348, floorY + 24, 22, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillRect(344, floorY - 12, 8, 36);
+      const spray = Math.sin(animFrame * 0.2) * 3;
+      ctx.fillStyle = '#bae6fd';
+      ctx.beginPath();
+      ctx.arc(348, floorY - 18 + spray, 7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Hammock (Level 5)
+    if (HomeManager.hasItem('garden', 'hammock')) {
+      ctx.strokeStyle = '#92400e';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(418, floorY - 46);
+      ctx.lineTo(418, floorY);
+      ctx.moveTo(504, floorY - 46);
+      ctx.lineTo(504, floorY);
+      ctx.stroke();
+      ctx.strokeStyle = '#f472b6';
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.moveTo(418, floorY - 38);
+      ctx.quadraticCurveTo(461, floorY - 8, 504, floorY - 38);
+      ctx.stroke();
+    }
+
+    // Rainbow Slide (Level 6)
+    if (HomeManager.hasItem('garden', 'rainbow_slide')) {
+      ['#f43f5e', '#fbbf24', '#34d399', '#38bdf8'].forEach((col, i) => {
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(552, floorY - 72 + i * 3);
+        ctx.quadraticCurveTo(582, floorY - 22 + i * 3, 624, floorY - 4 + i * 3);
+        ctx.stroke();
+      });
+    }
+
     // Neighbor Gartentor on the right side of the Garden!
     drawDoorPortal(ctx, w - 92, floorY - 138, 72, 138, 'Nachbarn 🐾 ▶', 'state:PETSITTING', 140, 'gate');
   }
@@ -1873,7 +2043,10 @@ export function setupHomeScreen(stateManager) {
       turtle: { body: '#059669', ear: '#34d399', accent: '#fbbf24' },
       hamster: { body: '#fbbf24', ear: '#f59e0b', accent: '#ffffff' },
       fox: { body: '#f97316', ear: '#9a3412', accent: '#ffffff' },
-      unicorn: { body: '#ffffff', ear: '#f472b6', accent: '#fde047' }
+      unicorn: { body: '#ffffff', ear: '#f472b6', accent: '#fde047' },
+      panda: { body: '#f8fafc', ear: '#1e293b', accent: '#cbd5e1' },
+      dragon: { body: '#10b981', ear: '#fbbf24', accent: '#6ee7b7' },
+      phoenix: { body: '#f43f5e', ear: '#fbbf24', accent: '#fde047' }
     };
 
     state.owned.pets.forEach((petId, idx) => {
@@ -2002,9 +2175,21 @@ export function setupHomeScreen(stateManager) {
     }
   });
 
+  window.addEventListener('runner:level-up', (e) => {
+    const lv = e.detail?.level;
+    const newHome = lv ? HomeManager.getItemsForLevel(lv) : [];
+    const listText = newHome.length > 0 ? ` Neu im Haus-Shop: ${newHome.map((i) => `${i.icon} ${i.name}`).join(', ')}` : '';
+    if (stateManager.getState() === 'HOME' && lv) {
+      updateUI();
+      renderShopGrid();
+      showToast(`🎉 Level ${lv} erreicht! (+${e.detail.bonusCoins} 🪙)${listText}`, 'success');
+    }
+  });
+
   stateManager.onStateChange((newState, payload) => {
     if (newState === 'HOME') {
       const dailyBonus = HomeManager.claimDailyVisitBonus();
+      const mailRes = MailboxManager.ensureDailyMail();
       if (payload && payload.room) {
         switchRoom(payload.room, payload.room === 'garden' ? 285 : 240);
       }
@@ -2016,6 +2201,8 @@ export function setupHomeScreen(stateManager) {
       if (dailyBonus > 0) {
         spawnFX('coin', 380, 180, 10);
         showToast(`🌟 Tages-Willkommensbonus im Haus: +${dailyBonus} 🪙!`, 'success');
+      } else if (mailRes.delivered && mailRes.delivered.length > 0) {
+        showToast(`📬 ${mailRes.delivered.length} neue Briefe im Briefkasten!`, 'info');
       }
     } else {
       stopLoop();

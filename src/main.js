@@ -7,6 +7,7 @@ import { setupHomeScreen } from './home/homeScreen.js';
 import { setupIceCreamScreen } from './jobs/iceCreamScreen.js';
 import { setupPetSittingScreen } from './jobs/petSittingScreen.js';
 import { setupEarnMoneyUI } from './economy/earnMoneyUI.js';
+import { setupMailboxUI } from './mailbox/mailboxUI.js';
 import { RunnerEngine } from './game/runnerEngine.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -25,9 +26,15 @@ document.addEventListener('DOMContentLoaded', () => {
       window.dispatchEvent(new CustomEvent('runner:coins-updated'));
     }
   });
+  const mailboxUI = setupMailboxUI(stateManager);
 
   window.addEventListener('runner:coins-updated', () => {
     earnMoneyUI.refreshBadges();
+    mailboxUI.refreshMailboxButtons();
+  });
+
+  window.addEventListener('runner:mailbox-updated', () => {
+    mailboxUI.refreshMailboxButtons();
   });
 
   stateManager.onStateChange((newState) => {
@@ -37,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
       runnerEngine.stop();
     }
     earnMoneyUI.refreshBadges();
+    mailboxUI.refreshMailboxButtons();
   });
 
   // Initial state setup

@@ -33,6 +33,12 @@
   -webkit-user-select: none;
 }
 
+input,
+textarea {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 body, html {
   width: 100%;
   height: 100%;
@@ -2053,10 +2059,314 @@ body, html {
   margin-top: 0.25rem;
 }
 
+/* ===================================================== */
+/* LEVEL-UNLOCK HINWEIS & BRIEFKASTEN (iPad-freundlich)  */
+/* ===================================================== */
+
+.next-level-hint {
+  margin: 0.65rem auto 0 auto;
+  max-width: 720px;
+  padding: 0.45rem 0.95rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(2, 132, 199, 0.24);
+  font-size: 0.84rem !important;
+  font-weight: 700 !important;
+  color: #0c4a6e !important;
+  box-shadow: 0 4px 12px rgba(88, 28, 135, 0.06);
+}
+
+.btn-mailbox {
+  position: relative;
+  background: linear-gradient(135deg, #2563eb 0%, #0284c7 100%);
+  color: #ffffff;
+  padding: 0.52rem 1.05rem;
+  font-size: 0.9rem;
+  min-height: 44px;
+}
+
+.mail-badge-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 9999px;
+  background: #f43f5e;
+  color: #ffffff;
+  font-size: 0.76rem;
+  font-weight: 800;
+  border: 1.5px solid #ffffff;
+}
+
+#mailbox-modal {
+  z-index: 85;
+}
+
+.mailbox-modal-content {
+  max-width: 700px;
+  background: linear-gradient(180deg, #ffffff 0%, #fffafc 100%);
+}
+
+.mailbox-buy-card {
+  background: linear-gradient(145deg, #f0f9ff 0%, #fdf2f8 100%);
+  border: 1.5px solid rgba(2, 132, 199, 0.25);
+  border-radius: 22px;
+  padding: 1.4rem 1.25rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mailbox-buy-icon {
+  font-size: 3.2rem;
+  line-height: 1;
+}
+
+.mailbox-buy-card h3 {
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--ink-strong);
+}
+
+.mailbox-buy-card p {
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--ink-body);
+  max-width: 520px;
+}
+
+.mailbox-buy-actions {
+  width: 100%;
+  max-width: 360px;
+}
+
+.mailbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.mail-card {
+  background: #ffffff;
+  border: 1.5px solid var(--hairline-strong);
+  border-radius: 20px;
+  padding: 1rem 1.05rem;
+  box-shadow: 0 6px 16px rgba(88, 28, 135, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.mail-card.unread {
+  border-color: #ec4899;
+  background: linear-gradient(145deg, #fffafd 0%, #f0f9ff 100%);
+}
+
+.mail-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.mail-sender-block {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.mail-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: #fdf2f8;
+  border: 1px solid rgba(236, 72, 153, 0.25);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.45rem;
+  flex-shrink: 0;
+}
+
+.mail-sender-block strong {
+  display: block;
+  font-size: 0.96rem;
+  color: var(--ink-strong);
+}
+
+.mail-meta {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.mail-status {
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 0.25rem 0.65rem;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.mail-status.pending {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+.mail-status.accepted {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+.mail-status.declined {
+  background: #ffe4e6;
+  color: #9f1239;
+  border: 1px solid #fda4af;
+}
+
+.mail-title {
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.08rem;
+  font-weight: 800;
+  color: #9d174d;
+}
+
+.mail-text {
+  font-size: 0.94rem;
+  line-height: 1.45;
+  color: var(--ink-body);
+}
+
+.mail-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.2rem;
+}
+
+.mail-actions-row .btn {
+  min-height: 46px;
+  padding: 0.6rem 1rem;
+  font-size: 0.9rem;
+}
+
+.btn-mail-accept {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  box-shadow: 0 6px 14px rgba(5, 150, 105, 0.24);
+}
+
+.btn-mail-decline {
+  background: linear-gradient(135deg, #fb7185 0%, #e11d48 100%);
+  color: #ffffff;
+  box-shadow: 0 6px 14px rgba(225, 29, 72, 0.22);
+}
+
+.mail-compose-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.95rem;
+}
+
+.mail-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.mail-label {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--ink-strong);
+}
+
+.mail-chip-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 0.5rem;
+}
+
+.mail-pick-btn {
+  min-height: 48px;
+  padding: 0.55rem 0.7rem;
+  border-radius: 14px;
+  border: 1.5px solid rgba(168, 85, 247, 0.22);
+  background: #ffffff;
+  color: var(--ink-strong);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.86rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  touch-action: manipulation;
+  text-align: left;
+}
+
+.mail-pick-btn.active {
+  border-color: #db2777;
+  background: linear-gradient(135deg, #fdf2f8 0%, #eef2ff 100%);
+  box-shadow: 0 4px 12px rgba(219, 39, 119, 0.16);
+}
+
+.mail-phrases-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.mail-phrase-btn {
+  min-height: 44px;
+  padding: 0.48rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid rgba(2, 132, 199, 0.28);
+  background: #f0f9ff;
+  color: #0c4a6e;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  font-size: 0.84rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.mail-phrase-btn.active {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  color: #ffffff;
+  border-color: transparent;
+}
+
+.mail-textarea {
+  width: 100%;
+  min-height: 104px;
+  padding: 0.78rem 0.9rem;
+  border-radius: 16px;
+  border: 1.5px solid var(--hairline-strong);
+  background: #ffffff;
+  color: var(--ink-strong);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.mail-compose-footer {
+  margin-top: 0.2rem;
+}
+
 /* Focus & Reduced Motion */
 button:focus-visible,
 select:focus-visible,
-input:focus-visible {
+input:focus-visible,
+textarea:focus-visible {
   outline: 3px solid #ec4899;
   outline-offset: 2px;
 }

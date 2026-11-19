@@ -517,6 +517,30 @@ function drawSculptedTorso(ctx, shoulderY, hipY, shW, waW, hipW, neckH, topConfi
     ctx.lineTo(-6, shoulderY + 17);
     ctx.closePath();
     ctx.fill();
+  } else if (style === 'sparkle_top') {
+    // Pastel Shimmer Top with Golden Stars
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.beginPath();
+    ctx.ellipse(0, shoulderY + torsoH * 0.25, sW * 0.75, 10, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fde047';
+    [[-4, 14], [5, 22], [-2, 30]].forEach(([sx, sy]) => {
+      ctx.beginPath();
+      ctx.arc(sx, shoulderY + sy, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  } else if (style === 'princess_coat') {
+    // Elegant Gala Sash & Gold Pearl Trim
+    ctx.fillStyle = '#fef9c3';
+    ctx.beginPath();
+    ctx.moveTo(-sW * 0.85, shoulderY + 4);
+    ctx.lineTo(sW * 0.9, hipY);
+    ctx.lineTo(sW * 0.55, hipY);
+    ctx.lineTo(-sW, shoulderY + 13);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillRect(-hW, hipY - 5, hW * 2, 5);
   } else if (style === 'astronaut') {
     // Sleek glossy pearl chest plate & cyan holo indicator
     ctx.fillStyle = '#f8fafc';
@@ -858,6 +882,12 @@ function drawArticulatedLeg(ctx, hipX, hipY, thick, thighLen, calfLen, thighAngl
     ctx.beginPath();
     ctx.arc(0, thighLen, 3.6, 0, Math.PI * 2);
     ctx.fill();
+  } else if (style === 'star_jeans') {
+    ctx.fillStyle = '#fde047';
+    ctx.beginPath();
+    ctx.arc(thick * 0.16, thighLen * 0.45, 2.6, 0, Math.PI * 2);
+    ctx.arc(-thick * 0.12, thighLen * 0.72, 2.2, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   // Knee -> Calf -> Ankle
@@ -902,14 +932,20 @@ function drawSculptedShoe(ctx, legThick, shoesConfig, isBack) {
 
   const shoeBase = shoesConfig.color || '#ffffff';
   const shoeW = legThick * 1.85;
-  const shoeH = style === 'boots' ? 14 : 10.5;
+  const shoeH = style === 'boots' || style === 'glitter_boots' ? 14 : 10.5;
 
-  if (style === 'boots') {
+  if (style === 'boots' || style === 'glitter_boots') {
     // Tall boot cuff around ankle
     ctx.fillStyle = makeStudioGrad(ctx, -legThick * 0.5, -10, legThick * 0.5, 2, shadeHex(shoeBase, dim), 42, -36);
     ctx.beginPath();
     ctx.roundRect(-legThick * 0.52, -10, legThick * 1.06, 13, [4, 4, 2, 2]);
     ctx.fill();
+    if (style === 'glitter_boots') {
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.arc(0, -4, 2.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   // Sculpted shoe upper
@@ -978,7 +1014,15 @@ function drawSculptedHairBack(ctx, x, headY, headW, headH, hairId, hairBase, fra
   const midHair = shadeHex(hairBase, -12);
   const sway = Math.sin(frame * 0.1) * 2.2;
 
-  if (hairId === 'hair_3' || hairId === 'hair_crown' || hairId === 'hair_cat' || hairId === 'hair_halo') {
+  if (
+    hairId === 'hair_3' ||
+    hairId === 'hair_crown' ||
+    hairId === 'hair_cat' ||
+    hairId === 'hair_halo' ||
+    hairId === 'hair_bunny' ||
+    hairId === 'hair_flower' ||
+    hairId === 'hair_unicorn'
+  ) {
     // Flowing layered S-wave back hair
     const backGrad = ctx.createLinearGradient(-headW, -headH * 0.4, headW, headH * 2.1);
     backGrad.addColorStop(0, midHair);
@@ -1181,6 +1225,28 @@ function drawSculptedFace(ctx, w, h, faceId, isBlinking) {
       drawGlossyLips(ctx, w * 0.16, h * 0.46, w * 0.26, false);
       break;
     }
+
+    case 'face_8': // Butterfly Sparkle Eyes
+      drawBrow(ctx, eyeLx, eyeY - eyeH * 1.65, eyeW * 1.05, -0.14);
+      drawBrow(ctx, eyeRx, eyeY - eyeH * 1.65, eyeW * 0.9, 0.14);
+      drawAlmondEye(ctx, eyeLx, eyeY, eyeW * 1.04, eyeH * 1.04, isBlinking, '#a855f7', 'star');
+      drawAlmondEye(ctx, eyeRx, eyeY, eyeW * 0.88, eyeH * 1.04, isBlinking, '#a855f7', 'star');
+      // Tiny pastel butterfly wing accent on cheek
+      ctx.fillStyle = '#f472b6';
+      ctx.beginPath();
+      ctx.ellipse(-w * 0.42, h * 0.26, 3.2, 2.1, -0.4, 0, Math.PI * 2);
+      ctx.ellipse(-w * 0.34, h * 0.30, 2.4, 1.8, 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      drawGlossyLips(ctx, w * 0.16, h * 0.45, w * 0.30, true);
+      break;
+
+    case 'face_9': // Rainbow Star Eyes
+      drawBrow(ctx, eyeLx, eyeY - eyeH * 1.7, eyeW * 1.05, -0.12);
+      drawBrow(ctx, eyeRx, eyeY - eyeH * 1.7, eyeW * 0.9, 0.12);
+      drawAlmondEye(ctx, eyeLx, eyeY, eyeW * 1.08, eyeH * 1.08, isBlinking, '#ec4899', 'star');
+      drawAlmondEye(ctx, eyeRx, eyeY, eyeW * 0.92, eyeH * 1.08, isBlinking, '#0ea5e9', 'star');
+      drawGlossyLips(ctx, w * 0.16, h * 0.45, w * 0.31, true);
+      break;
 
     case 'face_1':
     default: // Sparkling Feature-Film Eyes & Warm Glossy Smile
@@ -1482,6 +1548,50 @@ function drawSculptedHairFront(ctx, w, h, hairId, hairBase, frame) {
     ctx.ellipse(0, -h * 1.46 + floatY, w * 0.78, h * 0.16, 0, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
+  } else if (hairId === 'hair_bunny') {
+    // Cute Tall Pastel Bunny Ears
+    [-1, 1].forEach((dir) => {
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.ellipse(dir * w * 0.45, -h * 1.48, w * 0.22, h * 0.62, dir * 0.14, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#f9a8d4';
+      ctx.beginPath();
+      ctx.ellipse(dir * w * 0.45, -h * 1.46, w * 0.11, h * 0.42, dir * 0.14, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  } else if (hairId === 'hair_flower') {
+    // Pastel Blossom Crown
+    const petals = ['#f472b6', '#fde047', '#ffffff', '#c084fc', '#fb7185'];
+    [-0.7, -0.35, 0, 0.35, 0.7].forEach((px, idx) => {
+      ctx.fillStyle = petals[idx];
+      ctx.beginPath();
+      ctx.arc(px * w, -h * 1.05 + Math.abs(px) * 3, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(px * w, -h * 1.05 + Math.abs(px) * 3, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  } else if (hairId === 'hair_unicorn') {
+    // Golden Unicorn Horn & Pastel Ears
+    [-1, 1].forEach((dir) => {
+      ctx.fillStyle = '#fbcfe8';
+      ctx.beginPath();
+      ctx.ellipse(dir * w * 0.55, -h * 1.15, w * 0.16, h * 0.26, dir * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    const hornGrad = ctx.createLinearGradient(0, -h * 1.85, 0, -h * 1.0);
+    hornGrad.addColorStop(0, '#fef9c3');
+    hornGrad.addColorStop(0.5, '#fbbf24');
+    hornGrad.addColorStop(1, '#f472b6');
+    ctx.fillStyle = hornGrad;
+    ctx.beginPath();
+    ctx.moveTo(-w * 0.16, -h * 1.02);
+    ctx.lineTo(w * 0.04, -h * 1.86);
+    ctx.lineTo(w * 0.22, -h * 1.02);
+    ctx.closePath();
+    ctx.fill();
   }
 
   ctx.restore();

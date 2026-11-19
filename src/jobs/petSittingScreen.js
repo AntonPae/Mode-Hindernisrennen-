@@ -610,6 +610,9 @@ export function setupPetSittingScreen(stateManager) {
 
   window.addEventListener('keydown', (e) => {
     if (stateManager.getState() !== 'PETSITTING') return;
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+    if (document.querySelector('.modal:not(.hidden)')) return;
     if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
       keys.left = true;
       player.waypoints = [];

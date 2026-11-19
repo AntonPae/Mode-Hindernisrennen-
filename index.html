@@ -25,6 +25,7 @@
           <button type="button" id="openEarnEditorBtn" class="btn btn-earn">💰 Geld verdienen</button>
           <button type="button" id="mysteryBoxBtn" class="btn btn-mystery">🎁 Überraschungs-Kiste (65 🪙)</button>
         </div>
+        <p id="editorNextLevelHint" class="next-level-hint"></p>
         <div id="shopToast" class="shop-toast hidden"></div>
       </header>
 
@@ -158,6 +159,7 @@
           <span class="coin-pill">🪙 Spielgeld: <strong id="townCoinsVal">0</strong></span>
           <span class="level-pill">🏆 Level <strong id="townLevelVal">1</strong></span>
           <button type="button" id="openEarnTownBtn" class="btn btn-earn">💰 Geld verdienen</button>
+          <button type="button" id="townMailboxBtn" class="btn btn-mailbox">📬 Briefkasten</button>
         </div>
       </header>
 
@@ -205,7 +207,9 @@
           <span class="supply-pill">🦴 Tierfutter: <strong id="petFoodCountVal">3</strong></span>
           <button type="button" id="openEarnHomeBtn" class="btn btn-earn">💰 Geld verdienen</button>
           <button type="button" id="homeMysteryBtn" class="btn btn-mystery">🎁 Haus-Überraschung (75 🪙)</button>
+          <button type="button" id="homeMailboxBtn" class="btn btn-mailbox">📬 Briefkasten</button>
         </div>
+        <p id="homeNextLevelHint" class="next-level-hint"></p>
         <div id="homeToast" class="shop-toast hidden"></div>
       </header>
 
@@ -453,6 +457,22 @@
         <div id="earnToast" class="shop-toast hidden"></div>
         <div id="earnTabs" class="earn-tabs"></div>
         <div id="earnTabBody" class="earn-tab-body"></div>
+      </div>
+    </div>
+
+    <!-- Mailbox & Letters Modal -->
+    <div id="mailbox-modal" class="modal hidden">
+      <div class="earn-modal-content mailbox-modal-content">
+        <div class="earn-modal-header">
+          <div>
+            <h2>📬 Mein Briefkasten</h2>
+            <span class="coin-pill">🪙 Aktuell: <strong id="mailboxCoinsVal">0</strong></span>
+          </div>
+          <button type="button" id="closeMailboxBtn" class="btn btn-small btn-secondary" aria-label="Briefkasten schließen">✖</button>
+        </div>
+        <div id="mailboxToast" class="shop-toast hidden"></div>
+        <div id="mailboxTabs" class="earn-tabs"></div>
+        <div id="mailboxBody" class="earn-tab-body"></div>
       </div>
     </div>
   </div>

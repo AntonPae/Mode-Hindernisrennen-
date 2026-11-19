@@ -8,7 +8,8 @@ export const HOME_CATALOG = {
     { id: 'bedroom', name: 'Obergeschoss', icon: '🪜', price: 130, desc: 'Baut ein zweites Stockwerk auf dein Haus' },
     { id: 'conservatory', name: 'Wintergarten', icon: '🪴', price: 170, desc: 'Gläserner Anbau zwischen Haus und Garten' },
     { id: 'balcony', name: 'Sonniger Balkon', icon: '🌅', price: 195, unlockLevel: 2, isNew: true, desc: 'Schicker Balkon am Obergeschoss' },
-    { id: 'pool_deck', name: 'Pool-Terrasse', icon: '🏊', price: 260, unlockLevel: 3, isNew: true, desc: 'Blauer Gartenpool zum Abkühlen!' }
+    { id: 'pool_deck', name: 'Pool-Terrasse', icon: '🏊', price: 260, unlockLevel: 3, isNew: true, desc: 'Blauer Gartenpool zum Abkühlen!' },
+    { id: 'observatory', name: 'Dach-Sternwarte', icon: '🔭', price: 340, unlockLevel: 6, isNew: true, desc: 'Glaskuppel mit Teleskop zum Sternegucken!' }
   ],
   furniture: [
     { id: 'sofa', name: 'Gemütliches Sofa', icon: '🛋️', price: 50, desc: 'Ein weiches rotes Cartoon-Sofa' },
@@ -17,7 +18,9 @@ export const HOME_CATALOG = {
     { id: 'bed', name: 'Kuschel-Bett', icon: '🛏️', price: 110, desc: 'Perfekt zum Ausruhen nach dem Rennen' },
     { id: 'aquarium', name: 'Aquarium', icon: '🐠', price: 140, desc: 'Leuchtendes Becken mit bunten Fischen' },
     { id: 'gaming_setup', name: 'Gaming-Ecke', icon: '🎮', price: 165, isNew: true, desc: 'Leuchtender Monitor & Zocker-Stuhl' },
-    { id: 'piano', name: 'Konzert-Klavier', icon: '🎹', price: 185, unlockLevel: 2, isNew: true, desc: 'Spielt fröhliche Melodien im Wohnzimmer' }
+    { id: 'piano', name: 'Konzert-Klavier', icon: '🎹', price: 185, unlockLevel: 2, isNew: true, desc: 'Spielt fröhliche Melodien im Wohnzimmer' },
+    { id: 'dj_booth', name: 'DJ-Musik-Ecke', icon: '🎧', price: 195, unlockLevel: 3, isNew: true, desc: 'Perfekt für deine eigenen Haus-Partys!' },
+    { id: 'home_cinema', name: 'Heimkino', icon: '🎬', price: 260, unlockLevel: 5, isNew: true, desc: 'Große Kino-Leinwand für Filmabende mit Freunden' }
   ],
   decor: [
     { id: 'rug', name: 'Fluffiger Teppich', icon: '🧶', price: 35, desc: 'Warmer Teppich fürs Wohnzimmer' },
@@ -26,9 +29,11 @@ export const HOME_CATALOG = {
     { id: 'lights', name: 'Lichterkette', icon: '✨', price: 75, desc: 'Gemütliche goldene Lichter' },
     { id: 'lava_lamp', name: 'Lavalampe', icon: '🪩', price: 85, isNew: true, desc: 'Bunte blubbernde Leucht-Deko' },
     { id: 'bookshelf', name: 'Bücherregal', icon: '📚', price: 95, desc: 'Voll mit spannenden Abenteuern' },
-    { id: 'trophy_shelf', name: 'Pokal-Regal', icon: '🏆', price: 120, unlockLevel: 2, isNew: true, desc: 'Zeigt deine goldenen Lauf-Pokale' }
+    { id: 'trophy_shelf', name: 'Pokal-Regal', icon: '🏆', price: 120, unlockLevel: 2, isNew: true, desc: 'Zeigt deine goldenen Lauf-Pokale' },
+    { id: 'chandelier', name: 'Kristall-Leuchter', icon: '💎', price: 165, unlockLevel: 4, isNew: true, desc: 'Funkelnder Kronleuchter für dein Wohnzimmer' }
   ],
   garden: [
+    { id: 'mailbox', name: 'Briefkasten', icon: '📬', price: 45, isNew: true, desc: 'Bekomme jeden Tag 1–2 Briefe & Einladungen von Freunden!' },
     { id: 'flowerbed', name: 'Blumenbeet', icon: '🌷', price: 0, desc: 'Bunte Blumen im Vorgarten' },
     { id: 'veggies', name: 'Gemüsebeet', icon: '🥕', price: 60, desc: 'Leckeres Gemüse (+10 🪙 pro Ernte)' },
     { id: 'apple_tree', name: 'Apfelbaum', icon: '🍎', price: 95, desc: 'Trägt saftige Äpfel (+12 🪙 pro Ernte)' },
@@ -36,7 +41,11 @@ export const HOME_CATALOG = {
     { id: 'swing', name: 'Gartenschaukel', icon: '🎠', price: 145, isNew: true, desc: 'Schaukelspaß im grünen Garten' },
     { id: 'bbq', name: 'Grill-Ecke', icon: '🍔', price: 160, unlockLevel: 2, isNew: true, desc: 'Leckeres BBQ-Fest im Garten (+6 🪙 beim Kochen)' },
     { id: 'treehouse', name: 'Baumhaus', icon: '🏡', price: 180, desc: 'Ein echtes Abenteuer-Baumhaus!' },
-    { id: 'greenhouse', name: 'Gewächshaus', icon: '🌿', price: 220, unlockLevel: 3, isNew: true, desc: 'Lässt Pflanzen turbo-schnell wachsen (+15 🪙 Ernte)' }
+    { id: 'gold_mailbox', name: 'Gold-Briefkasten', icon: '✨', price: 135, unlockLevel: 3, isNew: true, desc: 'Schicker Gold-Briefkasten mit Extra-Münzen in Geschenkbriefen!' },
+    { id: 'greenhouse', name: 'Gewächshaus', icon: '🌿', price: 220, unlockLevel: 3, isNew: true, desc: 'Lässt Pflanzen turbo-schnell wachsen (+15 🪙 Ernte)' },
+    { id: 'fountain', name: 'Garten-Brunnen', icon: '⛲', price: 190, unlockLevel: 4, isNew: true, desc: 'Plätschernder Wunschbrunnen direkt vor der Terrasse' },
+    { id: 'hammock', name: 'Hängematte', icon: '🌴', price: 185, unlockLevel: 5, isNew: true, desc: 'Gemütliche Sonnen-Hängematte im Garten' },
+    { id: 'rainbow_slide', name: 'Regenbogen-Rutsche', icon: '🌈', price: 290, unlockLevel: 6, isNew: true, desc: 'Bunte Garten-Rutsche für Partys mit Nachbarn!' }
   ],
   pets: [
     { id: 'turtle', name: 'Schildkröte Speedy', icon: '🐢', price: 65, desc: 'Gemütlich, lieb und mag Salat' },
@@ -46,7 +55,10 @@ export const HOME_CATALOG = {
     { id: 'dog', name: 'Hund Bello', icon: '🐶', price: 90, desc: 'Dein treuer bester Freund' },
     { id: 'parrot', name: 'Papagei Coco', icon: '🦜', price: 115, desc: 'Bunt, klug und plappert gern' },
     { id: 'fox', name: 'Fuchs Foxy', icon: '🦊', price: 175, unlockLevel: 2, isNew: true, desc: 'Schlauer kleiner Garten-Fuchs' },
-    { id: 'unicorn', name: 'Mini-Einhorn', icon: '🦄', price: 280, unlockLevel: 3, isNew: true, desc: 'Magisches Glitzer-Einhorn!' }
+    { id: 'unicorn', name: 'Mini-Einhorn', icon: '🦄', price: 280, unlockLevel: 3, isNew: true, desc: 'Magisches Glitzer-Einhorn!' },
+    { id: 'panda', name: 'Panda Mochi', icon: '🐼', price: 230, unlockLevel: 4, isNew: true, desc: 'Knuddeliger Panda, der frischen Bambus knabbert' },
+    { id: 'dragon', name: 'Glücks-Drache Fips', icon: '🐉', price: 310, unlockLevel: 5, isNew: true, desc: 'Süßer Mini-Drache mit Glitzerflügeln' },
+    { id: 'phoenix', name: 'Sternen-Vogel', icon: '🐦‍🔥', price: 360, unlockLevel: 6, isNew: true, desc: 'Magischer Traumvogel, der extra Münzen bringt' }
   ],
   petItems: [
     { id: 'bowl', name: 'Gold-Napf', icon: '🥣', price: 35, desc: 'Schicker Napf für deine Tiere' },
@@ -131,6 +143,10 @@ export const HomeManager = {
     }
   },
 
+  hasMailbox() {
+    return this.hasItem('garden', 'mailbox') || this.hasItem('garden', 'gold_mailbox');
+  },
+
   hasItem(category, id) {
     const state = this.getState();
     return Array.isArray(state.owned[category]) && state.owned[category].includes(id);
@@ -142,13 +158,25 @@ export const HomeManager = {
     return playerLevel >= item.unlockLevel;
   },
 
+  getItemsForLevel(targetLevel) {
+    const items = [];
+    Object.keys(HOME_CATALOG).forEach((cat) => {
+      HOME_CATALOG[cat].forEach((item) => {
+        if (item.unlockLevel === targetLevel) {
+          items.push({ category: cat, ...item });
+        }
+      });
+    });
+    return items;
+  },
+
   // Daily rotating 30% deals in Home Shop
   getDailyDeals() {
     const seed = getDateSeed();
     const pool = [];
     Object.keys(HOME_CATALOG).forEach((cat) => {
       HOME_CATALOG[cat].forEach((item) => {
-        if (item.price > 0 && !item.isConsumable) {
+        if (item.price > 0 && !item.isConsumable && this.isLevelUnlocked(item)) {
           pool.push({ category: cat, id: item.id });
         }
       });
@@ -198,6 +226,7 @@ export const HomeManager = {
     if (this.hasItem('decor', 'trophy_shelf')) bonus += 5;
     if (this.hasItem('supplies', 'robot_helper')) bonus += 5;
     if (this.hasItem('garden', 'greenhouse')) bonus += 4;
+    if (this.hasItem('pets', 'phoenix')) bonus += 8;
     return bonus;
   },
 
@@ -318,6 +347,7 @@ export const HomeManager = {
     state.needs.cleanliness = Math.max(10, state.needs.cleanliness - 5);
     this.saveState(state);
     ShopManager.addCoins(bonusCoins);
+    ShopManager.recordProgress(0, 1);
     EarnMoneyManager.recordEvent({ care: 1 });
     return { ok: true, bonusCoins, state };
   },
@@ -334,6 +364,7 @@ export const HomeManager = {
     state.needs.cleanliness = Math.min(100, state.needs.cleanliness + boost);
     this.saveState(state);
     ShopManager.addCoins(bonusCoins);
+    ShopManager.recordProgress(0, 1);
     EarnMoneyManager.recordEvent({ care: 1 });
     return { ok: true, bonusCoins, state };
   },
@@ -353,6 +384,7 @@ export const HomeManager = {
     state.needs.petCare = Math.min(100, state.needs.petCare + boost);
     this.saveState(state);
     ShopManager.addCoins(bonusCoins);
+    ShopManager.recordProgress(0, 1);
     EarnMoneyManager.recordEvent({ care: 1 });
     return { ok: true, bonusCoins, state };
   },
@@ -364,6 +396,7 @@ export const HomeManager = {
     }
     state.needs.petCare = Math.min(100, state.needs.petCare + 15);
     this.saveState(state);
+    ShopManager.recordProgress(0, 1);
     EarnMoneyManager.recordEvent({ care: 1 });
     return { ok: true, state };
   },
@@ -379,6 +412,7 @@ export const HomeManager = {
       state.needs.gardenGrowth = 10;
       this.saveState(state);
       ShopManager.addCoins(reward);
+      ShopManager.recordProgress(0, 2);
       EarnMoneyManager.recordEvent({ care: 1 });
       return { ok: true, action: 'harvest', bonusCoins: reward, state };
     }
@@ -388,6 +422,7 @@ export const HomeManager = {
     const growthStep = (hasGoldCan ? 50 : 30) + (hasGreenhouse ? 15 : 0);
     state.needs.gardenGrowth = Math.min(100, state.needs.gardenGrowth + growthStep);
     this.saveState(state);
+    ShopManager.recordProgress(0, 1);
     EarnMoneyManager.recordEvent({ care: 1 });
     return { ok: true, action: 'water', state };
   }
