@@ -1203,6 +1203,21 @@ body, html {
   cursor: pointer;
 }
 
+.home-pet-room-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.9rem;
+  background: linear-gradient(90deg, #fff1f2 0%, #f0fdf4 100%);
+  border-top: 1px solid var(--hairline);
+}
+
+.home-pet-room-bar.hidden {
+  display: none;
+}
+
 /* Walk Control Pad below canvas */
 .home-walk-pad {
   display: flex;

@@ -18,6 +18,7 @@ const CATEGORY_TABS = [
 const ROOMS = [
   { id: 'living_room', label: '🛋️ Wohnzimmer', alwaysUnlocked: true },
   { id: 'kitchen', label: '🍳 Küche', alwaysUnlocked: true },
+  { id: 'pet_room', label: '🐾 Tierzimmer', unlockItem: 'pet_room' },
   { id: 'bedroom', label: '🛏️ Schlafzimmer', unlockItem: 'bedroom' },
   { id: 'conservatory', label: '🪴 Wintergarten', unlockItem: 'conservatory' },
   { id: 'garden', label: '🌳 Garten', alwaysUnlocked: true }
@@ -40,6 +41,11 @@ export function setupHomeScreen(stateManager) {
   const walkLeftBtn = document.getElementById('homeWalkLeftBtn');
   const walkRightBtn = document.getElementById('homeWalkRightBtn');
   const jumpBtn = document.getElementById('homeJumpBtn');
+
+  const petRoomBar = document.getElementById('homePetRoomBar');
+  const pickAllPetsBtn = document.getElementById('homePickAllPetsBtn');
+  const leaveAllPetsBtn = document.getElementById('homeLeaveAllPetsBtn');
+  const openPetShopBtn = document.getElementById('homeOpenPetShopBtn');
 
   const cleanBar = document.getElementById('cleanBar');
   const hungerBar = document.getElementById('hungerBar');
@@ -163,20 +169,32 @@ export function setupHomeScreen(stateManager) {
     player.pose = 'idle';
     player.poseTimer = 0;
     petFollowers.reset(player.x, canvas ? canvas.height - 54 : 336);
+    if (petRoomBar) {
+      petRoomBar.classList.toggle('hidden', activeRoom !== 'pet_room');
+    }
     renderRoomTabs();
-    setTaskBanner(`Du bist jetzt in: ${room.label.replace(/^[^\s]+\s/, '')} · Klicke auf den Boden oder tippe auf ein Tier, um es mitzunehmen!`);
+    if (activeRoom === 'pet_room') {
+      setTaskBanner('🐾 Tierzimmer: Hier bleiben deine Tiere! Tippe ein Tier an, um es abzuholen & mitzunehmen, oder kauf neue Tiersachen!');
+    } else {
+      setTaskBanner(`Du bist jetzt in: ${room.label.replace(/^[^\s]+\s/, '')} · Klicke auf den Boden oder gehe frei von Raum zu Raum!`);
+    }
     return true;
   }
 
   function renderRoomTabs() {
     if (!roomTabsEl) return;
+    const stayingCount = HomeManager.getStayingPets().length;
     roomTabsEl.innerHTML = '';
     ROOMS.forEach((room) => {
       const unlocked = isRoomUnlocked(room);
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = `home-room-tab${activeRoom === room.id ? ' active' : ''}${!unlocked ? ' locked' : ''}`;
-      btn.textContent = unlocked ? room.label : `🔒 ${room.label.replace(/^[^\s]+\s/, '')}`;
+      if (room.id === 'pet_room' && unlocked && stayingCount > 0) {
+        btn.textContent = `${room.label} (${stayingCount})`;
+      } else {
+        btn.textContent = unlocked ? room.label : `🔒 ${room.label.replace(/^[^\s]+\s/, '')}`;
+      }
       btn.addEventListener('click', () => switchRoom(room.id));
       roomTabsEl.appendChild(btn);
     });
@@ -277,9 +295,12 @@ export function setupHomeScreen(stateManager) {
           : '';
 
       const isPetTab = activeTab === 'pets';
+      const hasPetRoom = HomeManager.hasPetRoom();
       const isComingAlong = owned && isPetTab && HomeManager.isCompanionPet(item.id);
       const btnLabel = owned
-        ? (isPetTab ? (isComingAlong ? '🎒 Kommt mit' : '👆 Mitnehmen') : '✓ Im Besitz')
+        ? (isPetTab
+            ? (isComingAlong ? '🎒 Kommt mit' : hasPetRoom ? '🐾 Im Tierzimmer · Abholen' : '👆 Mitnehmen')
+            : '✓ Im Besitz')
         : !levelOk
           ? `🔒 Ab Level ${item.unlockLevel}`
           : `${isDeal ? '🔥 ' : ''}Kaufen (${price} 🪙)`;
@@ -302,13 +323,24 @@ export function setupHomeScreen(stateManager) {
         buyBtn.addEventListener('click', () => {
           const res = HomeManager.toggleCompanionPet(item.id);
           if (res.ok) {
+            renderRoomTabs();
             renderShopGrid();
             if (res.active) {
               HomeManager.cuddleCompanionPet(item.id);
               spawnFX('heart', player.x, 220, 8);
-              showToast(`🐾 ${item.name} kommt jetzt überall mit!`, 'success');
+              showToast(
+                hasPetRoom
+                  ? `🐾 ${item.name} aus dem Tierzimmer abgeholt! Es kommt jetzt überall mit!`
+                  : `🐾 ${item.name} kommt jetzt überall mit!`,
+                'success'
+              );
             } else {
-              showToast(`🏡 ${item.name} bleibt gemütlich zuhause.`, 'info');
+              showToast(
+                hasPetRoom
+                  ? `🐾 ${item.name} bleibt jetzt gemütlich im Tierzimmer.`
+                  : `🏡 ${item.name} bleibt gemütlich zuhause.`,
+                'info'
+              );
             }
           }
         });
@@ -317,7 +349,13 @@ export function setupHomeScreen(stateManager) {
           const res = HomeManager.buyItem(activeTab, item.id);
           if (res.ok) {
             updateUI();
-            renderRoomTabs();
+            if (item.id === 'pet_room') {
+              activeTab = 'petItems';
+              switchRoom('pet_room', 140);
+              renderTabs();
+            } else {
+              renderRoomTabs();
+            }
             renderShopGrid();
             notifyMoneyOrMissionChange();
             if (item.id === 'mailbox' || item.id === 'gold_mailbox') {
@@ -325,7 +363,15 @@ export function setupHomeScreen(stateManager) {
               window.dispatchEvent(new CustomEvent('runner:mailbox-updated'));
             }
             spawnFX('sparkle', player.x, 220, 12);
-            showToast(isPetTab ? `🎉 "${item.name}" gekauft! Tippe es im Zimmer an, um es mitzunehmen!` : `🎉 "${item.name}" gekauft!`, 'success');
+            if (item.id === 'pet_room') {
+              showToast('🐾 Tierzimmer gebaut! Hier kannst du jetzt Tiersachen kaufen & deine Tiere abholen!', 'success');
+            } else if (activeTab === 'petItems' && HomeManager.hasPetRoom() && activeRoom !== 'pet_room') {
+              showToast(`🎉 "${item.name}" gekauft und direkt ins Tierzimmer gestellt!`, 'success');
+            } else if (isPetTab && HomeManager.hasPetRoom()) {
+              showToast(`🎉 "${item.name}" wartet jetzt im Tierzimmer! Hol es dort ab!`, 'success');
+            } else {
+              showToast(isPetTab ? `🎉 "${item.name}" gekauft! Tippe es im Zimmer an, um es mitzunehmen!` : `🎉 "${item.name}" gekauft!`, 'success');
+            }
           } else if (res.reason === 'insufficient_funds') {
             showToast(`🔒 Noch ${res.missing} 🪙 nötig für "${item.name}"!`, 'warn');
           }
@@ -413,17 +459,21 @@ export function setupHomeScreen(stateManager) {
       showToast('🦴 Kein Tierfutter mehr! Kauf Nachschub unter "🛒 Vorräte".', 'warn');
       return;
     }
+    if (HomeManager.hasPetRoom() && activeRoom !== 'pet_room') {
+      switchRoom('pet_room', 120);
+    }
+    const list = state.owned.pets.slice(0, 5);
     activeTask = {
       type: mode === 'feed' ? 'feed_pets' : 'pet_pets',
-      targets: state.owned.pets.slice(0, 3).map((petId, idx) => ({
+      targets: list.map((petId, idx) => ({
         id: petId,
-        x: 200 + idx * 175,
+        x: 170 + idx * (list.length > 1 ? Math.min(130, 440 / (list.length - 1)) : 0),
         collected: false
       }))
     };
     setTaskBanner(
       mode === 'feed'
-        ? `🦴 Füttern: Lauf zu deinen Tieren im Raum, um sie zu füttern! (0/${activeTask.targets.length})`
+        ? `🦴 Füttern: Lauf zu deinen Tieren, um sie zu füttern! (0/${activeTask.targets.length})`
         : `🤗 Streicheln: Lauf zu deinen Tieren, um sie zu knuddeln! (0/${activeTask.targets.length})`,
       false
     );
@@ -483,6 +533,46 @@ export function setupHomeScreen(stateManager) {
   if (feedPetsBtn) feedPetsBtn.addEventListener('click', () => startPetTask('feed'));
   if (petAnimalsBtn) petAnimalsBtn.addEventListener('click', () => startPetTask('pet'));
   if (gardenBtn) gardenBtn.addEventListener('click', startGardenTask);
+
+  if (pickAllPetsBtn) {
+    pickAllPetsBtn.addEventListener('click', () => {
+      const state = HomeManager.getState();
+      if (!state.owned.pets.length) {
+        activeTab = 'pets';
+        renderTabs();
+        renderShopGrid();
+        showToast('🐾 Kauf dir zuerst ein Tier unter "🐾 Tiere"!', 'info');
+        return;
+      }
+      HomeManager.setAllCompanions(true);
+      updateUI();
+      renderRoomTabs();
+      renderShopGrid();
+      spawnFX('heart', player.x, 230, 12);
+      showToast('🐾 Alle deine Tiere abgeholt! Sie begleiten dich jetzt überall hin!', 'success');
+    });
+  }
+
+  if (leaveAllPetsBtn) {
+    leaveAllPetsBtn.addEventListener('click', () => {
+      HomeManager.setAllCompanions(false);
+      updateUI();
+      renderRoomTabs();
+      renderShopGrid();
+      spawnFX('sparkle', player.x, 240, 10);
+      showToast('🏠 Deine Tiere bleiben jetzt gemütlich im Tierzimmer!', 'info');
+    });
+  }
+
+  if (openPetShopBtn) {
+    openPetShopBtn.addEventListener('click', () => {
+      activeTab = 'petItems';
+      renderTabs();
+      renderShopGrid();
+      if (itemsGridEl) itemsGridEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      showToast('🧸 Such dir schöne Sachen fürs Tierzimmer aus!', 'info');
+    });
+  }
 
   // Movement Key & Touch Pad Listeners
   window.addEventListener('keydown', (e) => {
@@ -578,22 +668,34 @@ export function setupHomeScreen(stateManager) {
         }
       }
 
-      // 2b. Tap directly on a Pet in the room/garden to take it everywhere with you (or leave it home)!
+      // 2b. Tap directly on a Pet in the room/garden to take it everywhere with you (or leave it in Tierzimmer)!
       for (let i = petHotspots.length - 1; i >= 0; i--) {
         const ph = petHotspots[i];
         if (Math.hypot(cx - ph.x, cy - ph.y) <= ph.r) {
           const res = HomeManager.toggleCompanionPet(ph.petId);
           if (res.ok) {
             const meta = getPetMeta(ph.petId);
+            const hasPetRoom = HomeManager.hasPetRoom();
             if (res.active) {
               HomeManager.cuddleCompanionPet(ph.petId);
               spawnFX('heart', ph.x, ph.y - 16, 9);
-              showToast(`🐾 ${meta.name} kommt jetzt überall mit! Tippe es unterwegs an zum Streicheln.`, 'success');
+              showToast(
+                hasPetRoom
+                  ? `🐾 ${meta.name} im Tierzimmer abgeholt! Es kommt jetzt überall mit!`
+                  : `🐾 ${meta.name} kommt jetzt überall mit! Tippe es unterwegs an zum Streicheln.`,
+                'success'
+              );
             } else {
               spawnFX('sparkle', ph.x, ph.y - 14, 6);
-              showToast(`🏡 ${meta.name} bleibt gemütlich zuhause.`, 'info');
+              showToast(
+                hasPetRoom
+                  ? `🐾 ${meta.name} bleibt jetzt gemütlich im Tierzimmer!`
+                  : `🏡 ${meta.name} bleibt gemütlich zuhause.`,
+                'info'
+              );
             }
             updateUI();
+            renderRoomTabs();
             renderShopGrid();
           }
           return;
@@ -738,6 +840,11 @@ export function setupHomeScreen(stateManager) {
       if (activeRoom === 'kitchen' && player.x >= w - 52 && vx > 0) {
         edgeCooldown = 36;
         switchRoom('garden', 290);
+        return;
+      }
+      if (activeRoom === 'pet_room' && player.x <= 52 && vx < 0) {
+        edgeCooldown = 36;
+        switchRoom('living_room', 590);
         return;
       }
       if (activeRoom === 'garden' && player.x <= 125 && vx < 0) {
@@ -917,6 +1024,8 @@ export function setupHomeScreen(stateManager) {
 
     if (activeRoom === 'kitchen') {
       drawKitchenRoom(ctx, w, h, floorY, state);
+    } else if (activeRoom === 'pet_room') {
+      drawPetRoom(ctx, w, h, floorY, state);
     } else if (activeRoom === 'bedroom') {
       drawBedroomRoom(ctx, w, h, floorY, state);
     } else if (activeRoom === 'conservatory') {
@@ -1256,16 +1365,16 @@ export function setupHomeScreen(stateManager) {
     if (HomeManager.hasItem('decor', 'bookshelf')) {
       ctx.fillStyle = '#b45309';
       ctx.beginPath();
-      ctx.roundRect(475, floorY - 148, 68, 148, [6, 6, 0, 0]);
+      ctx.roundRect(446, floorY - 148, 66, 148, [6, 6, 0, 0]);
       ctx.fill();
       const bColors = ['#f472b6', '#38bdf8', '#fbbf24', '#34d399', '#a855f7'];
       for (let shelf = 0; shelf < 3; shelf++) {
         const sy = floorY - 138 + shelf * 46;
         ctx.fillStyle = '#78350f';
-        ctx.fillRect(481, sy, 56, 36);
+        ctx.fillRect(452, sy, 54, 36);
         for (let b = 0; b < 4; b++) {
           ctx.fillStyle = bColors[(shelf + b) % bColors.length];
-          ctx.fillRect(485 + b * 12, sy + 8, 9, 28);
+          ctx.fillRect(456 + b * 12, sy + 8, 9, 28);
         }
       }
     }
@@ -1274,17 +1383,17 @@ export function setupHomeScreen(stateManager) {
     if (HomeManager.hasItem('furniture', 'aquarium')) {
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.roundRect(558, floorY - 76, 76, 76, [6, 6, 0, 0]);
+      ctx.roundRect(520, floorY - 76, 70, 76, [6, 6, 0, 0]);
       ctx.fill();
-      const aqG = ctx.createLinearGradient(562, floorY - 122, 562, floorY - 76);
+      const aqG = ctx.createLinearGradient(524, floorY - 122, 524, floorY - 76);
       aqG.addColorStop(0, '#67e8f9');
       aqG.addColorStop(1, '#0284c7');
       ctx.fillStyle = aqG;
       ctx.beginPath();
-      ctx.roundRect(562, floorY - 122, 68, 46, [6]);
+      ctx.roundRect(524, floorY - 122, 62, 46, [6]);
       ctx.fill();
       // Swimming vector fish
-      const fx = 582 + Math.sin(animFrame * 0.06) * 16;
+      const fx = 542 + Math.sin(animFrame * 0.06) * 14;
       ctx.fillStyle = '#fb923c';
       ctx.beginPath();
       ctx.ellipse(fx, floorY - 98, 7, 4.5, 0, 0, Math.PI * 2);
@@ -1397,9 +1506,14 @@ export function setupHomeScreen(stateManager) {
       ctx.fill();
     }
 
-    // Open archways — left to Traumstadt & right to Kitchen (no closed doors!)
+    // Open archways — left to Traumstadt & right to Tierzimmer (if owned) + Kitchen (no closed doors!)
     drawDoorPortal(ctx, 14, floorY - 144, 62, 144, '◀ Stadt', 'state:TOWN', 155, 'arch');
-    drawDoorPortal(ctx, w - 102, floorY - 148, 74, 148, 'Küche ➔', 'kitchen', 110, 'arch');
+    if (HomeManager.hasPetRoom()) {
+      drawDoorPortal(ctx, 602, floorY - 142, 64, 142, '🐾 Tierzimmer', 'pet_room', 125, 'arch');
+      drawDoorPortal(ctx, 678, floorY - 148, 68, 148, 'Küche ➔', 'kitchen', 110, 'arch');
+    } else {
+      drawDoorPortal(ctx, w - 102, floorY - 148, 74, 148, 'Küche ➔', 'kitchen', 110, 'arch');
+    }
   }
 
   function drawKitchenRoom(ctx, w, h, floorY, state) {
@@ -1528,6 +1642,285 @@ export function setupHomeScreen(stateManager) {
     // Open archways back to Living Room & straight into Garden
     drawDoorPortal(ctx, 26, floorY - 148, 72, 148, '◀ Wohnzimmer', 'living_room', w - 150, 'arch');
     drawDoorPortal(ctx, w - 102, floorY - 148, 72, 148, 'Garten ➔', 'garden', 290, 'arch');
+  }
+
+  function drawPetRoom(ctx, w, h, floorY, state) {
+    // Cozy Warm Mint-Peach Pet Room Walls
+    const wallGrad = ctx.createLinearGradient(0, 0, 0, floorY);
+    wallGrad.addColorStop(0, '#ecfeff');
+    wallGrad.addColorStop(0.65, '#fdf2f8');
+    wallGrad.addColorStop(1, '#fef3c7');
+    ctx.fillStyle = wallGrad;
+    ctx.fillRect(0, 0, w, floorY);
+
+    // Subtle decorative paw-print wallpaper dots
+    ctx.fillStyle = 'rgba(236, 72, 153, 0.1)';
+    for (let px = 65; px < w - 50; px += 95) {
+      const py = 54 + ((px / 95) % 2) * 32;
+      ctx.beginPath();
+      ctx.arc(px, py, 6, 0, Math.PI * 2);
+      ctx.arc(px - 6, py - 8, 3, 0, Math.PI * 2);
+      ctx.arc(px, py - 10, 3, 0, Math.PI * 2);
+      ctx.arc(px + 6, py - 8, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Pastel Wood Floor + Big Soft Rainbow Play Rug
+    const floorGrad = ctx.createLinearGradient(0, floorY, 0, h);
+    floorGrad.addColorStop(0, '#fde68a');
+    floorGrad.addColorStop(1, '#f59e0b');
+    ctx.fillStyle = floorGrad;
+    ctx.fillRect(0, floorY, w, h - floorY);
+
+    const rugG = ctx.createLinearGradient(150, floorY, 590, floorY + 34);
+    rugG.addColorStop(0, '#fbcfe8');
+    rugG.addColorStop(0.5, '#bae6fd');
+    rugG.addColorStop(1, '#a7f3d0');
+    ctx.fillStyle = rugG;
+    ctx.beginPath();
+    ctx.ellipse(385, floorY + 18, 225, 18, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Cheerful Window looking out at sunny trees
+    ctx.fillStyle = '#bae6fd';
+    ctx.beginPath();
+    ctx.roundRect(295, 56, 155, 118, [18]);
+    ctx.fill();
+    ctx.fillStyle = '#34d399';
+    ctx.beginPath();
+    ctx.arc(372, 174, 62, Math.PI, 0);
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.roundRect(295, 56, 155, 118, [18]);
+    ctx.stroke();
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(372, 56);
+    ctx.lineTo(372, 174);
+    ctx.stroke();
+
+    // Cute Pet Room Wall Plaque
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.roundRect(286, 16, 174, 28, [14]);
+    ctx.fill();
+    ctx.strokeStyle = '#ec4899';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.font = '800 12px "Outfit", sans-serif';
+    ctx.fillStyle = '#be185d';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🐾 Mein Tierzimmer', 373, 30);
+
+    // Pet Items inside the Tierzimmer (bought in "🧸 Tiersachen"!)
+    // 1. Bubble Bath Tub (Schaum-Wanne)
+    if (HomeManager.hasItem('petItems', 'pet_bath')) {
+      ctx.save();
+      ctx.fillStyle = '#e0f2fe';
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(102, floorY - 32, 68, 32, [6, 6, 18, 18]);
+      ctx.fill();
+      ctx.stroke();
+      // Bubbles
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      [0, 1, 2, 3].forEach((b) => {
+        const by = floorY - 34 - ((animFrame * 0.4 + b * 9) % 18);
+        ctx.beginPath();
+        ctx.arc(114 + b * 14, by, 5 + (b % 2) * 2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+
+    // 2. Golden Food Bowl (Gold-Napf)
+    if (HomeManager.hasItem('petItems', 'bowl')) {
+      ctx.save();
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath();
+      ctx.roundRect(178, floorY - 12, 38, 14, [4, 4, 9, 9]);
+      ctx.fill();
+      ctx.fillStyle = '#fde047';
+      ctx.fillRect(182, floorY - 14, 30, 5);
+      ctx.restore();
+    }
+
+    // 3. Bubbling Water Fountain (Trink-Brunnen)
+    if (HomeManager.hasItem('petItems', 'water_fountain')) {
+      ctx.save();
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.roundRect(224, floorY - 16, 40, 16, [6]);
+      ctx.fill();
+      ctx.fillStyle = '#e0f2fe';
+      ctx.fillRect(240, floorY - 34, 8, 20);
+      const sp = Math.sin(animFrame * 0.22) * 3;
+      ctx.fillStyle = '#7dd3fc';
+      ctx.beginPath();
+      ctx.arc(244, floorY - 38 + sp, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 4. Fluffy Star Cushion (Kuschelkissen)
+    if (HomeManager.hasItem('petItems', 'pet_cushion')) {
+      ctx.save();
+      ctx.fillStyle = '#f472b6';
+      ctx.beginPath();
+      ctx.ellipse(302, floorY + 4, 34, 11, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#fdf2f8';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 5. Cozy Pet Bed Basket (Tierkörbchen)
+    if (HomeManager.hasItem('petItems', 'pet_bed')) {
+      ctx.save();
+      ctx.fillStyle = '#d97706';
+      ctx.beginPath();
+      ctx.ellipse(386, floorY - 2, 42, 16, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fbcfe8';
+      ctx.beginPath();
+      ctx.ellipse(386, floorY - 4, 32, 11, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 6. Play Ball (Spielball)
+    if (HomeManager.hasItem('petItems', 'ball')) {
+      const rollX = 452 + Math.sin(animFrame * 0.04) * 14;
+      ctx.save();
+      ctx.translate(rollX, floorY - 10);
+      ctx.fillStyle = '#ec4899';
+      ctx.beginPath();
+      ctx.arc(0, 0, 11, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.arc(-3, -3, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 7. Rainbow Play Tunnel (Spiel-Tunnel)
+    if (HomeManager.hasItem('petItems', 'pet_tunnel')) {
+      ctx.save();
+      ctx.fillStyle = '#8b5cf6';
+      ctx.beginPath();
+      ctx.roundRect(486, floorY - 40, 68, 40, [20, 20, 4, 4]);
+      ctx.fill();
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(500, floorY - 40, 14, 40);
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillRect(524, floorY - 40, 14, 40);
+      ctx.fillStyle = '#1e1b4b';
+      ctx.beginPath();
+      ctx.ellipse(490, floorY - 18, 8, 16, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 8. Spinning Hamster Wheel (Laufrad)
+    if (HomeManager.hasItem('petItems', 'hamster_wheel')) {
+      ctx.save();
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(576, floorY);
+      ctx.lineTo(590, floorY - 30);
+      ctx.lineTo(604, floorY);
+      ctx.stroke();
+
+      ctx.translate(590, floorY - 32);
+      ctx.rotate(animFrame * 0.05);
+      ctx.strokeStyle = '#06b6d4';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.arc(0, 0, 22, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.lineWidth = 2;
+      for (let s = 0; s < 4; s++) {
+        const a = (s * Math.PI) / 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a) * 20, Math.sin(a) * 20);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // 9. Cat Climbing Tree (Kletterbaum)
+    if (HomeManager.hasItem('petItems', 'cat_tree')) {
+      ctx.save();
+      ctx.fillStyle = '#92400e';
+      ctx.fillRect(634, floorY - 10, 56, 10);
+      ctx.fillStyle = '#d97706';
+      ctx.fillRect(656, floorY - 115, 12, 106);
+      ctx.fillStyle = '#f9a8d4';
+      ctx.beginPath();
+      ctx.roundRect(628, floorY - 72, 66, 12, [6]);
+      ctx.roundRect(634, floorY - 122, 56, 12, [6]);
+      ctx.fill();
+      // Dangling toy ball
+      ctx.strokeStyle = '#be185d';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(644, floorY - 72);
+      ctx.lineTo(644, floorY - 50);
+      ctx.stroke();
+      ctx.fillStyle = '#f43f5e';
+      ctx.beginPath();
+      ctx.arc(644, floorY - 48, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 10. Cozy Pet House / Tent (Hundehütte)
+    if (HomeManager.hasItem('petItems', 'pet_house')) {
+      ctx.save();
+      ctx.fillStyle = '#fb7185';
+      ctx.beginPath();
+      ctx.moveTo(698, floorY - 62);
+      ctx.lineTo(746, floorY - 36);
+      ctx.lineTo(698, floorY - 36);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#fef3c7';
+      ctx.fillRect(698, floorY - 36, 48, 36);
+      ctx.fillStyle = '#78350f';
+      ctx.beginPath();
+      ctx.roundRect(712, floorY - 26, 20, 26, [10, 10, 0, 0]);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Helpful wall hint if no pets or no pet items yet
+    if (state.owned.petItems.length === 0) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      ctx.beginPath();
+      ctx.roundRect(220, floorY - 78, 320, 30, [15]);
+      ctx.fill();
+      ctx.font = '700 11.5px "Plus Jakarta Sans", sans-serif';
+      ctx.fillStyle = '#9d174d';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🧸 Kauf Tiersachen im Shop – sie erscheinen direkt hier!', 380, floorY - 63);
+      ctx.restore();
+    }
+
+    // Open archway back to Living Room
+    drawDoorPortal(ctx, 18, floorY - 144, 68, 144, '◀ Wohnzimmer', 'living_room', 590, 'arch');
   }
 
   function drawBedroomRoom(ctx, w, h, floorY) {
@@ -2011,6 +2404,26 @@ export function setupHomeScreen(stateManager) {
       });
     }
 
+    // Pet House in Garden (Hundehütte)
+    if (HomeManager.hasItem('petItems', 'pet_house')) {
+      ctx.save();
+      const hy = floorY + 22;
+      ctx.fillStyle = '#fef3c7';
+      ctx.fillRect(262, hy - 30, 40, 30);
+      ctx.fillStyle = '#f43f5e';
+      ctx.beginPath();
+      ctx.moveTo(256, hy - 30);
+      ctx.lineTo(282, hy - 50);
+      ctx.lineTo(308, hy - 30);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#78350f';
+      ctx.beginPath();
+      ctx.roundRect(273, hy - 20, 18, 20, [9, 9, 0, 0]);
+      ctx.fill();
+      ctx.restore();
+    }
+
     // Neighbor Gartentor on the right side of the Garden!
     drawDoorPortal(ctx, w - 92, floorY - 138, 72, 138, 'Nachbarn 🐾 ▶', 'state:PETSITTING', 140, 'gate');
   }
@@ -2080,6 +2493,7 @@ export function setupHomeScreen(stateManager) {
 
   function drawRoomPets(ctx, floorY, state, playerDrawY) {
     petHotspots = [];
+    const hasPetRoom = HomeManager.hasPetRoom();
     const companionIds = HomeManager.getCompanionPets();
     const roamingPets = state.owned.pets.filter((id) => !companionIds.includes(id));
 
@@ -2107,29 +2521,35 @@ export function setupHomeScreen(stateManager) {
         scale: 0.96,
         isWalking: f.isWalking,
         tapBounce: f.tapBounce,
-        badgeText: '🎒 Kommt mit',
+        badgeText: activeRoom === 'pet_room' ? '🎒 Kommt mit · Hier lassen' : '🎒 Kommt mit',
         badgeColor: '#059669'
       });
       petHotspots.push({ petId: f.id, x: f.x, y: f.y - 14, r: 36 });
     });
 
-    // 2. Pets staying in the room/garden roam freely — tap any to take along!
-    roamingPets.forEach((petId, idx) => {
-      const basePos = 180 + ((idx * 145) % 460);
-      const walkX = basePos + Math.sin(animFrame * 0.024 + idx * 2.1) * 34;
-      const walkY = floorY + 14 + (idx % 2 === 0 ? -4 : 6);
-      const dir = Math.cos(animFrame * 0.024 + idx * 2.1) >= 0 ? 1 : -1;
+    // 2. If Tierzimmer is owned, non-companion pets ALWAYS stay inside pet_room so you can pick them up there!
+    const shouldShowStayingPets = hasPetRoom ? activeRoom === 'pet_room' : true;
+    if (shouldShowStayingPets) {
+      roamingPets.forEach((petId, idx) => {
+        const spots = [190, 305, 390, 495, 595, 655];
+        const basePos = activeRoom === 'pet_room'
+          ? spots[idx % spots.length]
+          : 180 + ((idx * 145) % 460);
+        const walkX = basePos + Math.sin(animFrame * 0.024 + idx * 2.1) * 32;
+        const walkY = floorY + 14 + (idx % 2 === 0 ? -4 : 6);
+        const dir = Math.cos(animFrame * 0.024 + idx * 2.1) >= 0 ? 1 : -1;
 
-      drawVectorPet(ctx, petId, walkX, walkY, {
-        frame: animFrame + idx * 23,
-        facing: dir,
-        scale: 1,
-        isWalking: true,
-        badgeText: '👆 Mitnehmen',
-        badgeColor: '#db2777'
+        drawVectorPet(ctx, petId, walkX, walkY, {
+          frame: animFrame + idx * 23,
+          facing: dir,
+          scale: 1,
+          isWalking: true,
+          badgeText: hasPetRoom ? '👆 Abholen' : '👆 Mitnehmen',
+          badgeColor: '#db2777'
+        });
+        petHotspots.push({ petId, x: walkX, y: walkY - 14, r: 38 });
       });
-      petHotspots.push({ petId, x: walkX, y: walkY - 14, r: 38 });
-    });
+    }
   }
 
   function drawFloatingHint(ctx, x, y, text, bgColor) {
@@ -2196,6 +2616,7 @@ export function setupHomeScreen(stateManager) {
         switchRoom(payload.room, payload.room === 'garden' ? 285 : 240);
       } else {
         petFollowers.reset(player.x, canvas ? canvas.height - 54 : 336);
+        if (petRoomBar) petRoomBar.classList.toggle('hidden', activeRoom !== 'pet_room');
       }
       updateUI();
       renderRoomTabs();

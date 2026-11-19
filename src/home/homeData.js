@@ -5,6 +5,7 @@ export const HOME_CATALOG = {
   expansions: [
     { id: 'living_room', name: 'Wohnzimmer', icon: '🏠', price: 0, desc: 'Dein gemütliches Basis-Zuhause' },
     { id: 'kitchen', name: 'Küche', icon: '🍳', price: 80, desc: 'Schaltet die Einbauküche frei (+5 🪙 beim Kochen)' },
+    { id: 'pet_room', name: 'Tierzimmer', icon: '🐾', price: 95, isNew: true, desc: 'Ein eigener Raum für deine Tiere – dort bleiben sie & du kannst sie abholen!' },
     { id: 'bedroom', name: 'Obergeschoss', icon: '🪜', price: 130, desc: 'Baut ein zweites Stockwerk auf dein Haus' },
     { id: 'conservatory', name: 'Wintergarten', icon: '🪴', price: 170, desc: 'Gläserner Anbau zwischen Haus und Garten' },
     { id: 'balcony', name: 'Sonniger Balkon', icon: '🌅', price: 195, unlockLevel: 2, isNew: true, desc: 'Schicker Balkon am Obergeschoss' },
@@ -61,12 +62,16 @@ export const HOME_CATALOG = {
     { id: 'phoenix', name: 'Sternen-Vogel', icon: '🐦‍🔥', price: 360, unlockLevel: 6, isNew: true, desc: 'Magischer Traumvogel, der extra Münzen bringt' }
   ],
   petItems: [
-    { id: 'bowl', name: 'Gold-Napf', icon: '🥣', price: 35, desc: 'Schicker Napf für deine Tiere' },
+    { id: 'bowl', name: 'Gold-Napf', icon: '🥣', price: 35, desc: 'Schicker Napf fürs Tierzimmer' },
+    { id: 'pet_cushion', name: 'Kuschelkissen', icon: '🛋️', price: 40, isNew: true, desc: 'Weiches Sternen-Kissen fürs Tierzimmer' },
     { id: 'ball', name: 'Spielball', icon: '⚽', price: 45, desc: 'Damit spielen deine Tiere gern' },
+    { id: 'pet_tunnel', name: 'Spiel-Tunnel', icon: '🌈', price: 55, isNew: true, desc: 'Bunter Flitzer-Tunnel fürs Tierzimmer' },
     { id: 'hamster_wheel', name: 'Laufrad', icon: '🎡', price: 65, isNew: true, desc: 'Flitzer-Rad für kleine Tiere' },
-    { id: 'pet_bed', name: 'Tierkörbchen', icon: '🧺', price: 70, desc: 'Extra weicher Schlafplatz für Tiere' },
-    { id: 'cat_tree', name: 'Kletterbaum', icon: '🪵', price: 85, desc: 'Abenteuer-Kletterturm fürs Haus' },
-    { id: 'pet_house', name: 'Hundehütte', icon: '🛖', price: 120, unlockLevel: 2, isNew: true, desc: 'Gemütliche Hütte draußen im Garten' }
+    { id: 'pet_bed', name: 'Tierkörbchen', icon: '🧺', price: 70, desc: 'Extra weicher Schlafplatz fürs Tierzimmer' },
+    { id: 'water_fountain', name: 'Trink-Brunnen', icon: '⛲', price: 75, isNew: true, desc: 'Frisches Sprudelwasser fürs Tierzimmer (+4 🪙 beim Füttern)' },
+    { id: 'cat_tree', name: 'Kletterbaum', icon: '🪵', price: 85, desc: 'Abenteuer-Kletterturm fürs Tierzimmer' },
+    { id: 'pet_bath', name: 'Schaum-Wanne', icon: '🛁', price: 80, unlockLevel: 2, isNew: true, desc: 'Blubber-Badewanne für glückliche Tiere' },
+    { id: 'pet_house', name: 'Hundehütte', icon: '🛖', price: 120, unlockLevel: 2, isNew: true, desc: 'Gemütliche Hütte für Garten & Tierzimmer' }
   ],
   supplies: [
     { id: 'buy_food', name: 'Koch-Zutaten (+3)', icon: '🥘', price: 15, isConsumable: true, key: 'food', amount: 3, desc: 'Frische Zutaten für 3x Kochen' },
@@ -149,6 +154,10 @@ export const HomeManager = {
     return this.hasItem('garden', 'mailbox') || this.hasItem('garden', 'gold_mailbox');
   },
 
+  hasPetRoom() {
+    return this.hasItem('expansions', 'pet_room');
+  },
+
   hasItem(category, id) {
     const state = this.getState();
     return Array.isArray(state.owned[category]) && state.owned[category].includes(id);
@@ -159,6 +168,13 @@ export const HomeManager = {
     const ownedPets = Array.isArray(state.owned.pets) ? state.owned.pets : [];
     const selected = Array.isArray(state.companionPets) ? state.companionPets : [];
     return selected.filter((id) => ownedPets.includes(id));
+  },
+
+  getStayingPets() {
+    const state = this.getState();
+    const ownedPets = Array.isArray(state.owned.pets) ? state.owned.pets : [];
+    const companions = this.getCompanionPets();
+    return ownedPets.filter((id) => !companions.includes(id));
   },
 
   isCompanionPet(petId) {
@@ -435,8 +451,9 @@ export const HomeManager = {
     }
     state.inventory.petFood -= 1;
     const hasBowl = this.hasItem('petItems', 'bowl');
+    const hasFountain = this.hasItem('petItems', 'water_fountain');
     const boost = hasBowl ? 50 : 35;
-    const bonusCoins = 10;
+    const bonusCoins = 10 + (hasFountain ? 4 : 0);
     state.needs.petCare = Math.min(100, state.needs.petCare + boost);
     this.saveState(state);
     ShopManager.addCoins(bonusCoins);
