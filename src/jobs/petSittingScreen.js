@@ -2,6 +2,7 @@ import { PlayerConfig } from '../editor/characterData.js';
 import { renderCharacter } from '../editor/characterRenderer.js';
 import { ShopManager } from '../editor/shopData.js';
 import { EarnMoneyManager } from '../economy/earnMoneyData.js';
+import { HomeManager } from '../home/homeData.js';
 import { PetFollowerController } from '../home/petCompanion.js';
 
 export const CARE_ACTIONS = [
@@ -119,6 +120,7 @@ export function setupPetSittingScreen(stateManager) {
   const houseTabsEl = document.getElementById('petHouseTabs');
   const careBarEl = document.getElementById('petCareBar');
   const leashAllBtn = document.getElementById('petLeashAllBtn');
+  const unleashAllBtn = document.getElementById('petUnleashAllBtn');
   const callNeighborBtn = document.getElementById('petCallNeighborBtn');
 
   const walkLeftBtn = document.getElementById('petWalkLeftBtn');
@@ -159,7 +161,7 @@ export function setupPetSittingScreen(stateManager) {
   let visitsSinceBreak = 0;
   const fxParticles = [];
   let ballFx = null;
-  const petFollowers = new PetFollowerController();
+  const petFollowers = new PetFollowerController({ includeSitting: false });
 
   function showToast(msg, type = 'info') {
     if (!toastEl) return;
@@ -231,6 +233,10 @@ export function setupPetSittingScreen(stateManager) {
     return houseSlots.filter((v) => v && v.state === 'caring' && v.onLeash);
   }
 
+  function syncSittingSlots() {
+    HomeManager.savePetSittingSlots(houseSlots);
+  }
+
   function getNearestHouseIdx(px, py) {
     let best = -1;
     let bestDist = 118;
@@ -245,7 +251,6 @@ export function setupPetSittingScreen(stateManager) {
   }
 
   function initShift() {
-    shiftCoins = 0;
     ballFx = null;
     quietPauseTimer = 0;
     visitsSinceBreak = 0;
@@ -258,19 +263,35 @@ export function setupPetSittingScreen(stateManager) {
     player.poseTimer = 0;
     petFollowers.reset(player.x, player.y + 4);
 
-    // Calm start: 2 neighbors outside, 1 arrives later so not everyone is always waiting!
-    houseSlots[0] = createNeighborVisit(0, true);
-    houseSlots[1] = null;
-    houseSlots[2] = createNeighborVisit(2, false);
-    houseCooldowns[0] = 0;
-    houseCooldowns[1] = 280;
-    houseCooldowns[2] = 0;
-    selectedHouseIdx = 0;
+    const saved = HomeManager.getPetSittingSlots();
+    if (saved && saved.some((v) => v && (v.state === 'caring' || v.state === 'offering'))) {
+      for (let i = 0; i < 3; i++) {
+        const s = saved[i];
+        houseSlots[i] = s ? { ...s } : null;
+        houseCooldowns[i] = s ? 0 : 220 + i * 110;
+        if (houseSlots[i] && houseSlots[i].state === 'caring' && houseSlots[i].onLeash) {
+          houseSlots[i].x = player.x - 32 - i * 24;
+          houseSlots[i].y = player.y + 6;
+        }
+      }
+      selectedHouseIdx = Math.max(0, houseSlots.findIndex((v) => v && v.state !== 'happy_leaving'));
+    } else {
+      shiftCoins = 0;
+      // Calm start: 2 neighbors outside, 1 arrives later so not everyone is always waiting!
+      houseSlots[0] = createNeighborVisit(0, true);
+      houseSlots[1] = null;
+      houseSlots[2] = createNeighborVisit(2, false);
+      houseCooldowns[0] = 0;
+      houseCooldowns[1] = 280;
+      houseCooldowns[2] = 0;
+      selectedHouseIdx = 0;
+    }
 
+    syncSittingSlots();
     updateHUD();
     renderHouseTabs();
     renderCareButtons();
-    setStatus('Lauf überall durch die Nachbarschaft & den Park! Hol Aufträge ab – du kannst auch alle Tiere zusammen an die Leine nehmen.');
+    setStatus('Hol Pflegehunde bei den Nachbarn ab – du kannst sie an der Leine ÜBERALLhin (Haus, Stadt, Café, Rennen & Events) mitnehmen!');
   }
 
   function updateHUD() {
@@ -281,15 +302,29 @@ export function setupPetSittingScreen(stateManager) {
 
     const leashed = getLeashedVisits();
     const anyReady = leashed.some((v) => v.walkReady);
+    const ownLeashedCount = HomeManager.getCompanionPets().length;
+    const ownOwnedCount = (HomeManager.getState().owned.pets || []).length;
+    const waitingOrUnleashedNeighbors = houseSlots.filter((v) => v && (v.state === 'offering' || (v.state === 'caring' && !v.onLeash))).length;
+    const totalAllLeashed = leashed.length + ownLeashedCount;
 
     if (leashAllBtn) {
-      if (leashed.length > 0 && anyReady) {
-        leashAllBtn.textContent = `✅ Gassi fertig! Leinen ab (${leashed.length})`;
-      } else if (leashed.length > 0) {
-        const minPct = Math.min(100, Math.round((Math.min(...leashed.map((v) => v.leashDistance)) / WALK_GOAL_DISTANCE) * 100));
-        leashAllBtn.textContent = `🐾 Alle an Leine (${leashed.length}) · ${minPct}%`;
+      if (waitingOrUnleashedNeighbors === 0 && ownLeashedCount >= ownOwnedCount && totalAllLeashed > 0) {
+        leashAllBtn.textContent = `🐾 Alle ${totalAllLeashed} an Leine!`;
+      } else if (totalAllLeashed > 0) {
+        leashAllBtn.textContent = `🐕 Alle an Leine (${totalAllLeashed})`;
       } else {
-        leashAllBtn.textContent = '🐕 Alle an die Leine';
+        leashAllBtn.textContent = '🐕 Alle an die Leine!';
+      }
+    }
+
+    if (unleashAllBtn) {
+      if (leashed.length > 0) {
+        unleashAllBtn.classList.remove('hidden');
+        unleashAllBtn.textContent = anyReady
+          ? `✅ Gassi fertig! Leinen ab (${leashed.length})`
+          : `🔓 Leinen ab (${leashed.length})`;
+      } else {
+        unleashAllBtn.classList.add('hidden');
       }
     }
 
@@ -298,8 +333,8 @@ export function setupPetSittingScreen(stateManager) {
         const names = leashed.map((v) => v.info.name).join(', ');
         const avgPct = Math.min(100, Math.round((leashed.reduce((s, v) => s + Math.min(WALK_GOAL_DISTANCE, v.leashDistance), 0) / (leashed.length * WALK_GOAL_DISTANCE)) * 100));
         activePetSlotsEl.innerHTML = anyReady
-          ? `<span class="cone-scoop-chip" style="--scoop:#10b981;--scoop-light:#d1fae5;">✨ Gassi fertig mit ${names}! Tippe auf „Gassi fertig!“ oder geh zu einem Haus!</span>`
-          : `<span class="cone-scoop-chip" style="--scoop:#8b5cf6;--scoop-light:#ede9fe;">🐕 An der Leine (${leashed.length}): ${names} · ${avgPct}% – Lauf frei überall herum!</span>`;
+          ? `<span class="cone-scoop-chip" style="--scoop:#10b981;--scoop-light:#d1fae5;">✨ ${names} (Gassi fertig!): Kommen überall mit dir mit – oder tippe „Gassi fertig!“!</span>`
+          : `<span class="cone-scoop-chip" style="--scoop:#8b5cf6;--scoop-light:#ede9fe;">🐕 Kommen überall mit (${leashed.length}): ${names} · ${avgPct}% – Lauf auch ins Haus, in die Stadt oder ins Café!</span>`;
         return;
       }
 
@@ -386,6 +421,7 @@ export function setupPetSittingScreen(stateManager) {
     selectedHouseIdx = emptyIdx;
     const h = NEIGHBOR_HOUSES[emptyIdx];
     spawnFX('sparkle', h.neighborX, 210, 8);
+    syncSittingSlots();
     updateHUD();
     showToast(`👋 ${h.neighborName} kommt mit ${houseSlots[emptyIdx].info.name} vor die Tür!`, 'success');
     setStatus(`${h.neighborName} wartet jetzt vor dem Haus mit ${houseSlots[emptyIdx].info.name}!`);
@@ -406,8 +442,9 @@ export function setupPetSittingScreen(stateManager) {
         v.x = house.yardX - 34;
         v.y = house.yardY + 8;
       });
+      syncSittingSlots();
       updateHUD();
-      showToast('🐾 Leinen abgenommen! Lauf weiter durch die Nachbarschaft!', 'info');
+      showToast('🐾 Leinen abgenommen! Die Tiere warten jetzt bei den Häusern.', 'info');
       return true;
     }
 
@@ -449,6 +486,7 @@ export function setupPetSittingScreen(stateManager) {
 
     player.pose = 'pet';
     player.poseTimer = 28;
+    syncSittingSlots();
     updateHUD();
     if (packBonus > 0 || totalBonusCoins > 0) {
       showToast(`🐕 Rudel-Gassi geschafft! +${totalBonusCoins + packBonus} 🪙 extra Rudel-Bonus!`, 'success');
@@ -457,22 +495,28 @@ export function setupPetSittingScreen(stateManager) {
   }
 
   function putAllCaringOnLeash() {
-    const caring = houseSlots.filter((v) => v && v.state === 'caring');
-    if (caring.length === 0) {
-      const offerIdx = houseSlots.findIndex((v) => v && v.state === 'offering');
-      if (offerIdx !== -1) {
-        const h = NEIGHBOR_HOUSES[offerIdx];
-        navigateToPoint(h.neighborX + 8, 258, { type: 'accept_and_leash', houseIdx: offerIdx });
-        showToast(`🚶 Du holst erst ${houseSlots[offerIdx].info.name} & Geld bei ${h.neighborName} ab!`, 'info');
-      } else {
-        showToast('Gerade warten keine Tiere – tippe auf „🔔 Nachbar rufen“!', 'info');
-      }
-      return;
-    }
-
+    let newlyAccepted = 0;
     let newlyLeashed = 0;
-    caring.forEach((v) => {
-      if (!v.onLeash) {
+    let upfrontCoins = 0;
+
+    // 1. Accept ALL waiting offering neighbors & put their animals straight onto leashes!
+    houseSlots.forEach((v, idx) => {
+      if (v && v.state === 'offering') {
+        const house = NEIGHBOR_HOUSES[idx];
+        const upfront = v.info.upfrontPay;
+        v.state = 'caring';
+        v.onLeash = true;
+        v.leashDistance = 0;
+        v.walkReady = false;
+        v.x = house.yardX - 34;
+        v.y = house.yardY + 8;
+
+        upfrontCoins += upfront;
+        newlyAccepted++;
+        newlyLeashed++;
+        spawnFX('coin', house.neighborX, 200, 7);
+        spawnFX('heart', v.x, v.y - 20, 5);
+      } else if (v && v.state === 'caring' && !v.onLeash) {
         v.onLeash = true;
         v.leashDistance = 0;
         v.walkReady = false;
@@ -480,13 +524,42 @@ export function setupPetSittingScreen(stateManager) {
         spawnFX('heart', v.x, v.y - 20, 5);
       }
     });
+
+    if (upfrontCoins > 0) {
+      shiftCoins += upfrontCoins;
+      ShopManager.addCoins(upfrontCoins);
+      ShopManager.recordProgress(0, upfrontCoins);
+      window.dispatchEvent(new CustomEvent('runner:coins-updated'));
+      player.pose = 'pet';
+      player.poseTimer = 24;
+    }
+
+    // 2. Also put ALL owned pets onto leashes at the exact same time!
+    const ownedPetsCount = (HomeManager.getState().owned.pets || []).length;
+    const prevOwnCompanions = HomeManager.getCompanionPets().length;
+    let ownNowCount = prevOwnCompanions;
+    if (ownedPetsCount > 0) {
+      ownNowCount = HomeManager.setAllCompanions(true).length;
+    }
+
+    const newlyOwnLeashed = Math.max(0, ownNowCount - prevOwnCompanions);
+    const totalNeighborsLeashed = getLeashedVisits().length;
+    const grandTotal = totalNeighborsLeashed + ownNowCount;
+
+    syncSittingSlots();
     updateHUD();
-    if (newlyLeashed > 0) {
-      const total = getLeashedVisits().length;
-      showToast(`🐕 ${total} ${total === 1 ? 'Tier' : 'Tiere'} gleichzeitig an der Leine! Lauf überall herum!`, 'success');
-      setStatus(`🐾 ${total} Tiere zusammen an der Leine! Lauf überall hin – auch weitere Nachbarn kannst du dabei noch abholen!`);
+
+    if (grandTotal === 0) {
+      showToast('Gerade warten keine Tiere – tippe auf „🔔 Nachbar rufen“!', 'info');
+      return;
+    }
+
+    if (newlyAccepted > 0 || newlyLeashed > 0 || newlyOwnLeashed > 0) {
+      const coinTxt = upfrontCoins > 0 ? ` (+${upfrontCoins} 🪙)` : '';
+      showToast(`🐕 Alle ${grandTotal} Tiere gleichzeitig an der Leine!${coinTxt}`, 'success');
+      setStatus(`🐾 Alle ${grandTotal} Tiere (eigene + Pflege-Tiere) laufen jetzt überall mit dir mit!`);
     } else {
-      finishLeashWalk();
+      showToast(`🐾 Alle ${grandTotal} Tiere sind schon gleichzeitig an der Leine!`, 'success');
     }
   }
 
@@ -610,7 +683,7 @@ export function setupPetSittingScreen(stateManager) {
     player.pendingAction = pendingAction;
   }
 
-  function acceptNeighborJob(houseIdx, autoLeash = false) {
+  function acceptNeighborJob(houseIdx, autoLeash = true) {
     const visit = houseSlots[houseIdx];
     const house = NEIGHBOR_HOUSES[houseIdx];
     if (!visit || visit.state !== 'offering') return;
@@ -632,12 +705,13 @@ export function setupPetSittingScreen(stateManager) {
     player.poseTimer = 24;
     spawnFX('coin', house.neighborX, 200, 10);
     spawnFX('heart', visit.x, visit.y - 24, 6);
+    syncSittingSlots();
     updateHUD();
 
     const firstNeed = CARE_BY_ID[visit.need];
     if (autoLeash) {
-      showToast(`💰 +${upfront} 🪙 von ${house.neighborName}! ${visit.info.name} kommt direkt an die Leine!`, 'success');
-      setStatus(`🐕 ${visit.info.name} ist an der Leine! Hol ruhig auch noch die anderen Tiere ab!`);
+      showToast(`💰 +${upfront} 🪙 von ${house.neighborName}! ${visit.info.name} läuft jetzt überall mit dir mit!`, 'success');
+      setStatus(`🐕 ${visit.info.name} kommt an der Leine überall mit (auch ins Haus, Café, Stadt & Rennen)! Wunsch: ${firstNeed.icon} ${firstNeed.label}.`);
     } else {
       showToast(`💰 ${house.neighborName} gibt dir +${upfront} 🪙! Pass jetzt gut auf ${visit.info.name} auf!`, 'success');
       setStatus(`💰 +${upfront} 🪙 von ${house.neighborName} erhalten! ${visit.info.name} braucht: ${firstNeed.icon} ${firstNeed.label}.`);
@@ -682,6 +756,7 @@ export function setupPetSittingScreen(stateManager) {
       ballFx = { x: player.x, y: player.y - 30, vx: -player.facing * 4.5, vy: -5.2, life: 44 };
     }
 
+    syncSittingSlots();
     updateHUD();
     if (finishedVisit) {
       showToast(`🎉 ${house.neighborName} sagt Danke für ${visit.info.name}! +${totalEarned} 🪙 Trinkgeld!`, 'success');
@@ -702,7 +777,7 @@ export function setupPetSittingScreen(stateManager) {
     }
 
     if (visit.state === 'offering') {
-      acceptNeighborJob(houseIdx, false);
+      acceptNeighborJob(houseIdx, true);
       return;
     }
 
@@ -718,9 +793,10 @@ export function setupPetSittingScreen(stateManager) {
         visit.leashDistance = 0;
         visit.walkReady = false;
         spawnFX('heart', visit.x, visit.y - 20, 6);
+        syncSittingSlots();
         updateHUD();
-        showToast(`🐕 ${visit.info.name} ist an der Leine! Lauf frei herum – du kannst auch alle anderen dazu nehmen!`, 'success');
-        setStatus(`🐕 ${visit.info.name} an der Leine! Lauf überall herum oder nimm noch mehr Tiere mit.`);
+        showToast(`🐕 ${visit.info.name} ist an der Leine & kommt überall mit!`, 'success');
+        setStatus(`🐕 ${visit.info.name} kommt überall mit! Du kannst noch mehr Tiere dazu nehmen.`);
       } else {
         finishLeashWalk(houseIdx);
       }
@@ -816,6 +892,7 @@ export function setupPetSittingScreen(stateManager) {
   }
 
   if (leashAllBtn) leashAllBtn.addEventListener('click', putAllCaringOnLeash);
+  if (unleashAllBtn) unleashAllBtn.addEventListener('click', () => finishLeashWalk());
   if (callNeighborBtn) callNeighborBtn.addEventListener('click', summonNextNeighbor);
 
   if (canvas) {
@@ -950,12 +1027,14 @@ export function setupPetSittingScreen(stateManager) {
       updateHUD();
     }
 
-    // Update ALL leashed neighbor animals together in staggered pack formation!
+    // Update ALL leashed neighbor animals together in a neat 2-column staggered pack!
     const leashed = getLeashedVisits();
     let hudDirty = false;
     leashed.forEach((p, idx) => {
-      const slotDist = 36 + idx * 32;
-      const sideOffset = idx % 2 === 0 ? 10 : -10;
+      const row = Math.floor(idx / 2);
+      const col = idx % 2;
+      const slotDist = 36 + row * 28;
+      const sideOffset = (col === 0 ? 1 : -1) * (12 + (row % 2) * 8);
       const targetPetX = Math.max(24, Math.min(836, player.x - player.facing * slotDist));
       const targetPetY = Math.max(145, Math.min(454, player.y + sideOffset));
       p.x += (targetPetX - p.x) * 0.16;
@@ -969,6 +1048,7 @@ export function setupPetSittingScreen(stateManager) {
           if (!beforeReady) {
             spawnFX('sparkle', p.x, p.y - 24, 7);
             showToast(`✨ ${p.info.name} hat genug Auslauf gehabt! Tippe auf „✅ Gassi fertig!“ wann immer du magst.`, 'success');
+            syncSittingSlots();
             hudDirty = true;
           }
         }
@@ -994,8 +1074,9 @@ export function setupPetSittingScreen(stateManager) {
         if (!visit) {
           houseCooldowns[i]--;
           const currentActive = houseSlots.filter((v) => v !== null).length;
-          if (houseCooldowns[i] <= 0 && currentActive < 2) {
+          if (houseCooldowns[i] <= 0 && currentActive < 3) {
             houseSlots[i] = createNeighborVisit(i, i === 0 || Math.random() < 0.55);
+            syncSittingSlots();
             updateHUD();
           } else if (houseCooldowns[i] <= 0) {
             houseCooldowns[i] = 150;
@@ -1009,6 +1090,7 @@ export function setupPetSittingScreen(stateManager) {
           if (visit.happyTimer <= 0) {
             houseSlots[i] = null;
             houseCooldowns[i] = 240 + Math.floor(Math.random() * 200);
+            syncSittingSlots();
             updateHUD();
           }
         }
@@ -1590,6 +1672,7 @@ export function setupPetSittingScreen(stateManager) {
     if (rafId) {
       cancelAnimationFrame(rafId);
       rafId = null;
+      syncSittingSlots();
     }
   }
 

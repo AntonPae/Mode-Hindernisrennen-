@@ -83,6 +83,7 @@ export const HOME_CATALOG = {
 };
 
 const HOME_KEY = 'runner_home_state';
+const PETSIT_SLOTS_KEY = 'runner_petsit_slots';
 export const HOME_MYSTERY_BOX_PRICE = 75;
 
 function getDateSeed() {
@@ -112,6 +113,7 @@ function getDefaultHomeState() {
       gardenGrowth: 40
     },
     companionPets: [],
+    sittingCompanions: [],
     lastDailyBonusDate: '',
     lastUpdate: Date.now()
   };
@@ -133,6 +135,7 @@ export const HomeManager = {
         inventory: { ...def.inventory, ...(parsed.inventory || {}) },
         needs: { ...def.needs, ...(parsed.needs || {}) },
         companionPets: Array.isArray(parsed.companionPets) ? parsed.companionPets : [],
+        sittingCompanions: Array.isArray(parsed.sittingCompanions) ? parsed.sittingCompanions : [],
         lastDailyBonusDate: parsed.lastDailyBonusDate || '',
         lastUpdate: parsed.lastUpdate || Date.now()
       };
@@ -212,8 +215,85 @@ export const HomeManager = {
     return state.companionPets;
   },
 
+  getSittingCompanions() {
+    const state = this.getState();
+    return Array.isArray(state.sittingCompanions) ? state.sittingCompanions : [];
+  },
+
+  getSittingCompanionById(sitId) {
+    return this.getSittingCompanions().find((s) => s.id === sitId) || null;
+  },
+
+  setSittingCompanions(list) {
+    const state = this.getState();
+    state.sittingCompanions = Array.isArray(list) ? list : [];
+    this.saveState(state);
+    window.dispatchEvent(new CustomEvent('runner:pets-updated', { detail: { sittingCompanions: state.sittingCompanions } }));
+    return state.sittingCompanions;
+  },
+
+  getPetSittingSlots() {
+    try {
+      const raw = localStorage.getItem(PETSIT_SLOTS_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) && parsed.length === 3 ? parsed : null;
+    } catch {
+      return null;
+    }
+  },
+
+  savePetSittingSlots(slots) {
+    try {
+      const clean = (Array.isArray(slots) ? slots : [null, null, null]).slice(0, 3);
+      localStorage.setItem(PETSIT_SLOTS_KEY, JSON.stringify(clean));
+      const activeLeashed = clean
+        .filter((v) => v && v.state === 'caring' && v.onLeash && v.info)
+        .map((v) => ({
+          id: `sit_${v.houseIdx}`,
+          houseIdx: v.houseIdx,
+          species: v.info.species || 'dog',
+          name: v.info.name || 'Bello',
+          badge: v.info.badge || '🐕 Hund',
+          body: v.info.body || '#d97706',
+          ear: v.info.ear || '#92400e',
+          accent: v.info.accent || '#fde68a',
+          collar: v.info.collar || '#ec4899',
+          say: `${v.info.species === 'cat' ? 'Miau' : v.info.species === 'bunny' ? 'Hoppel' : 'Wuff'}! Gassi! ❤️`,
+          isSitting: true
+        }));
+      this.setSittingCompanions(activeLeashed);
+    } catch {
+      // Ignore storage errors
+    }
+  },
+
   cuddleCompanionPet(petId) {
     const state = this.getState();
+    const sittingObj = typeof petId === 'string' && petId.startsWith('sit_')
+      ? this.getSittingCompanionById(petId)
+      : null;
+
+    if (sittingObj) {
+      state.needs.petCare = Math.min(100, (state.needs.petCare || 70) + 6);
+      this.saveState(state);
+      const slots = this.getPetSittingSlots();
+      if (slots && slots[sittingObj.houseIdx] && slots[sittingObj.houseIdx].state === 'caring') {
+        slots[sittingObj.houseIdx].leashDistance = Math.min(240, (slots[sittingObj.houseIdx].leashDistance || 0) + 18);
+        if (slots[sittingObj.houseIdx].leashDistance >= 220) {
+          slots[sittingObj.houseIdx].walkReady = true;
+        }
+        try {
+          localStorage.setItem(PETSIT_SLOTS_KEY, JSON.stringify(slots));
+        } catch {
+          // Ignore storage error
+        }
+      }
+      ShopManager.recordProgress(0, 1);
+      EarnMoneyManager.recordEvent({ care: 1 });
+      return { ok: true, isSitting: true, item: sittingObj, state };
+    }
+
     if (!this.hasItem('pets', petId)) return { ok: false };
     state.needs.petCare = Math.min(100, (state.needs.petCare || 70) + 8);
     this.saveState(state);

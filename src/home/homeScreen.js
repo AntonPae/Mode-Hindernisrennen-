@@ -65,6 +65,7 @@ export function setupHomeScreen(stateManager) {
   const feedPetsBtn = document.getElementById('feedPetsBtn');
   const petAnimalsBtn = document.getElementById('petAnimalsBtn');
   const gardenBtn = document.getElementById('gardenBtn');
+  const homeLeashAllBtn = document.getElementById('homeLeashAllBtn');
 
   const backToEditorBtn = document.getElementById('homeToEditorBtn');
   const playFromHomeBtn = document.getElementById('homeToGameBtn');
@@ -534,6 +535,29 @@ export function setupHomeScreen(stateManager) {
   if (petAnimalsBtn) petAnimalsBtn.addEventListener('click', () => startPetTask('pet'));
   if (gardenBtn) gardenBtn.addEventListener('click', startGardenTask);
 
+  if (homeLeashAllBtn) {
+    homeLeashAllBtn.addEventListener('click', () => {
+      const state = HomeManager.getState();
+      const sitting = HomeManager.getSittingCompanions();
+      if (!state.owned.pets.length && !sitting.length) {
+        activeTab = 'pets';
+        renderTabs();
+        renderShopGrid();
+        showToast('🐾 Kauf dir zuerst ein Tier unter "🐾 Tiere" oder hol Hunde bei den Nachbarn ab!', 'info');
+        return;
+      }
+      if (state.owned.pets.length > 0) {
+        HomeManager.setAllCompanions(true);
+      }
+      const total = state.owned.pets.length + sitting.length;
+      updateUI();
+      renderRoomTabs();
+      renderShopGrid();
+      spawnFX('heart', player.x, 230, 12);
+      showToast(`🐕 Alle ${total} Tiere gleichzeitig an der Leine! Sie laufen jetzt überall mit dir mit!`, 'success');
+    });
+  }
+
   if (pickAllPetsBtn) {
     pickAllPetsBtn.addEventListener('click', () => {
       const state = HomeManager.getState();
@@ -672,6 +696,14 @@ export function setupHomeScreen(stateManager) {
       for (let i = petHotspots.length - 1; i >= 0; i--) {
         const ph = petHotspots[i];
         if (Math.hypot(cx - ph.x, cy - ph.y) <= ph.r) {
+          if (ph.isSitting) {
+            const meta = getPetMeta(ph.petRef || ph.petId);
+            HomeManager.cuddleCompanionPet(ph.petId);
+            spawnFX('heart', ph.x, ph.y - 16, 9);
+            showToast(`❤️ ${meta.name} (Pflege-Tier) wedelt fröhlich & läuft überall mit dir mit!`, 'success');
+            updateUI();
+            return;
+          }
           const res = HomeManager.toggleCompanionPet(ph.petId);
           if (res.ok) {
             const meta = getPetMeta(ph.petId);
@@ -2505,7 +2537,7 @@ export function setupHomeScreen(stateManager) {
       maxY: floorY + 38
     });
     petFollowers.followers.forEach((f, idx) => {
-      const meta = getPetMeta(f.id);
+      const meta = getPetMeta(f.petRef || f.id);
       ctx.save();
       ctx.strokeStyle = meta.collar;
       ctx.lineWidth = 2.2;
@@ -2515,16 +2547,20 @@ export function setupHomeScreen(stateManager) {
       ctx.stroke();
       ctx.restore();
 
-      drawVectorPet(ctx, f.id, f.x, f.y, {
+      drawVectorPet(ctx, f.petRef || f.id, f.x, f.y, {
         frame: animFrame + idx * 17,
         facing: f.facing,
         scale: 0.96,
         isWalking: f.isWalking,
         tapBounce: f.tapBounce,
-        badgeText: activeRoom === 'pet_room' ? '🎒 Kommt mit · Hier lassen' : '🎒 Kommt mit',
-        badgeColor: '#059669'
+        badgeText: f.isSitting
+          ? `🐾 ${meta.name} (Sitten)`
+          : activeRoom === 'pet_room'
+            ? '🎒 Kommt mit · Hier lassen'
+            : '🎒 Kommt mit',
+        badgeColor: f.isSitting ? '#0284c7' : '#059669'
       });
-      petHotspots.push({ petId: f.id, x: f.x, y: f.y - 14, r: 36 });
+      petHotspots.push({ petId: f.id, petRef: f.petRef, isSitting: f.isSitting, x: f.x, y: f.y - 14, r: 36 });
     });
 
     // 2. If Tierzimmer is owned, non-companion pets ALWAYS stay inside pet_room so you can pick them up there!

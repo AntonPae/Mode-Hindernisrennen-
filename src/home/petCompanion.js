@@ -14,18 +14,36 @@ export const PET_PALETTES = {
   phoenix: { body: '#f43f5e', ear: '#fbbf24', accent: '#fde047', collar: '#fbbf24', say: 'Funkel! 🌟' }
 };
 
-export function getPetMeta(petId) {
+export function getPetMeta(petRef) {
+  if (petRef && typeof petRef === 'object') {
+    const species = petRef.species || 'dog';
+    const pal = PET_PALETTES[species] || PET_PALETTES.dog;
+    return {
+      ...pal,
+      ...petRef,
+      id: petRef.id || species,
+      species,
+      name: petRef.name || 'Pflege-Hund',
+      icon: petRef.icon || '🐕'
+    };
+  }
+  if (typeof petRef === 'string' && petRef.startsWith('sit_')) {
+    const sitting = HomeManager.getSittingCompanionById(petRef);
+    if (sitting) return getPetMeta(sitting);
+  }
+  const petId = typeof petRef === 'string' ? petRef : 'dog';
   const catalog = HOME_CATALOG.pets.find((p) => p.id === petId);
   const pal = PET_PALETTES[petId] || PET_PALETTES.dog;
   return {
     id: petId,
+    species: petId,
     name: catalog ? catalog.name : 'Tierchen',
     icon: catalog ? catalog.icon : '🐾',
     ...pal
   };
 }
 
-export function drawVectorPet(ctx, petId, x, y, opts = {}) {
+export function drawVectorPet(ctx, petRef, x, y, opts = {}) {
   const {
     frame = 0,
     facing = 1,
@@ -37,7 +55,8 @@ export function drawVectorPet(ctx, petId, x, y, opts = {}) {
     speechText = ''
   } = opts;
 
-  const meta = getPetMeta(petId);
+  const meta = getPetMeta(petRef);
+  const petId = meta.species || (typeof petRef === 'string' ? petRef : 'dog');
   const walkBob = isWalking
     ? Math.abs(Math.sin(frame * 0.28)) * 5.5
     : Math.sin(frame * 0.08) * 1.8;
@@ -230,45 +249,74 @@ export function drawVectorPet(ctx, petId, x, y, opts = {}) {
 }
 
 export class PetFollowerController {
-  constructor() {
+  constructor(opts = {}) {
+    this.includeSitting = opts.includeSitting !== false;
     this.followers = [];
     this.hitboxes = [];
   }
 
-  reset(anchorX, anchorY) {
-    const ids = HomeManager.getCompanionPets();
-    this.followers = ids.map((id, idx) => ({
+  _getCompanionEntries() {
+    const ownEntries = HomeManager.getCompanionPets().map((id) => ({
       id,
-      x: anchorX - (idx + 1) * 38,
-      y: anchorY + (idx % 2 === 0 ? 4 : -4),
-      facing: 1,
-      isWalking: false,
-      tapBounce: 0,
-      speechTimer: 0,
-      speechText: ''
+      petRef: id,
+      isSitting: false
     }));
+    if (!this.includeSitting) return ownEntries;
+    const sitEntries = HomeManager.getSittingCompanions().map((sit) => ({
+      id: sit.id,
+      petRef: sit,
+      isSitting: true
+    }));
+    return [...ownEntries, ...sitEntries];
   }
 
-  update(anchorX, anchorY, facing = 1, bounds = null) {
-    const ids = HomeManager.getCompanionPets();
-    const existingById = new Map(this.followers.map((f) => [f.id, f]));
-
-    this.followers = ids.map((id, idx) => {
-      const prev = existingById.get(id);
-      const slotOffset = 38 + idx * 32;
-      const targetX = anchorX - facing * slotOffset;
-      const targetY = anchorY + (idx % 2 === 0 ? 6 : -6);
-
-      const f = prev || {
-        id,
-        x: targetX,
-        y: targetY,
-        facing,
+  reset(anchorX, anchorY) {
+    const entries = this._getCompanionEntries();
+    this.followers = entries.map((entry, idx) => {
+      const row = Math.floor(idx / 2);
+      const col = idx % 2;
+      return {
+        id: entry.id,
+        petRef: entry.petRef,
+        isSitting: entry.isSitting,
+        x: anchorX - (36 + row * 28),
+        y: anchorY + (col === 0 ? 1 : -1) * (10 + (row % 2) * 8),
+        facing: 1,
         isWalking: false,
         tapBounce: 0,
         speechTimer: 0,
         speechText: ''
       };
+    });
+  }
+
+  update(anchorX, anchorY, facing = 1, bounds = null) {
+    const entries = this._getCompanionEntries();
+    const existingById = new Map(this.followers.map((f) => [f.id, f]));
+
+    this.followers = entries.map((entry, idx) => {
+      const prev = existingById.get(entry.id);
+      const row = Math.floor(idx / 2);
+      const col = idx % 2;
+      const slotOffset = 36 + row * 28;
+      const spreadY = (col === 0 ? 1 : -1) * (10 + (row % 2) * 8);
+      const targetX = anchorX - facing * slotOffset;
+      const targetY = anchorY + spreadY;
+
+      const f = prev
+        ? { ...prev, petRef: entry.petRef, isSitting: entry.isSitting }
+        : {
+            id: entry.id,
+            petRef: entry.petRef,
+            isSitting: entry.isSitting,
+            x: targetX,
+            y: targetY,
+            facing,
+            isWalking: false,
+            tapBounce: 0,
+            speechTimer: 0,
+            speechText: ''
+          };
 
       const clampedTargetX = bounds
         ? Math.max(bounds.minX, Math.min(bounds.maxX, targetX))
@@ -310,9 +358,10 @@ export class PetFollowerController {
     this.hitboxes = [];
 
     this.followers.forEach((f, idx) => {
-      if (showLeashes) {
+      const meta = getPetMeta(f.petRef);
+      if (showLeashes || f.isSitting) {
         ctx.save();
-        ctx.strokeStyle = getPetMeta(f.id).collar;
+        ctx.strokeStyle = meta.collar;
         ctx.lineWidth = 2.4;
         ctx.beginPath();
         ctx.moveTo(anchorX + facing * 10, anchorY - 40);
@@ -326,17 +375,21 @@ export class PetFollowerController {
         ctx.restore();
       }
 
-      drawVectorPet(ctx, f.id, f.x, f.y, {
+      drawVectorPet(ctx, f.petRef, f.x, f.y, {
         frame: animFrame + idx * 17,
         facing: f.facing,
         scale,
         isWalking: f.isWalking,
         tapBounce: f.tapBounce,
+        badgeText: f.isSitting ? `🐾 ${meta.name}` : '',
+        badgeColor: '#0284c7',
         speechText: f.speechTimer > 0 ? f.speechText : ''
       });
 
       this.hitboxes.push({
         id: f.id,
+        petRef: f.petRef,
+        isSitting: f.isSitting,
         x: f.x,
         y: f.y - 16,
         r: 36
@@ -349,7 +402,7 @@ export class PetFollowerController {
       const box = this.hitboxes[i];
       if (Math.hypot(cx - box.x, cy - box.y) <= box.r) {
         const follower = this.followers.find((f) => f.id === box.id);
-        const meta = getPetMeta(box.id);
+        const meta = getPetMeta(box.petRef || box.id);
         if (follower) {
           follower.tapBounce = 24;
           follower.speechTimer = 95;
@@ -359,6 +412,7 @@ export class PetFollowerController {
         return {
           hit: true,
           petId: box.id,
+          isSitting: box.isSitting,
           x: box.x,
           y: box.y,
           meta,

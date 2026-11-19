@@ -293,7 +293,7 @@ export class RunnerEngine {
           const box = this.companionHitboxes[i];
           if (Math.hypot(cx - box.x, cy - box.y) <= box.r) {
             const st = this.companionStates.find((s) => s.id === box.id);
-            const meta = getPetMeta(box.id);
+            const meta = getPetMeta((st && st.petRef) || box.id);
             if (st) {
               st.tapBounce = 24;
               st.speechTimer = 90;
@@ -365,9 +365,11 @@ export class RunnerEngine {
     this.player.invulnerable = false;
     this.player.invulnerableTimer = 0;
 
-    const companionIds = HomeManager.getCompanionPets();
-    this.companionStates = companionIds.map((id) => ({
-      id,
+    const ownCompanions = HomeManager.getCompanionPets().map((id) => ({ id, petRef: id }));
+    const sitCompanions = HomeManager.getSittingCompanions().map((sit) => ({ id: sit.id, petRef: sit }));
+    this.companionStates = [...ownCompanions, ...sitCompanions].map((entry) => ({
+      id: entry.id,
+      petRef: entry.petRef,
       tapBounce: 0,
       speechTimer: 0,
       speechText: ''
@@ -737,7 +739,7 @@ export class RunnerEngine {
       const trailYOffset = lagFrames >= 0 ? (this.playerHeightTrail[lagFrames] || 0) : 0;
       const petX = Math.max(26, this.player.x - 42 - idx * 34);
       const petY = groundY + trailYOffset;
-      drawVectorPet(this.ctx, st.id, petX, petY, {
+      drawVectorPet(this.ctx, st.petRef || st.id, petX, petY, {
         frame: this.player.animFrame + idx * 13,
         facing: 1,
         scale: 0.9,
