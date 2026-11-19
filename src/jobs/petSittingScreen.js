@@ -2,13 +2,14 @@ import { PlayerConfig } from '../editor/characterData.js';
 import { renderCharacter } from '../editor/characterRenderer.js';
 import { ShopManager } from '../editor/shopData.js';
 import { EarnMoneyManager } from '../economy/earnMoneyData.js';
+import { PetFollowerController } from '../home/petCompanion.js';
 
 export const CARE_ACTIONS = [
   { id: 'feed', icon: '🦴', label: 'Füttern', short: 'Futter 🦴', color: '#f59e0b', light: '#fef3c7', reward: 7 },
   { id: 'water', icon: '💧', label: 'Wasser geben', short: 'Wasser 💧', color: '#0ea5e9', light: '#e0f2fe', reward: 6 },
   { id: 'play', icon: '🎾', label: 'Ball spielen', short: 'Spielen 🎾', color: '#10b981', light: '#d1fae5', reward: 8 },
   { id: 'brush', icon: '🤗', label: 'Streicheln & Bürsten', short: 'Kuscheln ❤️', color: '#ec4899', light: '#fce7f3', reward: 7 },
-  { id: 'walk', icon: '🐕', label: 'Gassi gehen', short: 'Gassi 🐾', color: '#8b5cf6', light: '#ede9fe', reward: 12, dogsOnly: true }
+  { id: 'walk', icon: '🐕', label: 'An die Leine & Gassi', short: 'Leine & Gassi 🐾', color: '#8b5cf6', light: '#ede9fe', reward: 12 }
 ];
 
 const CARE_BY_ID = Object.fromEntries(CARE_ACTIONS.map((a) => [a.id, a]));
@@ -78,9 +79,7 @@ const PET_CATALOG = [
   { species: 'turtle', name: 'Otto', badge: '🐢 Schildkröte', body: '#34d399', accent: '#a7f3d0', ear: '#047857', collar: '#f59e0b', upfrontPay: 15 }
 ];
 
-const WALK_START_X = 185;
-const WALK_END_X = 785;
-const PATH_Y = 258;
+const WALK_GOAL_DISTANCE = 220;
 
 export function setupPetSittingScreen(stateManager) {
   const canvas = document.getElementById('petSittingCanvas');
@@ -95,6 +94,8 @@ export function setupPetSittingScreen(stateManager) {
   const activePetSlotsEl = document.getElementById('petActiveTargetBar');
   const houseTabsEl = document.getElementById('petHouseTabs');
   const careBarEl = document.getElementById('petCareBar');
+  const leashAllBtn = document.getElementById('petLeashAllBtn');
+  const callNeighborBtn = document.getElementById('petCallNeighborBtn');
 
   const walkLeftBtn = document.getElementById('petWalkLeftBtn');
   const walkRightBtn = document.getElementById('petWalkRightBtn');
@@ -114,26 +115,27 @@ export function setupPetSittingScreen(stateManager) {
   let petsHelpedCount = parseInt(localStorage.getItem('runner_petsit_count') || '0', 10) || 0;
   let shiftCoins = 0;
 
-  // Player starts right outside "Mein Haus" on the left and walks to the Neighbors!
+  // Player starts right outside "Mein Haus" on the left and can roam EVERYWHERE across the neighborhood & park!
   const player = {
     x: MY_HOME_PORTAL.standX,
     y: MY_HOME_PORTAL.standY,
     facing: 1,
     waypoints: [],
-    pendingAction: null, // { type: 'accept', houseIdx } | { type: 'care', houseIdx, actionId } | { type: 'smart_care', houseIdx } | { type: 'go_home' }
+    pendingAction: null,
     pose: 'idle',
     poseTimer: 0
   };
-
-  let walkState = null; // { houseIdx, pet, targetX, phase }
 
   const keys = { left: false, right: false, up: false, down: false };
   const holdPad = { left: false, right: false, up: false, down: false };
 
   const houseSlots = [null, null, null];
-  const houseCooldowns = [0, 0, 0];
+  const houseCooldowns = [0, 240, 420];
+  let quietPauseTimer = 0;
+  let visitsSinceBreak = 0;
   const fxParticles = [];
   let ballFx = null;
+  const petFollowers = new PetFollowerController();
 
   function showToast(msg, type = 'info') {
     if (!toastEl) return;
@@ -173,10 +175,7 @@ export function setupPetSittingScreen(stateManager) {
   }
 
   function pickNextNeed(petInfo, previousNeed = null) {
-    const pool = CARE_ACTIONS.filter((a) => {
-      if (a.dogsOnly && petInfo.species !== 'dog') return false;
-      return a.id !== previousNeed;
-    });
+    const pool = CARE_ACTIONS.filter((a) => a.id !== previousNeed);
     return pool[Math.floor(Math.random() * pool.length)].id;
   }
 
@@ -190,23 +189,29 @@ export function setupPetSittingScreen(stateManager) {
     return {
       houseIdx,
       info: base,
-      // Initially the animal stands right beside the neighbor at the porch!
       x: house.x + 22,
       y: 234,
       need: firstNeed,
       happiness: 0,
       tasksGoal: 2,
-      state: 'offering', // 'offering' (neighbor pays & hands over pet) -> 'caring' -> 'walking_with_player' -> 'happy_leaving'
+      state: 'offering', // 'offering' -> 'caring' -> 'happy_leaving'
+      onLeash: false,
+      leashDistance: 0,
+      walkReady: false,
       happyTimer: 0,
       patience: 100
     };
   }
 
+  function getLeashedVisits() {
+    return houseSlots.filter((v) => v && v.state === 'caring' && v.onLeash);
+  }
+
   function getNearestHouseIdx(px, py) {
     let best = -1;
-    let bestDist = 115;
+    let bestDist = 118;
     NEIGHBOR_HOUSES.forEach((h, idx) => {
-      const d = Math.hypot(px - h.x, py - 300);
+      const d = Math.hypot(px - h.x, py - 295);
       if (d < bestDist) {
         bestDist = d;
         best = idx;
@@ -217,8 +222,9 @@ export function setupPetSittingScreen(stateManager) {
 
   function initShift() {
     shiftCoins = 0;
-    walkState = null;
     ballFx = null;
+    quietPauseTimer = 0;
+    visitsSinceBreak = 0;
     player.x = MY_HOME_PORTAL.standX;
     player.y = MY_HOME_PORTAL.standY;
     player.facing = 1;
@@ -226,19 +232,21 @@ export function setupPetSittingScreen(stateManager) {
     player.pendingAction = null;
     player.pose = 'idle';
     player.poseTimer = 0;
+    petFollowers.reset(player.x, player.y + 4);
 
+    // Calm start: 2 neighbors outside, 1 arrives later so not everyone is always waiting!
     houseSlots[0] = createNeighborVisit(0, true);
-    houseSlots[1] = createNeighborVisit(1, false);
-    houseSlots[2] = createNeighborVisit(2, true);
+    houseSlots[1] = null;
+    houseSlots[2] = createNeighborVisit(2, false);
     houseCooldowns[0] = 0;
-    houseCooldowns[1] = 0;
+    houseCooldowns[1] = 280;
     houseCooldowns[2] = 0;
     selectedHouseIdx = 0;
 
     updateHUD();
     renderHouseTabs();
     renderCareButtons();
-    setStatus('Du stehst vor deinem Haus! Lauf zu einem Nachbarn, hol dir Geld & Auftrag und pass auf sein Tier auf.');
+    setStatus('Lauf überall durch die Nachbarschaft & den Park! Hol Aufträge ab – du kannst auch alle Tiere zusammen an die Leine nehmen.');
   }
 
   function updateHUD() {
@@ -247,15 +255,37 @@ export function setupPetSittingScreen(stateManager) {
     if (caredValEl) caredValEl.textContent = petsHelpedCount;
     if (shiftEarningsEl) shiftEarningsEl.textContent = shiftCoins;
 
+    const leashed = getLeashedVisits();
+    const anyReady = leashed.some((v) => v.walkReady);
+
+    if (leashAllBtn) {
+      if (leashed.length > 0 && anyReady) {
+        leashAllBtn.textContent = `✅ Gassi fertig! Leinen ab (${leashed.length})`;
+      } else if (leashed.length > 0) {
+        const minPct = Math.min(100, Math.round((Math.min(...leashed.map((v) => v.leashDistance)) / WALK_GOAL_DISTANCE) * 100));
+        leashAllBtn.textContent = `🐾 Alle an Leine (${leashed.length}) · ${minPct}%`;
+      } else {
+        leashAllBtn.textContent = '🐕 Alle an die Leine';
+      }
+    }
+
     if (activePetSlotsEl) {
-      if (walkState) {
-        activePetSlotsEl.innerHTML = `<span class="cone-scoop-chip" style="--scoop:#8b5cf6;--scoop-light:#ede9fe;">🐕 Gassi mit ${walkState.pet.info.name}: Lauf zum grünen Gassi-Ziel auf dem Weg!</span>`;
+      if (leashed.length > 0) {
+        const names = leashed.map((v) => v.info.name).join(', ');
+        const avgPct = Math.min(100, Math.round((leashed.reduce((s, v) => s + Math.min(WALK_GOAL_DISTANCE, v.leashDistance), 0) / (leashed.length * WALK_GOAL_DISTANCE)) * 100));
+        activePetSlotsEl.innerHTML = anyReady
+          ? `<span class="cone-scoop-chip" style="--scoop:#10b981;--scoop-light:#d1fae5;">✨ Gassi fertig mit ${names}! Tippe auf „Gassi fertig!“ oder geh zu einem Haus!</span>`
+          : `<span class="cone-scoop-chip" style="--scoop:#8b5cf6;--scoop-light:#ede9fe;">🐕 An der Leine (${leashed.length}): ${names} · ${avgPct}% – Lauf frei überall herum!</span>`;
         return;
       }
+
       const visit = houseSlots[selectedHouseIdx];
       const house = NEIGHBOR_HOUSES[selectedHouseIdx];
       if (!visit || visit.state === 'happy_leaving') {
-        activePetSlotsEl.innerHTML = '<span class="cone-empty-hint">Geh zu einem Nachbarhaus, wo ein Nachbar mit seinem Tier wartet!</span>';
+        const activeAny = houseSlots.some((v) => v && v.state !== 'happy_leaving');
+        activePetSlotsEl.innerHTML = activeAny
+          ? '<span class="cone-empty-hint">Lauf frei herum oder geh zu einem Nachbarhaus mit Tier!</span>'
+          : '<span class="cone-empty-hint">☕ Gerade ruhige Pause – lauf über die Wiese oder tippe „🔔 Nachbar rufen“!</span>';
       } else if (visit.state === 'offering') {
         activePetSlotsEl.innerHTML = `
           <span class="cone-scoop-chip" style="--scoop:#f59e0b;--scoop-light:#fef3c7;">
@@ -320,6 +350,122 @@ export function setupPetSittingScreen(stateManager) {
     return offerIdx !== -1 ? offerIdx : selectedHouseIdx;
   }
 
+  function summonNextNeighbor() {
+    quietPauseTimer = 0;
+    const emptyIdx = houseSlots.findIndex((v) => !v);
+    if (emptyIdx === -1) {
+      showToast('Bei allen drei Nachbarn ist schon ein Tier draußen!', 'info');
+      return;
+    }
+    houseSlots[emptyIdx] = createNeighborVisit(emptyIdx, emptyIdx === 0 || Math.random() < 0.55);
+    houseCooldowns[emptyIdx] = 0;
+    selectedHouseIdx = emptyIdx;
+    const h = NEIGHBOR_HOUSES[emptyIdx];
+    spawnFX('sparkle', h.neighborX, 210, 8);
+    updateHUD();
+    showToast(`👋 ${h.neighborName} kommt mit ${houseSlots[emptyIdx].info.name} vor die Tür!`, 'success');
+    setStatus(`${h.neighborName} wartet jetzt vor dem Haus mit ${houseSlots[emptyIdx].info.name}!`);
+  }
+
+  function finishLeashWalk(onlyHouseIdx = null) {
+    const targets = houseSlots.filter((v) => v && v.state === 'caring' && v.onLeash && (onlyHouseIdx === null || v.houseIdx === onlyHouseIdx));
+    if (targets.length === 0) return false;
+
+    const readyCount = targets.filter((v) => v.walkReady).length;
+    if (readyCount === 0 && onlyHouseIdx === null) {
+      // Allow unleashing early without failing, or prompt gently if they haven't walked far
+      targets.forEach((v) => {
+        const house = NEIGHBOR_HOUSES[v.houseIdx];
+        v.onLeash = false;
+        v.leashDistance = 0;
+        v.walkReady = false;
+        v.x = house.yardX - 34;
+        v.y = house.yardY + 8;
+      });
+      updateHUD();
+      showToast('🐾 Leinen abgenommen! Lauf weiter durch die Nachbarschaft!', 'info');
+      return true;
+    }
+
+    const packBonus = Math.max(0, (readyCount - 1) * 6);
+    let totalBonusCoins = 0;
+
+    targets.forEach((v) => {
+      const house = NEIGHBOR_HOUSES[v.houseIdx];
+      const wasWalkReady = v.walkReady;
+      v.onLeash = false;
+      v.leashDistance = 0;
+      v.walkReady = false;
+      v.x = house.yardX - 34;
+      v.y = house.yardY + 8;
+
+      if (wasWalkReady) {
+        if (v.need === 'walk') {
+          awardCareSuccess(v.houseIdx, 'walk');
+        } else {
+          // Even if their top wish wasn't walk, walking them awards a happy walk bonus!
+          const bonus = 8;
+          totalBonusCoins += bonus;
+          shiftCoins += bonus;
+          ShopManager.addCoins(bonus);
+          ShopManager.recordProgress(0, bonus);
+          EarnMoneyManager.recordEvent({ care: 1 });
+          spawnFX('heart', v.x, v.y - 24, 6);
+        }
+      }
+    });
+
+    if (packBonus > 0) {
+      totalBonusCoins += packBonus;
+      shiftCoins += packBonus;
+      ShopManager.addCoins(packBonus);
+      ShopManager.recordProgress(0, packBonus);
+      window.dispatchEvent(new CustomEvent('runner:coins-updated'));
+    }
+
+    player.pose = 'pet';
+    player.poseTimer = 28;
+    updateHUD();
+    if (packBonus > 0 || totalBonusCoins > 0) {
+      showToast(`🐕 Rudel-Gassi geschafft! +${totalBonusCoins + packBonus} 🪙 extra Rudel-Bonus!`, 'success');
+    }
+    return true;
+  }
+
+  function putAllCaringOnLeash() {
+    const caring = houseSlots.filter((v) => v && v.state === 'caring');
+    if (caring.length === 0) {
+      const offerIdx = houseSlots.findIndex((v) => v && v.state === 'offering');
+      if (offerIdx !== -1) {
+        const h = NEIGHBOR_HOUSES[offerIdx];
+        navigateToPoint(h.neighborX + 8, 258, { type: 'accept_and_leash', houseIdx: offerIdx });
+        showToast(`🚶 Du holst erst ${houseSlots[offerIdx].info.name} & Geld bei ${h.neighborName} ab!`, 'info');
+      } else {
+        showToast('Gerade warten keine Tiere – tippe auf „🔔 Nachbar rufen“!', 'info');
+      }
+      return;
+    }
+
+    let newlyLeashed = 0;
+    caring.forEach((v) => {
+      if (!v.onLeash) {
+        v.onLeash = true;
+        v.leashDistance = 0;
+        v.walkReady = false;
+        newlyLeashed++;
+        spawnFX('heart', v.x, v.y - 20, 5);
+      }
+    });
+    updateHUD();
+    if (newlyLeashed > 0) {
+      const total = getLeashedVisits().length;
+      showToast(`🐕 ${total} ${total === 1 ? 'Tier' : 'Tiere'} gleichzeitig an der Leine! Lauf überall herum!`, 'success');
+      setStatus(`🐾 ${total} Tiere zusammen an der Leine! Lauf überall hin – auch weitere Nachbarn kannst du dabei noch abholen!`);
+    } else {
+      finishLeashWalk();
+    }
+  }
+
   function renderCareButtons() {
     if (!careBarEl) return;
     careBarEl.innerHTML = '';
@@ -336,7 +482,6 @@ export function setupPetSittingScreen(stateManager) {
       </span>
     `;
     acceptBtn.addEventListener('click', () => {
-      if (walkState) return;
       let targetIdx = selectedHouseFilter !== 'all'
         ? Number(selectedHouseFilter)
         : houseSlots.findIndex((v) => v && v.state === 'offering');
@@ -353,6 +498,22 @@ export function setupPetSittingScreen(stateManager) {
     });
     careBarEl.appendChild(acceptBtn);
 
+    // Quick button: Put ALL animals on leash at the same time!
+    const leashAllMenuBtn = document.createElement('button');
+    leashAllMenuBtn.type = 'button';
+    leashAllMenuBtn.className = 'ice-flavor-btn';
+    leashAllMenuBtn.innerHTML = `
+      <span class="ice-item-icon" style="background:radial-gradient(circle at 30% 30%, #ede9fe, #8b5cf6);">🐕</span>
+      <span class="ice-item-meta">
+        <span class="ice-item-name">Alle an die Leine!</span>
+        <span class="ice-item-price">Zusammen Gassi (+Rudel-Bonus)</span>
+      </span>
+    `;
+    leashAllMenuBtn.addEventListener('click', () => {
+      putAllCaringOnLeash();
+    });
+    careBarEl.appendChild(leashAllMenuBtn);
+
     CARE_ACTIONS.forEach((act) => {
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -365,10 +526,32 @@ export function setupPetSittingScreen(stateManager) {
         </span>
       `;
       btn.addEventListener('click', () => {
-        if (walkState) {
-          showToast(`🐕 Du bist gerade mit ${walkState.pet.info.name} Gassi! Lauf erst zum grünen Ziel-Schild.`, 'info');
-          return;
+        if (act.id === 'walk') {
+          let targetIdx = selectedHouseFilter !== 'all'
+            ? Number(selectedHouseFilter)
+            : houseSlots.findIndex((v) => v && v.state === 'caring' && !v.onLeash);
+          if (targetIdx === -1) targetIdx = getTargetHouseForMenu();
+          const visit = houseSlots[targetIdx];
+          const house = NEIGHBOR_HOUSES[targetIdx];
+          if (visit && visit.state === 'offering') {
+            navigateToPoint(house.neighborX + 8, 258, { type: 'accept_and_leash', houseIdx: targetIdx });
+            return;
+          }
+          if (visit && visit.state === 'caring') {
+            if (!visit.onLeash) {
+              visit.onLeash = true;
+              visit.leashDistance = 0;
+              visit.walkReady = false;
+              spawnFX('heart', visit.x, visit.y - 20, 6);
+              updateHUD();
+              showToast(`🐕 ${visit.info.name} ist an der Leine! Nimm gerne noch mehr Tiere dazu & lauf überall herum!`, 'success');
+            } else {
+              finishLeashWalk(targetIdx);
+            }
+            return;
+          }
         }
+
         // Prefer an active caring pet needing this exact action!
         let targetIdx = houseSlots.findIndex((v) => v && v.state === 'caring' && v.need === act.id);
         if (selectedHouseFilter !== 'all') {
@@ -387,7 +570,6 @@ export function setupPetSittingScreen(stateManager) {
           return;
         }
         if (visit.state === 'offering') {
-          // Automatically walk to neighbor first so they hand over the money & pet!
           navigateToPoint(house.neighborX + 8, 258, { type: 'accept', houseIdx: targetIdx });
           return;
         }
@@ -398,20 +580,22 @@ export function setupPetSittingScreen(stateManager) {
   }
 
   function navigateToPoint(tx, ty, pendingAction = null) {
-    const clampedX = Math.max(46, Math.min(814, tx));
-    const clampedY = Math.max(242, Math.min(436, ty));
+    const clampedX = Math.max(28, Math.min(832, tx));
+    const clampedY = Math.max(145, Math.min(454, ty));
     player.waypoints = [{ x: clampedX, y: clampedY }];
     player.pendingAction = pendingAction;
   }
 
-  function acceptNeighborJob(houseIdx) {
+  function acceptNeighborJob(houseIdx, autoLeash = false) {
     const visit = houseSlots[houseIdx];
     const house = NEIGHBOR_HOUSES[houseIdx];
     if (!visit || visit.state !== 'offering') return;
 
     const upfront = visit.info.upfrontPay;
     visit.state = 'caring';
-    // Pet steps forward into the front yard ready to be cared for!
+    visit.onLeash = autoLeash;
+    visit.leashDistance = 0;
+    visit.walkReady = false;
     visit.x = house.yardX - 34;
     visit.y = house.yardY + 8;
 
@@ -427,8 +611,13 @@ export function setupPetSittingScreen(stateManager) {
     updateHUD();
 
     const firstNeed = CARE_BY_ID[visit.need];
-    showToast(`💰 ${house.neighborName} gibt dir +${upfront} 🪙! Pass jetzt gut auf ${visit.info.name} auf!`, 'success');
-    setStatus(`💰 +${upfront} 🪙 von ${house.neighborName} erhalten! ${visit.info.name} braucht: ${firstNeed.icon} ${firstNeed.label}.`);
+    if (autoLeash) {
+      showToast(`💰 +${upfront} 🪙 von ${house.neighborName}! ${visit.info.name} kommt direkt an die Leine!`, 'success');
+      setStatus(`🐕 ${visit.info.name} ist an der Leine! Hol ruhig auch noch die anderen Tiere ab!`);
+    } else {
+      showToast(`💰 ${house.neighborName} gibt dir +${upfront} 🪙! Pass jetzt gut auf ${visit.info.name} auf!`, 'success');
+      setStatus(`💰 +${upfront} 🪙 von ${house.neighborName} erhalten! ${visit.info.name} braucht: ${firstNeed.icon} ${firstNeed.label}.`);
+    }
   }
 
   function awardCareSuccess(houseIdx, actionId) {
@@ -444,10 +633,12 @@ export function setupPetSittingScreen(stateManager) {
 
     if (visit.happiness >= visit.tasksGoal) {
       finishedVisit = true;
-      totalEarned += 10; // Extra neighbor thank-you tip!
+      totalEarned += 10;
       visit.state = 'happy_leaving';
+      visit.onLeash = false;
       visit.happyTimer = 105;
       petsHelpedCount += 1;
+      visitsSinceBreak += 1;
       localStorage.setItem('runner_petsit_count', String(petsHelpedCount));
       EarnMoneyManager.recordEvent({ petsit: 1, care: 1 });
     } else {
@@ -469,8 +660,8 @@ export function setupPetSittingScreen(stateManager) {
 
     updateHUD();
     if (finishedVisit) {
-      showToast(`🎉 ${house.neighborName} sagt Danke für das Aufpassen auf ${visit.info.name}! +${totalEarned} 🪙 Trinkgeld!`, 'success');
-      setStatus(`Super gemacht! Geh zum nächsten Nachbarn – oder schau später wieder bei ${house.neighborName} vorbei.`);
+      showToast(`🎉 ${house.neighborName} sagt Danke für ${visit.info.name}! +${totalEarned} 🪙 Trinkgeld!`, 'success');
+      setStatus(`Super gemacht! Lauf frei weiter oder schau bei den anderen Häusern vorbei.`);
     } else {
       const nextNeed = CARE_BY_ID[visit.need];
       showToast(`${act.icon} ${visit.info.name} freut sich! +${totalEarned} 🪙`, 'success');
@@ -479,7 +670,6 @@ export function setupPetSittingScreen(stateManager) {
   }
 
   function performCareAtHouse(houseIdx, requestedActionId = null) {
-    if (walkState) return;
     const visit = houseSlots[houseIdx];
     const house = NEIGHBOR_HOUSES[houseIdx];
     if (!visit || visit.state === 'happy_leaving') {
@@ -488,31 +678,34 @@ export function setupPetSittingScreen(stateManager) {
     }
 
     if (visit.state === 'offering') {
-      acceptNeighborJob(houseIdx);
+      acceptNeighborJob(houseIdx, false);
+      return;
+    }
+
+    if (visit.onLeash && visit.walkReady) {
+      finishLeashWalk(houseIdx);
       return;
     }
 
     const actionId = requestedActionId || visit.need;
-    if (actionId !== visit.need) {
-      const wanted = CARE_BY_ID[visit.need];
-      showToast(`💬 ${visit.info.name} möchte gerade lieber: ${wanted.icon} ${wanted.label}!`, 'warn');
+    if (actionId === 'walk') {
+      if (!visit.onLeash) {
+        visit.onLeash = true;
+        visit.leashDistance = 0;
+        visit.walkReady = false;
+        spawnFX('heart', visit.x, visit.y - 20, 6);
+        updateHUD();
+        showToast(`🐕 ${visit.info.name} ist an der Leine! Lauf frei herum – du kannst auch alle anderen dazu nehmen!`, 'success');
+        setStatus(`🐕 ${visit.info.name} an der Leine! Lauf überall herum oder nimm noch mehr Tiere mit.`);
+      } else {
+        finishLeashWalk(houseIdx);
+      }
       return;
     }
 
-    if (actionId === 'walk') {
-      const startLeft = player.x < 480;
-      walkState = {
-        houseIdx,
-        pet: visit,
-        phase: startLeft ? 'go_right' : 'go_left',
-        targetX: startLeft ? WALK_END_X : WALK_START_X
-      };
-      visit.state = 'walking_with_player';
-      player.pose = 'walk';
-      navigateToPoint(walkState.targetX, PATH_Y, null);
-      updateHUD();
-      setStatus(`🐕 Gassi mit ${visit.info.name}! Lauf bis zum grünen Ziel-Schild!`);
-      showToast(`🐕 Leine dran! Lauf mit ${visit.info.name} die Straße entlang!`, 'info');
+    if (actionId !== visit.need) {
+      const wanted = CARE_BY_ID[visit.need];
+      showToast(`💬 ${visit.info.name} möchte gerade lieber: ${wanted.icon} ${wanted.label}!`, 'warn');
       return;
     }
 
@@ -530,43 +723,60 @@ export function setupPetSittingScreen(stateManager) {
     const cx = (clientX - rect.left) * scaleX;
     const cy = (clientY - rect.top) * scaleY;
 
-    if (walkState) {
-      navigateToPoint(cx, Math.max(242, Math.min(315, cy)), null);
+    // 0. Tapping one of your own companion pets cuddles them right here!
+    const tappedPet = petFollowers.handleTap(cx, cy);
+    if (tappedPet.hit) {
+      spawnFX('heart', tappedPet.x, tappedPet.y - 20, 8);
+      showToast(`❤️ ${tappedPet.meta.name} wedelt fröhlich und freut sich!`, 'success');
       return;
     }
 
-    // 1. Clicked on "🏡 Dein Haus" on the far left? Walk to your front door & go home!
-    if (cx <= 156 && cy >= 75 && cy <= 275) {
+    // 1. Clicked on "🏡 Dein Haus" door on the far left?
+    if (cx >= 52 && cx <= 114 && cy >= 136 && cy <= 212) {
       navigateToPoint(MY_HOME_PORTAL.standX, MY_HOME_PORTAL.standY, { type: 'go_home' });
       return;
     }
 
-    // 2. Clicked on one of the 3 Neighbor Houses, their Neighbor, Pet, or Speech Bubble?
+    // 2. Clicked directly on a Neighbor or a Neighbor's Pet/Speech Bubble (within yard/porch area)?
     for (let i = 0; i < NEIGHBOR_HOUSES.length; i++) {
       const h = NEIGHBOR_HOUSES[i];
-      if (Math.abs(cx - h.x) <= 108 && cy >= 55 && cy <= 445) {
+      const visit = houseSlots[i];
+      if (!visit || visit.state === 'happy_leaving') continue;
+
+      const hitNeighbor = Math.hypot(cx - h.neighborX, cy - 205) <= 44;
+      const hitPet = Math.hypot(cx - visit.x, cy - (visit.y - 16)) <= 46;
+      const hitBubble = visit.state === 'offering'
+        ? (Math.abs(cx - (h.neighborX + 12)) <= 80 && cy >= 92 && cy <= 165)
+        : (visit.state === 'caring' && Math.abs(cx - (visit.x + 8)) <= 84 && cy >= visit.y - 122 && cy <= visit.y - 45);
+
+      if (hitNeighbor || hitPet || hitBubble) {
         selectedHouseIdx = i;
         updateHUD();
-        const visit = houseSlots[i];
-        if (!visit || visit.state === 'happy_leaving') continue;
-
         if (visit.state === 'offering') {
           navigateToPoint(h.neighborX + 8, 258, { type: 'accept', houseIdx: i });
           return;
         }
         if (visit.state === 'caring') {
-          navigateToPoint(h.yardX + 16, h.yardY - 6, { type: 'smart_care', houseIdx: i });
+          if (visit.onLeash && visit.walkReady) {
+            finishLeashWalk(i);
+            return;
+          }
+          if (hitPet && !visit.onLeash && visit.need === 'walk') {
+            performCareAtHouse(i, 'walk');
+            return;
+          }
+          navigateToPoint(Math.min(832, Math.max(28, visit.x + 18)), Math.min(454, Math.max(145, visit.y + 4)), { type: 'smart_care', houseIdx: i });
           return;
         }
       }
     }
 
+    // 3. Otherwise walk freely ANYWHERE on the entire neighborhood & park canvas!
     navigateToPoint(cx, cy, null);
   }
 
   function triggerNearbyAction() {
-    if (walkState) return;
-    if (Math.hypot(player.x - MY_HOME_PORTAL.standX, player.y - MY_HOME_PORTAL.standY) < 48) {
+    if (Math.hypot(player.x - MY_HOME_PORTAL.standX, player.y - MY_HOME_PORTAL.standY) < 46) {
       stateManager.setState('HOME');
       return;
     }
@@ -574,10 +784,15 @@ export function setupPetSittingScreen(stateManager) {
     if (nearIdx !== -1 && houseSlots[nearIdx] && houseSlots[nearIdx].state !== 'happy_leaving') {
       selectedHouseIdx = nearIdx;
       performCareAtHouse(nearIdx, null);
+    } else if (getLeashedVisits().some((v) => v.walkReady)) {
+      finishLeashWalk();
     } else {
-      showToast('Lauf zu einem Nachbarn vor seinem Haus, um das Geld & Tier abzuholen!', 'info');
+      showToast('Lauf frei überall herum – oder geh zu einem Nachbarn vor seinem Haus!', 'info');
     }
   }
+
+  if (leashAllBtn) leashAllBtn.addEventListener('click', putAllCaringOnLeash);
+  if (callNeighborBtn) callNeighborBtn.addEventListener('click', summonNextNeighbor);
 
   if (canvas) {
     canvas.addEventListener('click', (e) => handleCanvasClick(e.clientX, e.clientY));
@@ -648,6 +863,9 @@ export function setupPetSittingScreen(stateManager) {
   if (toTownBtn) toTownBtn.addEventListener('click', () => stateManager.setState('TOWN', { from: 'PETSITTING' }));
 
   function updateSimulation() {
+    const prevX = player.x;
+    const prevY = player.y;
+
     let moveX = 0;
     let moveY = 0;
     if (keys.left || holdPad.left) moveX -= 1;
@@ -658,8 +876,8 @@ export function setupPetSittingScreen(stateManager) {
     const speed = 4.6;
     if (moveX !== 0 || moveY !== 0) {
       const len = Math.hypot(moveX, moveY) || 1;
-      player.x = Math.max(44, Math.min(816, player.x + (moveX / len) * speed));
-      player.y = Math.max(242, Math.min(436, player.y + (moveY / len) * speed));
+      player.x = Math.max(28, Math.min(832, player.x + (moveX / len) * speed));
+      player.y = Math.max(145, Math.min(454, player.y + (moveY / len) * speed));
       if (moveX !== 0) player.facing = Math.sign(moveX);
       player.pose = 'walk';
     } else if (player.waypoints.length > 0) {
@@ -675,7 +893,8 @@ export function setupPetSittingScreen(stateManager) {
           const act = player.pendingAction;
           player.pendingAction = null;
           if (act.type === 'go_home') stateManager.setState('HOME');
-          else if (act.type === 'accept') acceptNeighborJob(act.houseIdx);
+          else if (act.type === 'accept') acceptNeighborJob(act.houseIdx, false);
+          else if (act.type === 'accept_and_leash') acceptNeighborJob(act.houseIdx, true);
           else if (act.type === 'care') performCareAtHouse(act.houseIdx, act.actionId);
           else if (act.type === 'smart_care') performCareAtHouse(act.houseIdx, null);
         }
@@ -692,50 +911,82 @@ export function setupPetSittingScreen(stateManager) {
       player.pose = 'idle';
     }
 
-    if (!walkState) {
-      const nearIdx = getNearestHouseIdx(player.x, player.y);
-      if (nearIdx !== -1 && nearIdx !== selectedHouseIdx) {
-        selectedHouseIdx = nearIdx;
-        updateHUD();
-      }
+    const movedStep = Math.hypot(player.x - prevX, player.y - prevY);
+
+    petFollowers.update(player.x, player.y + 6, player.facing, {
+      minX: 24,
+      maxX: 836,
+      minY: 145,
+      maxY: 458
+    });
+
+    const nearIdx = getNearestHouseIdx(player.x, player.y);
+    if (nearIdx !== -1 && nearIdx !== selectedHouseIdx) {
+      selectedHouseIdx = nearIdx;
+      updateHUD();
     }
 
-    if (walkState) {
-      const p = walkState.pet;
-      const targetPetX = player.x - player.facing * 42;
-      const targetPetY = player.y + 6;
+    // Update ALL leashed neighbor animals together in staggered pack formation!
+    const leashed = getLeashedVisits();
+    let hudDirty = false;
+    leashed.forEach((p, idx) => {
+      const slotDist = 36 + idx * 32;
+      const sideOffset = idx % 2 === 0 ? 10 : -10;
+      const targetPetX = Math.max(24, Math.min(836, player.x - player.facing * slotDist));
+      const targetPetY = Math.max(145, Math.min(454, player.y + sideOffset));
       p.x += (targetPetX - p.x) * 0.16;
       p.y += (targetPetY - p.y) * 0.16;
 
-      if (Math.abs(player.x - walkState.targetX) < 34) {
-        const finishedHouseIdx = walkState.houseIdx;
-        const house = NEIGHBOR_HOUSES[finishedHouseIdx];
-        p.x = house.yardX - 34;
-        p.y = house.yardY + 8;
-        p.state = 'caring';
-        walkState = null;
-        player.pose = 'pet';
-        player.poseTimer = 28;
-        awardCareSuccess(finishedHouseIdx, 'walk');
+      if (movedStep > 0.4) {
+        const beforeReady = p.walkReady;
+        p.leashDistance += movedStep;
+        if (p.leashDistance >= WALK_GOAL_DISTANCE) {
+          p.walkReady = true;
+          if (!beforeReady) {
+            spawnFX('sparkle', p.x, p.y - 24, 7);
+            showToast(`✨ ${p.info.name} hat genug Auslauf gehabt! Tippe auf „✅ Gassi fertig!“ wann immer du magst.`, 'success');
+            hudDirty = true;
+          }
+        }
+        if (animFrame % 12 === 0) hudDirty = true;
       }
+    });
+    if (hudDirty) updateHUD();
+
+    // Calm neighbor pacing & occasional quiet break so neighbors aren't nonstop waiting
+    const activeCount = houseSlots.filter((v) => v !== null).length;
+    if (activeCount === 0 && visitsSinceBreak >= 3 && quietPauseTimer === 0) {
+      quietPauseTimer = 250 + Math.floor(Math.random() * 170);
+      visitsSinceBreak = 0;
+      setStatus('🌿 Kurze ruhige Pause in der Nachbarschaft – lauf überall herum oder tippe „🔔 Nachbar rufen“!');
+      updateHUD();
     }
 
-    for (let i = 0; i < 3; i++) {
-      const visit = houseSlots[i];
-      if (!visit) {
-        houseCooldowns[i]--;
-        if (houseCooldowns[i] <= 0) {
-          houseSlots[i] = createNeighborVisit(i, i === 0 || Math.random() < 0.6);
+    if (quietPauseTimer > 0) {
+      quietPauseTimer--;
+    } else {
+      for (let i = 0; i < 3; i++) {
+        const visit = houseSlots[i];
+        if (!visit) {
+          houseCooldowns[i]--;
+          const currentActive = houseSlots.filter((v) => v !== null).length;
+          if (houseCooldowns[i] <= 0 && currentActive < 2) {
+            houseSlots[i] = createNeighborVisit(i, i === 0 || Math.random() < 0.55);
+            updateHUD();
+          } else if (houseCooldowns[i] <= 0) {
+            houseCooldowns[i] = 150;
+          }
+          continue;
         }
-        continue;
-      }
-      if (visit.state === 'caring') {
-        visit.patience = Math.max(12, visit.patience - 0.018);
-      } else if (visit.state === 'happy_leaving') {
-        visit.happyTimer--;
-        if (visit.happyTimer <= 0) {
-          houseSlots[i] = null;
-          houseCooldowns[i] = 70 + Math.floor(Math.random() * 55);
+        if (visit.state === 'caring') {
+          visit.patience = Math.max(15, visit.patience - 0.012);
+        } else if (visit.state === 'happy_leaving') {
+          visit.happyTimer--;
+          if (visit.happyTimer <= 0) {
+            houseSlots[i] = null;
+            houseCooldowns[i] = 240 + Math.floor(Math.random() * 200);
+            updateHUD();
+          }
         }
       }
     }
@@ -1006,8 +1257,8 @@ export function setupPetSittingScreen(stateManager) {
   }
 
   function drawNeighborPet(p) {
-    const bob = p.state === 'walking_with_player'
-      ? Math.abs(Math.sin(animFrame * 0.28)) * 5
+    const bob = p.onLeash
+      ? Math.abs(Math.sin(animFrame * 0.28 + p.houseIdx)) * 5
       : Math.sin(animFrame * 0.1 + p.houseIdx) * 2.5;
     const px = p.x;
     const py = p.y - bob;
@@ -1206,12 +1457,21 @@ export function setupPetSittingScreen(stateManager) {
     ctx.textBaseline = 'middle';
     ctx.fillText('DEIN HAUS ➔ NACHBARSCHAFT · HUNDESITTING', w / 2, 21);
 
-    // 2. Lawns & Connecting Street Path from Your House to All Neighbors
-    const lawn = ctx.createLinearGradient(0, 195, 0, h);
-    lawn.addColorStop(0, '#4ade80');
+    // 2. Lawns, Garden Paths Between Houses, Street & Lower Park Meadow (walkable EVERYWHERE!)
+    const lawn = ctx.createLinearGradient(0, 140, 0, h);
+    lawn.addColorStop(0, '#86efac');
+    lawn.addColorStop(0.35, '#4ade80');
     lawn.addColorStop(1, '#10b981');
     ctx.fillStyle = lawn;
-    ctx.fillRect(0, 195, w, h - 195);
+    ctx.fillRect(0, 140, w, h - 140);
+
+    // Stepping stone paths behind/between houses
+    ctx.fillStyle = 'rgba(254, 243, 199, 0.72)';
+    [164, 392, 622].forEach((gx) => {
+      ctx.beginPath();
+      ctx.roundRect(gx - 18, 146, 36, 94, [14]);
+      ctx.fill();
+    });
 
     const pathGrad = ctx.createLinearGradient(0, 232, 0, 286);
     pathGrad.addColorStop(0, '#fef3c7');
@@ -1222,6 +1482,20 @@ export function setupPetSittingScreen(stateManager) {
     ctx.fillRect(0, 234, w, 4);
     ctx.fillRect(0, 282, w, 4);
 
+    // Scenic park meadow path & wildflowers in lower area
+    ctx.fillStyle = 'rgba(254, 249, 195, 0.52)';
+    ctx.beginPath();
+    ctx.roundRect(40, 396, w - 80, 38, [19]);
+    ctx.fill();
+    ['#f472b6', '#fde047', '#ffffff', '#c084fc'].forEach((col, i) => {
+      ctx.fillStyle = col;
+      [90, 230, 420, 610, 770].forEach((fx, j) => {
+        ctx.beginPath();
+        ctx.arc(fx + (i % 2) * 18, 330 + ((i + j) % 3) * 38, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    });
+
     // 3. Draw Your House + 3 Neighbor Houses + Neighbors Standing at Their Porches!
     drawOwnHomeOnStreet();
     NEIGHBOR_HOUSES.forEach((h, idx) => {
@@ -1229,47 +1503,61 @@ export function setupPetSittingScreen(stateManager) {
       drawNeighborPerson(h, houseSlots[idx]);
     });
 
-    if (walkState) {
-      const gx = walkState.targetX;
-      ctx.save();
-      ctx.fillStyle = '#10b981';
-      ctx.beginPath();
-      ctx.roundRect(gx - 42, 206, 84, 24, [12]);
-      ctx.fill();
-      ctx.font = '800 11px "Plus Jakarta Sans", sans-serif';
-      ctx.fillStyle = '#ffffff';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('🐾 GASSI-ZIEL!', gx, 218);
-      ctx.fillStyle = '#059669';
-      ctx.fillRect(gx - 3, 230, 6, 28);
-      ctx.restore();
-    }
-
-    // 4. Draw Pets + Care Speech Bubbles
+    // 4. Draw Neighbor Pets + Speech Bubbles / Leash Progress
     houseSlots.forEach((p) => {
       if (!p) return;
       drawNeighborPet(p);
-      drawPetSpeechBubble(p);
+      if (p.onLeash) {
+        const pct = Math.min(100, Math.round((p.leashDistance / WALK_GOAL_DISTANCE) * 100));
+        ctx.save();
+        ctx.font = '800 10px "Plus Jakarta Sans", sans-serif';
+        const label = p.walkReady ? `✨ ${p.info.name} fertig!` : `🐕 Leine ${pct}%`;
+        const lw = ctx.measureText(label).width + 16;
+        ctx.fillStyle = p.walkReady ? '#ecfdf5' : '#f5f3ff';
+        ctx.strokeStyle = p.walkReady ? '#10b981' : '#8b5cf6';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(p.x - lw / 2, p.y - 68, lw, 20, [10]);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = p.walkReady ? '#047857' : '#6d28d9';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, p.x, p.y - 58);
+        ctx.restore();
+      } else {
+        drawPetSpeechBubble(p);
+      }
     });
 
-    if (walkState) {
+    // Draw colorful leashes for ALL leashed neighbor animals
+    const leashedNow = getLeashedVisits();
+    leashedNow.forEach((p) => {
       ctx.save();
-      ctx.strokeStyle = '#ec4899';
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = p.info.collar || '#ec4899';
+      ctx.lineWidth = 2.8;
       ctx.beginPath();
-      ctx.moveTo(player.x + player.facing * 14, player.y - 44);
+      ctx.moveTo(player.x + player.facing * 12, player.y - 42);
       ctx.quadraticCurveTo(
-        (player.x + walkState.pet.x) / 2,
-        player.y - 16,
-        walkState.pet.x + 14,
-        walkState.pet.y - 18
+        (player.x + p.x) / 2,
+        Math.max(player.y, p.y) - 12,
+        p.x + 12,
+        p.y - 18
       );
       ctx.stroke();
       ctx.restore();
-    }
+    });
 
-    // 5. Player Character always drawn ON TOP!
+    // 5. Own Companion Pets following player + tappable to cuddle!
+    petFollowers.draw(ctx, animFrame, {
+      scale: 0.92,
+      showLeashes: true,
+      anchorX: player.x,
+      anchorY: player.y,
+      facing: player.facing
+    });
+
+    // 6. Player Character always drawn ON TOP!
     ctx.save();
     ctx.translate(player.x, player.y);
     ctx.scale(0.84, 0.84);

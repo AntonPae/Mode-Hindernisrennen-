@@ -2,6 +2,7 @@ import { PlayerConfig } from '../editor/characterData.js';
 import { renderCharacter } from '../editor/characterRenderer.js';
 import { ShopManager } from '../editor/shopData.js';
 import { EarnMoneyManager } from '../economy/earnMoneyData.js';
+import { PetFollowerController } from '../home/petCompanion.js';
 
 export const CAFE_STATIONS = [
   { id: 'ice', label: '🍦 Eis-Truhe', x: 112, color: '#f43f5e', light: '#ffe4e6' },
@@ -148,8 +149,11 @@ export function setupIceCreamScreen(stateManager) {
 
   let trayItems = []; // up to 3 items carried on tray
   const tables = [null, null, null, null];
-  const tableTimers = [20, 60, 100, 160];
+  const tableTimers = [0, 240, 420, 620];
+  let quietPauseTimer = 0;
+  let guestsSinceBreak = 0;
   const fxParticles = [];
+  const petFollowers = new PetFollowerController();
 
   function showToast(msg, type = 'info') {
     if (!toastEl) return;
@@ -235,26 +239,30 @@ export function setupIceCreamScreen(stateManager) {
     trayItems = [];
     shiftCoins = 0;
     streak = 0;
+    quietPauseTimer = 0;
+    guestsSinceBreak = 0;
     player.x = 360;
     player.y = AISLE_Y;
     player.waypoints = [];
     player.pendingAction = null;
     player.pose = 'idle';
     player.poseTimer = 0;
+    petFollowers.reset(player.x, player.y + 4);
 
+    // Start calmly with 1 guest instead of a packed restaurant; more arrive gradually!
     for (let i = 0; i < 4; i++) {
-      tables[i] = i < 3 ? createCustomer(i) : null;
+      tables[i] = i === 0 ? createCustomer(0) : null;
       if (tables[i]) {
         tables[i].state = 'waiting';
         tables[i].yOffset = 0;
       }
-      tableTimers[i] = i === 3 ? 110 : 0;
+      tableTimers[i] = i === 0 ? 0 : 220 + i * 170;
     }
 
     updateHUD();
     renderStationTabs();
     renderMenuButtons();
-    setStatus('Hole Eis, Waffeln, Essen & Trinken hinter der Theke und bring sie direkt an die Tische!');
+    setStatus('Gemütlicher Start im Café! Hol Bestellungen hinter der Theke – nicht immer stehen überall Gäste.');
   }
 
   function updateHUD() {
@@ -455,6 +463,18 @@ export function setupIceCreamScreen(stateManager) {
     setStatus('🗑️ Tablett geleert – wähle neue Speisen & Getränke!');
   }
 
+  function inviteNextCustomerNow() {
+    const emptyIdx = tables.findIndex((t) => !t);
+    if (emptyIdx === -1) {
+      showToast('Alle 4 Tische sind gerade besetzt!', 'info');
+      return;
+    }
+    quietPauseTimer = 0;
+    tables[emptyIdx] = createCustomer(emptyIdx);
+    tableTimers[emptyIdx] = 0;
+    setStatus(`🔔 Ein neuer Gast setzt sich an Tisch ${emptyIdx + 1}!`);
+  }
+
   function handleCanvasClick(clientX, clientY) {
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
@@ -462,6 +482,15 @@ export function setupIceCreamScreen(stateManager) {
     const scaleY = canvas.height / rect.height;
     const cx = (clientX - rect.left) * scaleX;
     const cy = (clientY - rect.top) * scaleY;
+
+    // 0. Tap on a companion pet walking with you!
+    const petTap = petFollowers.handleTap(cx, cy);
+    if (petTap.hit) {
+      spawnFX('heart', petTap.x, petTap.y - 12, 7);
+      setStatus(`❤️ ${petTap.meta.name} wedelt fröhlich neben dir!`);
+      showToast(`❤️ ${petTap.meta.name} gestreichelt!`, 'success');
+      return;
+    }
 
     // 1. Clicked on one of the 4 back stations (or directly on a large food item!)
     if (cy >= 38 && cy <= 165) {
@@ -535,6 +564,10 @@ export function setupIceCreamScreen(stateManager) {
   }
   if (clearTrayBtn) {
     clearTrayBtn.addEventListener('click', clearTray);
+  }
+  const inviteGuestBtn = document.getElementById('iceInviteGuestBtn');
+  if (inviteGuestBtn) {
+    inviteGuestBtn.addEventListener('click', inviteNextCustomerNow);
   }
 
   const bindHold = (btn, dir) => {
@@ -656,12 +689,21 @@ export function setupIceCreamScreen(stateManager) {
       player.pose = 'idle';
     }
 
-    // Update customers at the 4 tables
+    // Update customers at the 4 tables (with realistic quiet pauses so customers aren't always there!)
+    if (quietPauseTimer > 0) quietPauseTimer--;
+    const activeCount = tables.filter(Boolean).length;
+    const maxSimultaneous = quietPauseTimer > 0 ? 0 : 2;
+
     for (let i = 0; i < 4; i++) {
       const c = tables[i];
       if (!c) {
-        tableTimers[i]--;
-        if (tableTimers[i] <= 0) tables[i] = createCustomer(i);
+        if (quietPauseTimer <= 0 && activeCount < maxSimultaneous) {
+          tableTimers[i]--;
+          if (tableTimers[i] <= 0) {
+            tables[i] = createCustomer(i);
+            guestsSinceBreak += 1;
+          }
+        }
         continue;
       }
 
@@ -669,13 +711,18 @@ export function setupIceCreamScreen(stateManager) {
         c.yOffset = Math.max(0, c.yOffset - 2.4);
         if (c.yOffset <= 0) c.state = 'waiting';
       } else if (c.state === 'waiting') {
-        c.patience = Math.max(5, c.patience - 0.025);
+        c.patience = Math.max(5, c.patience - 0.02);
       } else if (c.state === 'eating_leaving') {
         c.happyTimer--;
         if (c.happyTimer < 26) c.yOffset += 2.6;
         if (c.happyTimer <= 0) {
           tables[i] = null;
-          tableTimers[i] = 75 + Math.floor(Math.random() * 65);
+          tableTimers[i] = 240 + Math.floor(Math.random() * 260);
+          if (guestsSinceBreak >= 3 && tables.filter(Boolean).length === 0) {
+            quietPauseTimer = 260 + Math.floor(Math.random() * 180);
+            guestsSinceBreak = 0;
+            setStatus('☕ Ruhige Pause im Café – gerade keine Kunden da. Du kannst dein Tier streicheln oder "🔔 Gast rufen" tippen!');
+          }
         }
       }
     }
@@ -1198,8 +1245,23 @@ export function setupIceCreamScreen(stateManager) {
       ctx.fillText('BESTELL- & AUSGABETHEKE', w / 2, COUNTER_TOP_Y + 32);
     };
 
-    // Depth sort: if player is behind counter (y < 210), draw player BEFORE counter; otherwise draw counter first!
+    // Update Companion Pets
+    petFollowers.update(player.x, player.y + 4, player.facing, {
+      minX: 36,
+      maxX: w - 36,
+      minY: 152,
+      maxY: 446
+    });
+
+    // Depth sort: if player is behind counter (y < 210), draw player & pets BEFORE counter; otherwise draw counter first!
     if (player.y < 210) {
+      petFollowers.draw(ctx, animFrame, {
+        scale: 0.88,
+        showLeashes: true,
+        anchorX: player.x,
+        anchorY: player.y + 4,
+        facing: player.facing
+      });
       drawPlayerWithTray();
       drawCounter();
     } else {
@@ -1219,8 +1281,33 @@ export function setupIceCreamScreen(stateManager) {
       if (c) drawSpeechBubble(c, tb);
     });
 
-    // If player walked out in front of the counter, draw player on top so they are always visible!
+    // Peaceful empty café sign when no guests are currently seated
+    if (tables.every((t) => !t)) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+      ctx.beginPath();
+      ctx.roundRect(w / 2 - 175, 238, 350, 34, [17]);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(236, 72, 153, 0.35)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.font = '800 12px "Plus Jakarta Sans", sans-serif';
+      ctx.fillStyle = '#9d174d';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('☕ Kurze Pause – gerade keine Gäste im Café!', w / 2, 255);
+      ctx.restore();
+    }
+
+    // If player walked out in front of the counter, draw pets & player on top so they are always visible!
     if (player.y >= 210) {
+      petFollowers.draw(ctx, animFrame, {
+        scale: 0.88,
+        showLeashes: true,
+        anchorX: player.x,
+        anchorY: player.y + 4,
+        facing: player.facing
+      });
       drawPlayerWithTray();
     }
 

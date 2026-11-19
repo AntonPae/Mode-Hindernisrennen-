@@ -17,6 +17,18 @@ export class ControlsManager {
 
   initKeyboard() {
     window.addEventListener('keydown', (e) => {
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || document.activeElement?.isContentEditable) {
+        return;
+      }
+      if (document.querySelector('.modal:not(.hidden)')) {
+        return;
+      }
+      const gameScreen = document.getElementById('game-screen');
+      if (!gameScreen || gameScreen.classList.contains('hidden')) {
+        return;
+      }
+
       switch (e.key) {
         case 'ArrowLeft':
         case 'a':

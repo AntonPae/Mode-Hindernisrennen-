@@ -3,6 +3,7 @@ import { renderCharacter } from '../editor/characterRenderer.js';
 import { ShopManager } from '../editor/shopData.js';
 import { HOME_CATALOG, HomeManager } from './homeData.js';
 import { MailboxManager } from '../mailbox/mailboxData.js';
+import { drawVectorPet, getPetMeta, PetFollowerController } from './petCompanion.js';
 
 const CATEGORY_TABS = [
   { id: 'expansions', label: '🏗️ Anbau' },
@@ -87,6 +88,8 @@ export function setupHomeScreen(stateManager) {
 
   let activeTask = null;
   let doorHotspots = [];
+  let petHotspots = [];
+  const petFollowers = new PetFollowerController();
   const fxParticles = [];
   let activeFind = null;
   let nextFindTimer = 210;
@@ -159,8 +162,9 @@ export function setupHomeScreen(stateManager) {
     player.targetZ = null;
     player.pose = 'idle';
     player.poseTimer = 0;
+    petFollowers.reset(player.x, canvas ? canvas.height - 54 : 336);
     renderRoomTabs();
-    setTaskBanner(`Du bist jetzt in: ${room.label.replace(/^[^\s]+\s/, '')} · Klicke auf den Boden oder nutze ← → / A D zum Laufen!`);
+    setTaskBanner(`Du bist jetzt in: ${room.label.replace(/^[^\s]+\s/, '')} · Klicke auf den Boden oder tippe auf ein Tier, um es mitzunehmen!`);
     return true;
   }
 
@@ -272,8 +276,10 @@ export function setupHomeScreen(stateManager) {
           ? '<span class="home-inline-tag new">✨ NEU</span>'
           : '';
 
+      const isPetTab = activeTab === 'pets';
+      const isComingAlong = owned && isPetTab && HomeManager.isCompanionPet(item.id);
       const btnLabel = owned
-        ? '✓ Im Besitz'
+        ? (isPetTab ? (isComingAlong ? '🎒 Kommt mit' : '👆 Mitnehmen') : '✓ Im Besitz')
         : !levelOk
           ? `🔒 Ab Level ${item.unlockLevel}`
           : `${isDeal ? '🔥 ' : ''}Kaufen (${price} 🪙)`;
@@ -286,13 +292,27 @@ export function setupHomeScreen(stateManager) {
             <p>${item.desc}</p>
           </div>
         </div>
-        <button type="button" class="btn btn-small ${owned || !levelOk ? 'btn-secondary' : 'btn-primary'}" ${owned || !levelOk ? 'disabled' : ''}>
+        <button type="button" class="btn btn-small ${owned ? (isPetTab ? (isComingAlong ? 'btn-home' : 'btn-secondary') : 'btn-secondary') : !levelOk ? 'btn-secondary' : 'btn-primary'}" ${(owned && !isPetTab) || !levelOk ? 'disabled' : ''}>
           ${btnLabel}
         </button>
       `;
 
       const buyBtn = card.querySelector('button');
-      if (buyBtn && !owned && levelOk) {
+      if (buyBtn && owned && isPetTab) {
+        buyBtn.addEventListener('click', () => {
+          const res = HomeManager.toggleCompanionPet(item.id);
+          if (res.ok) {
+            renderShopGrid();
+            if (res.active) {
+              HomeManager.cuddleCompanionPet(item.id);
+              spawnFX('heart', player.x, 220, 8);
+              showToast(`🐾 ${item.name} kommt jetzt überall mit!`, 'success');
+            } else {
+              showToast(`🏡 ${item.name} bleibt gemütlich zuhause.`, 'info');
+            }
+          }
+        });
+      } else if (buyBtn && !owned && levelOk) {
         buyBtn.addEventListener('click', () => {
           const res = HomeManager.buyItem(activeTab, item.id);
           if (res.ok) {
@@ -305,7 +325,7 @@ export function setupHomeScreen(stateManager) {
               window.dispatchEvent(new CustomEvent('runner:mailbox-updated'));
             }
             spawnFX('sparkle', player.x, 220, 12);
-            showToast(`🎉 "${item.name}" gekauft!`, 'success');
+            showToast(isPetTab ? `🎉 "${item.name}" gekauft! Tippe es im Zimmer an, um es mitzunehmen!` : `🎉 "${item.name}" gekauft!`, 'success');
           } else if (res.reason === 'insufficient_funds') {
             showToast(`🔒 Noch ${res.missing} 🪙 nötig für "${item.name}"!`, 'warn');
           }
@@ -468,7 +488,8 @@ export function setupHomeScreen(stateManager) {
   window.addEventListener('keydown', (e) => {
     if (stateManager.getState() !== 'HOME') return;
     const tag = document.activeElement?.tagName;
-    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
+    if (document.querySelector('.modal:not(.hidden)')) return;
 
     if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
       keys.left = true;
@@ -553,6 +574,28 @@ export function setupHomeScreen(stateManager) {
       if (activeTask && activeTask.type === 'cook' && activeTask.phase === 'stir') {
         if (Math.abs(cx - activeTask.stoveX) < 55 && cy > 180 && cy < 330) {
           performStirAction();
+          return;
+        }
+      }
+
+      // 2b. Tap directly on a Pet in the room/garden to take it everywhere with you (or leave it home)!
+      for (let i = petHotspots.length - 1; i >= 0; i--) {
+        const ph = petHotspots[i];
+        if (Math.hypot(cx - ph.x, cy - ph.y) <= ph.r) {
+          const res = HomeManager.toggleCompanionPet(ph.petId);
+          if (res.ok) {
+            const meta = getPetMeta(ph.petId);
+            if (res.active) {
+              HomeManager.cuddleCompanionPet(ph.petId);
+              spawnFX('heart', ph.x, ph.y - 16, 9);
+              showToast(`🐾 ${meta.name} kommt jetzt überall mit! Tippe es unterwegs an zum Streicheln.`, 'success');
+            } else {
+              spawnFX('sparkle', ph.x, ph.y - 14, 6);
+              showToast(`🏡 ${meta.name} bleibt gemütlich zuhause.`, 'info');
+            }
+            updateUI();
+            renderShopGrid();
+          }
           return;
         }
       }
@@ -898,11 +941,12 @@ export function setupHomeScreen(stateManager) {
     // Active Task Visual Targets inside Room
     drawActiveTaskTargets(ctx, floorY);
 
-    // Animated Vector Pets (rendered in current room / garden)
-    drawRoomPets(ctx, floorY, state);
-
     // Character (Walks & Animates smoothly inside the active room!)
     const drawY = floorY + 12 + player.z + player.yOffset;
+
+    // Animated Vector Pets (roaming pets + companion pets following you!)
+    drawRoomPets(ctx, floorY, state, drawY);
+
     ctx.save();
     ctx.translate(player.x, drawY);
     ctx.scale(0.86, 0.86);
@@ -2034,99 +2078,57 @@ export function setupHomeScreen(stateManager) {
     }
   }
 
-  function drawRoomPets(ctx, floorY, state) {
-    const petPalette = {
-      dog: { body: '#d97706', ear: '#92400e', accent: '#fef3c7' },
-      cat: { body: '#f472b6', ear: '#db2777', accent: '#fff1f2' },
-      bunny: { body: '#ffffff', ear: '#fbcfe8', accent: '#f472b6' },
-      parrot: { body: '#10b981', ear: '#fbbf24', accent: '#38bdf8' },
-      turtle: { body: '#059669', ear: '#34d399', accent: '#fbbf24' },
-      hamster: { body: '#fbbf24', ear: '#f59e0b', accent: '#ffffff' },
-      fox: { body: '#f97316', ear: '#9a3412', accent: '#ffffff' },
-      unicorn: { body: '#ffffff', ear: '#f472b6', accent: '#fde047' },
-      panda: { body: '#f8fafc', ear: '#1e293b', accent: '#cbd5e1' },
-      dragon: { body: '#10b981', ear: '#fbbf24', accent: '#6ee7b7' },
-      phoenix: { body: '#f43f5e', ear: '#fbbf24', accent: '#fde047' }
-    };
+  function drawRoomPets(ctx, floorY, state, playerDrawY) {
+    petHotspots = [];
+    const companionIds = HomeManager.getCompanionPets();
+    const roamingPets = state.owned.pets.filter((id) => !companionIds.includes(id));
 
-    state.owned.pets.forEach((petId, idx) => {
-      const pal = petPalette[petId] || petPalette.dog;
-      const basePos = 180 + ((idx * 155) % 440);
-      const walkX = basePos + Math.sin(animFrame * 0.025 + idx * 2.1) * 34;
-      const hopY = floorY + 12 - Math.abs(Math.sin(animFrame * 0.07 + idx)) * (petId === 'bunny' || petId === 'parrot' ? 12 : 4);
-      const dir = Math.cos(animFrame * 0.025 + idx * 2.1) >= 0 ? 1 : -1;
-
+    // 1. Companion pets walk right beside you (with leashes / follow badge)
+    petFollowers.update(player.x, playerDrawY, player.facing, {
+      minX: 38,
+      maxX: canvas.width - 38,
+      minY: floorY - 4,
+      maxY: floorY + 38
+    });
+    petFollowers.followers.forEach((f, idx) => {
+      const meta = getPetMeta(f.id);
       ctx.save();
-      ctx.translate(walkX, hopY);
-      ctx.scale(dir, 1);
-
-      // Soft pet ground shadow
-      ctx.fillStyle = 'rgba(88, 28, 135, 0.22)';
+      ctx.strokeStyle = meta.collar;
+      ctx.lineWidth = 2.2;
       ctx.beginPath();
-      ctx.ellipse(0, 2, 16, 5, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Wagging tail
-      ctx.strokeStyle = pal.body;
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(-12, -10);
-      ctx.quadraticCurveTo(-18, -18 + Math.sin(animFrame * 0.25 + idx) * 4, -16, -22);
+      ctx.moveTo(player.x + player.facing * 10, playerDrawY - 38);
+      ctx.quadraticCurveTo((player.x + f.x) / 2, Math.max(playerDrawY, f.y) - 8, f.x + f.facing * 8, f.y - 12);
       ctx.stroke();
-
-      // 3D-shaded pet body
-      const bGrad = ctx.createRadialGradient(-3, -14, 2, 0, -10, 16);
-      bGrad.addColorStop(0, pal.accent);
-      bGrad.addColorStop(0.65, pal.body);
-      bGrad.addColorStop(1, pal.ear);
-      ctx.fillStyle = bGrad;
-      ctx.beginPath();
-      ctx.ellipse(0, -10, 13, 10, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Cute head
-      ctx.fillStyle = pal.body;
-      ctx.beginPath();
-      ctx.arc(10, -18, 9, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Ears / Horn
-      ctx.fillStyle = pal.ear;
-      if (petId === 'bunny') {
-        ctx.beginPath();
-        ctx.ellipse(8, -32, 3, 9, -0.15, 0, Math.PI * 2);
-        ctx.ellipse(13, -31, 3, 8, 0.15, 0, Math.PI * 2);
-        ctx.fill();
-      } else {
-        ctx.beginPath();
-        ctx.moveTo(5, -24);
-        ctx.lineTo(7, -31);
-        ctx.lineTo(12, -25);
-        ctx.closePath();
-        ctx.fill();
-      }
-
-      if (petId === 'unicorn') {
-        ctx.fillStyle = '#fde047';
-        ctx.beginPath();
-        ctx.moveTo(12, -25);
-        ctx.lineTo(16, -36);
-        ctx.lineTo(17, -24);
-        ctx.closePath();
-        ctx.fill();
-      }
-
-      // Glossy eye with catchlight
-      ctx.fillStyle = '#1e1b4b';
-      ctx.beginPath();
-      ctx.arc(14, -19, 2.2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(14.6, -19.7, 0.8, 0, Math.PI * 2);
-      ctx.fill();
-
       ctx.restore();
+
+      drawVectorPet(ctx, f.id, f.x, f.y, {
+        frame: animFrame + idx * 17,
+        facing: f.facing,
+        scale: 0.96,
+        isWalking: f.isWalking,
+        tapBounce: f.tapBounce,
+        badgeText: '🎒 Kommt mit',
+        badgeColor: '#059669'
+      });
+      petHotspots.push({ petId: f.id, x: f.x, y: f.y - 14, r: 36 });
+    });
+
+    // 2. Pets staying in the room/garden roam freely — tap any to take along!
+    roamingPets.forEach((petId, idx) => {
+      const basePos = 180 + ((idx * 145) % 460);
+      const walkX = basePos + Math.sin(animFrame * 0.024 + idx * 2.1) * 34;
+      const walkY = floorY + 14 + (idx % 2 === 0 ? -4 : 6);
+      const dir = Math.cos(animFrame * 0.024 + idx * 2.1) >= 0 ? 1 : -1;
+
+      drawVectorPet(ctx, petId, walkX, walkY, {
+        frame: animFrame + idx * 23,
+        facing: dir,
+        scale: 1,
+        isWalking: true,
+        badgeText: '👆 Mitnehmen',
+        badgeColor: '#db2777'
+      });
+      petHotspots.push({ petId, x: walkX, y: walkY - 14, r: 38 });
     });
   }
 
@@ -2192,6 +2194,8 @@ export function setupHomeScreen(stateManager) {
       const mailRes = MailboxManager.ensureDailyMail();
       if (payload && payload.room) {
         switchRoom(payload.room, payload.room === 'garden' ? 285 : 240);
+      } else {
+        petFollowers.reset(player.x, canvas ? canvas.height - 54 : 336);
       }
       updateUI();
       renderRoomTabs();

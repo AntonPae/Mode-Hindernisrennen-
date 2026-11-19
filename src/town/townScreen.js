@@ -3,6 +3,7 @@ import { renderCharacter } from '../editor/characterRenderer.js';
 import { ShopManager } from '../editor/shopData.js';
 import { HomeManager } from '../home/homeData.js';
 import { MailboxManager } from '../mailbox/mailboxData.js';
+import { PetFollowerController } from '../home/petCompanion.js';
 
 const WORLD_WIDTH = 2240;
 const GARDEN_LEFT_X = 280;
@@ -105,6 +106,9 @@ export function setupTownScreen(stateManager) {
     pendingPlace: null,
     pose: 'idle'
   };
+
+  const petFollowers = new PetFollowerController();
+  const fxParticles = [];
 
   const keys = { left: false, right: false, up: false, down: false };
   const holdPad = { left: false, right: false, up: false, down: false };
@@ -209,6 +213,22 @@ export function setupTownScreen(stateManager) {
       const screenX = (e.clientX - rect.left) * scaleX;
       const worldX = screenX + cameraX;
       const worldY = (e.clientY - rect.top) * scaleY;
+
+      // Tap on a companion pet walking with you?
+      const petTap = petFollowers.handleTap(worldX, worldY);
+      if (petTap.hit) {
+        for (let i = 0; i < 6; i++) {
+          fxParticles.push({
+            x: petTap.x + (Math.random() - 0.5) * 32,
+            y: petTap.y - 12,
+            vx: (Math.random() - 0.5) * 1.8,
+            vy: -1.1 - Math.random() * 1.4,
+            life: 40
+          });
+        }
+        if (statusEl) statusEl.textContent = `❤️ ${petTap.meta.name} freut sich über deine Streicheleinheit!`;
+        return;
+      }
 
       // Clicked directly on the Mailbox outside Dein Haus?
       if (HomeManager.hasMailbox() && worldX >= 220 && worldX <= 268 && worldY >= 165 && worldY <= 250) {
@@ -673,6 +693,21 @@ export function setupTownScreen(stateManager) {
     ctx.fillText('🏃 Renn-Stadion (Start!)', 2045, 221);
     ctx.restore();
 
+    // Update & Draw Companion Pets following you through Traumstadt!
+    petFollowers.update(player.x, player.y + 4, player.facing, {
+      minX: 30,
+      maxX: WORLD_WIDTH - 30,
+      minY: 238,
+      maxY: 438
+    });
+    petFollowers.draw(ctx, animFrame, {
+      scale: 0.92,
+      showLeashes: true,
+      anchorX: player.x,
+      anchorY: player.y + 4,
+      facing: player.facing
+    });
+
     // Draw Player Character walking freely through Town!
     ctx.save();
     ctx.translate(player.x, player.y);
@@ -683,6 +718,21 @@ export function setupTownScreen(stateManager) {
       facing: player.facing
     });
     ctx.restore();
+
+    for (let i = fxParticles.length - 1; i >= 0; i--) {
+      const p = fxParticles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life--;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, p.life / 40);
+      ctx.fillStyle = '#f43f5e';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      if (p.life <= 0) fxParticles.splice(i, 1);
+    }
 
     ctx.restore();
 
@@ -733,6 +783,7 @@ export function setupTownScreen(stateManager) {
       }
       player.waypoints = [];
       player.pendingPlace = null;
+      petFollowers.reset(player.x, player.y + 4);
       MailboxManager.ensureDailyMail();
       updateCoinsUI();
       renderDistrictBar();

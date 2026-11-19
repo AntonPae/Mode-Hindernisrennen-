@@ -106,6 +106,7 @@ function getDefaultHomeState() {
       petCare: 80,
       gardenGrowth: 40
     },
+    companionPets: [],
     lastDailyBonusDate: '',
     lastUpdate: Date.now()
   };
@@ -126,6 +127,7 @@ export const HomeManager = {
         owned: { ...def.owned, ...(parsed.owned || {}) },
         inventory: { ...def.inventory, ...(parsed.inventory || {}) },
         needs: { ...def.needs, ...(parsed.needs || {}) },
+        companionPets: Array.isArray(parsed.companionPets) ? parsed.companionPets : [],
         lastDailyBonusDate: parsed.lastDailyBonusDate || '',
         lastUpdate: parsed.lastUpdate || Date.now()
       };
@@ -150,6 +152,60 @@ export const HomeManager = {
   hasItem(category, id) {
     const state = this.getState();
     return Array.isArray(state.owned[category]) && state.owned[category].includes(id);
+  },
+
+  getCompanionPets() {
+    const state = this.getState();
+    const ownedPets = Array.isArray(state.owned.pets) ? state.owned.pets : [];
+    const selected = Array.isArray(state.companionPets) ? state.companionPets : [];
+    return selected.filter((id) => ownedPets.includes(id));
+  },
+
+  isCompanionPet(petId) {
+    return this.getCompanionPets().includes(petId);
+  },
+
+  toggleCompanionPet(petId) {
+    if (!this.hasItem('pets', petId)) {
+      return { ok: false, reason: 'not_owned' };
+    }
+    const state = this.getState();
+    const list = Array.isArray(state.companionPets) ? [...state.companionPets] : [];
+    const idx = list.indexOf(petId);
+    let active = false;
+    if (idx >= 0) {
+      list.splice(idx, 1);
+      active = false;
+    } else {
+      list.push(petId);
+      active = true;
+    }
+    state.companionPets = list;
+    this.saveState(state);
+    window.dispatchEvent(new CustomEvent('runner:pets-updated', { detail: { companionPets: list } }));
+    const item = HOME_CATALOG.pets.find((p) => p.id === petId);
+    return { ok: true, active, petId, item, companionPets: list };
+  },
+
+  setAllCompanions(enabled) {
+    const state = this.getState();
+    const ownedPets = Array.isArray(state.owned.pets) ? [...state.owned.pets] : [];
+    state.companionPets = enabled ? ownedPets : [];
+    this.saveState(state);
+    window.dispatchEvent(new CustomEvent('runner:pets-updated', { detail: { companionPets: state.companionPets } }));
+    return state.companionPets;
+  },
+
+  cuddleCompanionPet(petId) {
+    const state = this.getState();
+    if (!this.hasItem('pets', petId)) return { ok: false };
+    state.needs.petCare = Math.min(100, (state.needs.petCare || 70) + 8);
+    this.saveState(state);
+    ShopManager.recordProgress(0, 1);
+    EarnMoneyManager.recordEvent({ care: 1 });
+    window.dispatchEvent(new CustomEvent('runner:pets-updated', { detail: { companionPets: state.companionPets } }));
+    const item = HOME_CATALOG.pets.find((p) => p.id === petId);
+    return { ok: true, item, state };
   },
 
   isLevelUnlocked(item) {

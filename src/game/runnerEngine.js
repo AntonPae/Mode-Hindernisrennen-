@@ -6,6 +6,7 @@ import { renderCharacter } from '../editor/characterRenderer.js';
 import { ControlsManager } from './controls.js';
 import { ObstacleManager, CoinManager } from './obstacles.js';
 import { QuickTimeEventManager } from './quickTimeEvent.js';
+import { drawVectorPet, getPetMeta } from '../home/petCompanion.js';
 
 class SoundManager {
   constructor() {
@@ -243,6 +244,11 @@ export class RunnerEngine {
       animFrame: 0
     };
 
+    // Companion pet followers running behind the player
+    this.companionStates = [];
+    this.companionHitboxes = [];
+    this.playerHeightTrail = [];
+
     this.initUIEvents();
     this.resizeCanvas();
     window.addEventListener('resize', () => this.resizeCanvas());
@@ -274,6 +280,42 @@ export class RunnerEngine {
       this.homeReturnBtn.addEventListener('click', () => {
         this.gameOverModal.classList.add('hidden');
         this.stateManager.setState('HOME');
+      });
+    }
+
+    if (this.canvas) {
+      this.canvas.addEventListener('click', (e) => {
+        if (!this.isRunning || this.stateManager.getState() !== 'GAME') return;
+        const rect = this.canvas.getBoundingClientRect();
+        const cx = e.clientX - rect.left;
+        const cy = e.clientY - rect.top;
+        for (let i = this.companionHitboxes.length - 1; i >= 0; i--) {
+          const box = this.companionHitboxes[i];
+          if (Math.hypot(cx - box.x, cy - box.y) <= box.r) {
+            const st = this.companionStates.find((s) => s.id === box.id);
+            const meta = getPetMeta(box.id);
+            if (st) {
+              st.tapBounce = 24;
+              st.speechTimer = 90;
+              st.speechText = meta.say;
+            }
+            HomeManager.cuddleCompanionPet(box.id);
+            this.sounds.playCoin(false);
+            for (let k = 0; k < 6; k++) {
+              this.particles.push({
+                type: 'star',
+                x: box.x + (Math.random() - 0.5) * 32,
+                y: box.y - 10 + (Math.random() - 0.5) * 20,
+                vx: (Math.random() - 0.5) * 2,
+                vy: -1.5 - Math.random() * 1.5,
+                size: 12,
+                alpha: 1,
+                life: 28
+              });
+            }
+            break;
+          }
+        }
       });
     }
   }
@@ -322,6 +364,16 @@ export class RunnerEngine {
     this.player.jumpsLeft = PlayerConfig.ability === 'double_jump' ? 2 : 1;
     this.player.invulnerable = false;
     this.player.invulnerableTimer = 0;
+
+    const companionIds = HomeManager.getCompanionPets();
+    this.companionStates = companionIds.map((id) => ({
+      id,
+      tapBounce: 0,
+      speechTimer: 0,
+      speechText: ''
+    }));
+    this.companionHitboxes = [];
+    this.playerHeightTrail = [];
 
     this.controls.reset();
     this.obstacles.reset();
@@ -572,8 +624,15 @@ export class RunnerEngine {
       }
     }
 
-    // Animation frames
+    // Animation frames & companion height trail for lagged jumping
     this.player.animFrame++;
+    const heightOffset = this.player.y - groundY;
+    this.playerHeightTrail.unshift(heightOffset);
+    if (this.playerHeightTrail.length > 48) this.playerHeightTrail.pop();
+    this.companionStates.forEach((st) => {
+      if (st.tapBounce > 0) st.tapBounce--;
+      if (st.speechTimer > 0) st.speechTimer--;
+    });
 
     // Background Scroll
     this.scrollX += this.currentSpeed;
@@ -670,6 +729,29 @@ export class RunnerEngine {
 
     // Draw Particles
     this.drawParticles();
+
+    // Draw Companion Pets running behind the player
+    this.companionHitboxes = [];
+    this.companionStates.forEach((st, idx) => {
+      const lagFrames = Math.min(this.playerHeightTrail.length - 1, (idx + 1) * 5);
+      const trailYOffset = lagFrames >= 0 ? (this.playerHeightTrail[lagFrames] || 0) : 0;
+      const petX = Math.max(26, this.player.x - 42 - idx * 34);
+      const petY = groundY + trailYOffset;
+      drawVectorPet(this.ctx, st.id, petX, petY, {
+        frame: this.player.animFrame + idx * 13,
+        facing: 1,
+        scale: 0.9,
+        isWalking: !this.qte.isEventActive(),
+        tapBounce: st.tapBounce,
+        speechText: st.speechTimer > 0 ? st.speechText : ''
+      });
+      this.companionHitboxes.push({
+        id: st.id,
+        x: petX,
+        y: petY - 16,
+        r: 36
+      });
+    });
 
     // Draw Player
     let pose = 'run';
