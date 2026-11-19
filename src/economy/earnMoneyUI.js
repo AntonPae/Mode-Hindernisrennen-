@@ -13,6 +13,7 @@ export function setupEarnMoneyUI({ onCoinsChange } = {}) {
 
   const openButtons = [
     document.getElementById('openEarnEditorBtn'),
+    document.getElementById('openEarnTownBtn'),
     document.getElementById('openEarnHomeBtn'),
     document.getElementById('openEarnBgBtn'),
     document.getElementById('openEarnIceBtn'),

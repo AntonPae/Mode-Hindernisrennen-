@@ -641,6 +641,8 @@ export function setupPetSittingScreen(stateManager) {
 
   if (toHomeBtn) toHomeBtn.addEventListener('click', () => stateManager.setState('HOME'));
   if (toEditorBtn) toEditorBtn.addEventListener('click', () => stateManager.setState('EDITOR'));
+  const toTownBtn = document.getElementById('petToTownBtn');
+  if (toTownBtn) toTownBtn.addEventListener('click', () => stateManager.setState('TOWN', { from: 'PETSITTING' }));
 
   function updateSimulation() {
     let moveX = 0;

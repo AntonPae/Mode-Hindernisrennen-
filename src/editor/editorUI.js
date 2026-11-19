@@ -420,6 +420,13 @@ export function setupEditorUI(stateManager) {
     stateManager.setState('BACKGROUND_SELECT');
   });
 
+  const toTownBtn = document.getElementById('toTownBtn');
+  if (toTownBtn) {
+    toTownBtn.addEventListener('click', () => {
+      stateManager.setState('TOWN');
+    });
+  }
+
   const toHomeBtn = document.getElementById('toHomeBtn');
   if (toHomeBtn) {
     toHomeBtn.addEventListener('click', () => {

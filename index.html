@@ -118,6 +118,7 @@
           </fieldset>
 
           <div class="editor-cta-row">
+            <button id="toTownBtn" class="btn btn-town btn-large">🏙️ Zur Traumstadt (Alles verbunden)</button>
             <button id="toHomeBtn" class="btn btn-home btn-large">🏡 Mein Haus &amp; Garten</button>
             <button id="toIceCreamBtn" class="btn btn-icecream btn-large">🍦 Beruf: Café &amp; Eisdiele</button>
             <button id="toPetSitBtn" class="btn btn-petsit btn-large">🐾 Beruf: Hundesitting bei Nachbarn</button>
@@ -145,6 +146,50 @@
 
       <div class="bg-select-actions">
         <button id="backToEditorBtn" class="btn btn-secondary">📋 Zurück zum Editor</button>
+      </div>
+    </div>
+
+    <!-- State: Traumstadt (Connected Open Town) Overlay -->
+    <div id="town-screen" class="screen-overlay hidden">
+      <header class="app-header ice-compact-header">
+        <h1>🏙️ Traumstadt – Alles offen verbunden!</h1>
+        <p>Lauf frei durch die ganze Stadt ohne Türen im Weg – nur in den Garten geht es durch das Gartentor!</p>
+        <div class="coin-wallet-bar">
+          <span class="coin-pill">🪙 Spielgeld: <strong id="townCoinsVal">0</strong></span>
+          <span class="level-pill">🏆 Level <strong id="townLevelVal">1</strong></span>
+          <button type="button" id="openEarnTownBtn" class="btn btn-earn">💰 Geld verdienen</button>
+        </div>
+      </header>
+
+      <div class="icecream-layout">
+        <div class="ice-stage-column">
+          <div class="home-canvas-card ice-stage-card">
+            <div class="home-task-banner">
+              <span id="townStatusText">Lauf durch die Traumstadt! Überall offene Eingänge – außer beim Garten mit Gartentor.</span>
+            </div>
+            <canvas id="townCanvas" width="860" height="470"></canvas>
+            <div class="home-walk-pad">
+              <button type="button" id="townWalkLeftBtn" class="walk-pad-btn" aria-label="Nach links gehen">◀ Links</button>
+              <button type="button" id="townWalkUpBtn" class="walk-pad-btn" aria-label="Nach hinten gehen">▲ Hoch</button>
+              <button type="button" id="townEnterBtn" class="walk-pad-btn walk-pad-action" aria-label="Ort betreten">🚶 Betreten / Starten</button>
+              <button type="button" id="townWalkDownBtn" class="walk-pad-btn" aria-label="Nach vorne gehen">▼ Runter</button>
+              <button type="button" id="townWalkRightBtn" class="walk-pad-btn" aria-label="Nach rechts gehen">Rechts ▶</button>
+            </div>
+          </div>
+
+          <div class="home-nav-row ice-nav-row">
+            <button type="button" id="townToHomeBtn" class="btn btn-home">🏡 Direkt ins Haus</button>
+            <button type="button" id="townToEditorBtn" class="btn btn-secondary">✏️ Zurück zum Editor</button>
+          </div>
+        </div>
+
+        <aside class="ice-menu-column">
+          <div class="ice-menu-header">
+            <h2>🗺️ Orte in der Traumstadt</h2>
+            <span>Tippe auf einen Ort, um direkt dorthin zu laufen!</span>
+          </div>
+          <div id="townDistrictBar" class="ice-flavor-bar"></div>
+        </aside>
       </div>
     </div>
 
@@ -210,6 +255,7 @@
           </div>
 
           <div class="home-nav-row">
+            <button type="button" id="homeToTownBtn" class="btn btn-town">🏙️ In die Stadt</button>
             <button type="button" id="homeToEditorBtn" class="btn btn-secondary">✏️ Zurück zum Editor</button>
             <button type="button" id="homeToPetSitBtn" class="btn btn-petsit">🐾 Zu den Nachbarn (Hundesitting)</button>
             <button type="button" id="homeToIceCreamBtn" class="btn btn-icecream">🍦 Beruf: Café &amp; Eisdiele</button>
@@ -263,6 +309,7 @@
           </div>
 
           <div class="home-nav-row ice-nav-row">
+            <button type="button" id="iceToTownBtn" class="btn btn-town">🏙️ In die Stadt</button>
             <button type="button" id="iceToEditorBtn" class="btn btn-secondary">✏️ Zurück zum Editor</button>
             <button type="button" id="iceToHomeBtn" class="btn btn-home">🏡 Zu Haus &amp; Garten</button>
           </div>
@@ -317,6 +364,7 @@
           </div>
 
           <div class="home-nav-row ice-nav-row">
+            <button type="button" id="petToTownBtn" class="btn btn-town">🏙️ In die Stadt</button>
             <button type="button" id="petToHomeBtn" class="btn btn-home">🏡 Zurück in mein Haus</button>
             <button type="button" id="petToEditorBtn" class="btn btn-secondary">✏️ Zurück zum Editor</button>
           </div>

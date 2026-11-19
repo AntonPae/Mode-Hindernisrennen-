@@ -89,6 +89,8 @@ export function setupHomeScreen(stateManager) {
   const fxParticles = [];
   let activeFind = null;
   let nextFindTimer = 210;
+  let gardenGateOpen = 0;
+  let edgeCooldown = 0;
 
   function showToast(msg, type = 'info') {
     if (!toastEl) return;
@@ -348,16 +350,16 @@ export function setupHomeScreen(stateManager) {
       type: 'garden',
       mode: isHarvest ? 'harvest' : 'water',
       targets: [
-        { id: 'g1', x: 185, collected: false },
-        { id: 'g2', x: 345, collected: false },
-        { id: 'g3', x: 505, collected: false },
-        { id: 'g4', x: 645, collected: false }
+        { id: 'g1', x: 300, collected: false },
+        { id: 'g2', x: 405, collected: false },
+        { id: 'g3', x: 515, collected: false },
+        { id: 'g4', x: 615, collected: false }
       ]
     };
     setTaskBanner(
       isHarvest
-        ? '🍎 Ernten: Lauf zu allen 4 reifen Stellen im Garten & pflücke die Ernte! (0/4)'
-        : '🚿 Gießen: Lauf zu allen 4 Gartenbeeten & gieße die Pflanzen! (0/4)',
+        ? '🍎 Ernten: Lauf durchs Gartentor zu allen 4 reifen Stellen & pflücke die Ernte! (0/4)'
+        : '🚿 Gießen: Lauf durchs Gartentor zu allen 4 Gartenbeeten & gieße die Pflanzen! (0/4)',
       false
     );
   }
@@ -536,11 +538,15 @@ export function setupHomeScreen(stateManager) {
         }
       }
 
-      // 3. Clickable Room Doors & Neighbor Gate inside Canvas
+      // 3. Clickable Open Archways & Garden Gates inside Canvas
       for (const door of doorHotspots) {
         if (cx >= door.x && cx <= door.x + door.w && cy >= door.y && cy <= door.y + door.h) {
           if (door.targetRoom === 'state:PETSITTING') {
             stateManager.setState('PETSITTING');
+            return;
+          }
+          if (door.targetRoom === 'state:TOWN') {
+            stateManager.setState('TOWN', { from: 'HOME' });
             return;
           }
           switchRoom(door.targetRoom, door.entryX);
@@ -551,7 +557,11 @@ export function setupHomeScreen(stateManager) {
       // 4. Otherwise walk character to clicked floor spot!
       const clampedX = Math.max(55, Math.min(canvas.width - 55, cx));
       const floorBaseY = canvas.height - 62;
-      const clampedZ = Math.max(-14, Math.min(26, cy - floorBaseY));
+      let clampedZ = Math.max(-14, Math.min(26, cy - floorBaseY));
+      // If crossing the garden picket fence at x = 246, aim through the Gartentor height (z = 6)
+      if (activeRoom === 'garden' && ((player.x < 246 && clampedX >= 246) || (player.x >= 246 && clampedX < 246))) {
+        clampedZ = 6;
+      }
       player.targetX = clampedX;
       player.targetZ = clampedZ;
     });
@@ -567,6 +577,13 @@ export function setupHomeScreen(stateManager) {
   if (homeToIceCreamBtn) {
     homeToIceCreamBtn.addEventListener('click', () => {
       stateManager.setState('ICECREAM');
+    });
+  }
+
+  const homeToTownBtn = document.getElementById('homeToTownBtn');
+  if (homeToTownBtn) {
+    homeToTownBtn.addEventListener('click', () => {
+      stateManager.setState('TOWN', { from: 'HOME' });
     });
   }
 
@@ -589,6 +606,7 @@ export function setupHomeScreen(stateManager) {
     let vx = 0;
     let vz = 0;
     const speed = 3.6;
+    if (edgeCooldown > 0) edgeCooldown--;
 
     if (keys.left || holdPad.left) vx -= speed;
     if (keys.right || holdPad.right) vx += speed;
@@ -610,10 +628,57 @@ export function setupHomeScreen(stateManager) {
       }
     }
 
-    player.x = Math.max(52, Math.min(w - 52, player.x + vx));
-    player.z = Math.max(-14, Math.min(26, player.z + vz));
+    let nextX = Math.max(46, Math.min(w - 46, player.x + vx));
+    let nextZ = Math.max(-14, Math.min(26, player.z + vz));
+
+    // In the Garden, you MUST go through the Gartentor (x = 246, z = -4..16)!
+    if (activeRoom === 'garden') {
+      const gateX = 246;
+      const crossingGate = (player.x < gateX && nextX >= gateX) || (player.x >= gateX && nextX < gateX);
+      if (crossingGate && (nextZ < -4 || nextZ > 16)) {
+        // Gently guide character into the Gartentor path!
+        nextZ += nextZ < -4 ? 1.8 : -1.8;
+        if (nextZ < -6 || nextZ > 18) {
+          nextX = player.x;
+        }
+      }
+      const nearGate = Math.abs(nextX - gateX) < 55;
+      gardenGateOpen += ((nearGate ? 1 : 0) - gardenGateOpen) * 0.16;
+    }
+
+    player.x = nextX;
+    player.z = nextZ;
     if (vx !== 0) {
       player.facing = vx > 0 ? 1 : -1;
+    }
+
+    // Open-archway seamless walking between rooms (no closed doors blocking!)
+    if (!activeTask && edgeCooldown <= 0) {
+      if (activeRoom === 'living_room' && player.x >= w - 52 && vx > 0) {
+        edgeCooldown = 36;
+        switchRoom('kitchen', 110);
+        return;
+      }
+      if (activeRoom === 'living_room' && player.x <= 52 && vx < 0) {
+        edgeCooldown = 36;
+        stateManager.setState('TOWN', { from: 'HOME' });
+        return;
+      }
+      if (activeRoom === 'kitchen' && player.x <= 52 && vx < 0) {
+        edgeCooldown = 36;
+        switchRoom('living_room', w - 115);
+        return;
+      }
+      if (activeRoom === 'kitchen' && player.x >= w - 52 && vx > 0) {
+        edgeCooldown = 36;
+        switchRoom('garden', 290);
+        return;
+      }
+      if (activeRoom === 'garden' && player.x <= 125 && vx < 0) {
+        edgeCooldown = 36;
+        switchRoom('living_room', w - 130);
+        return;
+      }
     }
 
     // Jump gravity
@@ -893,34 +958,58 @@ export function setupHomeScreen(stateManager) {
     rafId = requestAnimationFrame(drawScene);
   }
 
-  // --- INTERIOR ROOM PAINTERS (100% Full-Stage, Zero Emojis) ---
-
-  function drawDoorPortal(ctx, x, y, w, h, label, targetRoom, entryX = 140) {
+  // Open arched passage (NO closed door in the way!), except garden gates when style === 'gate'
+  function drawDoorPortal(ctx, x, y, w, h, label, targetRoom, entryX = 140, style = 'arch') {
     doorHotspots.push({ x, y, w, h, targetRoom, entryX });
     ctx.save();
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.72)';
+    if (style === 'gate') {
+      // Garden Gate Portal (white picket gate frame + warm wooden gate)
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.roundRect(x - 5, y + 36, 10, h - 36, [4]);
+      ctx.roundRect(x + w - 5, y + 36, 10, h - 36, [4]);
+      ctx.fill();
+
+      ctx.fillStyle = '#fde68a';
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.roundRect(x + 4, y + 48, w - 8, h - 48, [10, 10, 4, 4]);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
+      ctx.beginPath();
+      ctx.roundRect(x - 10, y + 18, w + 20, 22, [11]);
+      ctx.fill();
+      ctx.font = '700 11px "Plus Jakarta Sans", sans-serif';
+      ctx.fillStyle = '#047857';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, x + w / 2, y + 29);
+      ctx.restore();
+      return;
+    }
+
+    // Open Sunlit Archway (no blocking door!)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
     ctx.beginPath();
-    ctx.roundRect(x - 6, y - 6, w + 12, h + 6, [18, 18, 0, 0]);
+    ctx.roundRect(x - 6, y - 6, w + 12, h + 6, [34, 34, 0, 0]);
     ctx.fill();
 
-    const dGrad = ctx.createLinearGradient(x, y, x + w, y + h);
-    dGrad.addColorStop(0, '#fbcfe8');
-    dGrad.addColorStop(1, '#c084fc');
-    ctx.fillStyle = dGrad;
+    const archGrad = ctx.createLinearGradient(x, y, x, y + h);
+    archGrad.addColorStop(0, '#bae6fd');
+    archGrad.addColorStop(0.65, '#fdf2f8');
+    archGrad.addColorStop(1, '#fde68a');
+    ctx.fillStyle = archGrad;
     ctx.beginPath();
-    ctx.roundRect(x, y, w, h, [14, 14, 0, 0]);
+    ctx.roundRect(x, y, w, h, [28, 28, 0, 0]);
     ctx.fill();
 
-    // Door handle
-    ctx.fillStyle = '#fde047';
-    ctx.beginPath();
-    ctx.arc(x + w - 12, y + h * 0.55, 4, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Crisp sign above door
+    // Crisp sign above open archway
     ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
     ctx.beginPath();
-    ctx.roundRect(x - 8, y - 26, w + 16, 20, [10]);
+    ctx.roundRect(x - 10, y - 26, w + 20, 20, [10]);
     ctx.fill();
     ctx.font = '700 11px "Plus Jakarta Sans", sans-serif';
     ctx.fillStyle = '#831843';
@@ -1191,8 +1280,9 @@ export function setupHomeScreen(stateManager) {
       ctx.fill();
     }
 
-    // Doorways to Kitchen & Garden
-    drawDoorPortal(ctx, w - 102, floorY - 148, 74, 148, 'Küche ➔', 'kitchen', 110);
+    // Open archways — left to Traumstadt & right to Kitchen (no closed doors!)
+    drawDoorPortal(ctx, 14, floorY - 144, 62, 144, '◀ Stadt', 'state:TOWN', 155, 'arch');
+    drawDoorPortal(ctx, w - 102, floorY - 148, 74, 148, 'Küche ➔', 'kitchen', 110, 'arch');
   }
 
   function drawKitchenRoom(ctx, w, h, floorY, state) {
@@ -1318,8 +1408,9 @@ export function setupHomeScreen(stateManager) {
       ctx.fill();
     }
 
-    // Door back to Living Room
-    drawDoorPortal(ctx, 26, floorY - 148, 72, 148, '◀ Wohnzimmer', 'living_room', w - 150);
+    // Open archways back to Living Room & straight into Garden
+    drawDoorPortal(ctx, 26, floorY - 148, 72, 148, '◀ Wohnzimmer', 'living_room', w - 150, 'arch');
+    drawDoorPortal(ctx, w - 102, floorY - 148, 72, 148, 'Garten ➔', 'garden', 290, 'arch');
   }
 
   function drawBedroomRoom(ctx, w, h, floorY) {
@@ -1429,7 +1520,7 @@ export function setupHomeScreen(stateManager) {
   }
 
   function drawGardenScene(ctx, w, h, floorY, state) {
-    // Full Wide Outdoor Dream Garden (NO house cutaway clutter!)
+    // Full Wide Outdoor Dream Garden WITH THE FULL HOUSE VISIBLE ON THE LEFT & GARTENTOR!
     const skyG = ctx.createLinearGradient(0, 0, 0, floorY);
     skyG.addColorStop(0, '#38bdf8');
     skyG.addColorStop(0.58, '#bae6fd');
@@ -1460,15 +1551,122 @@ export function setupHomeScreen(stateManager) {
     ctx.closePath();
     ctx.fill();
 
-    // Crisp White Garden Picket Fence
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-    for (let fx = 110; fx < w - 20; fx += 34) {
+    // FULL HOUSE EXTERIOR VISIBLE FROM THE GARDEN (left side x: 10..210)
+    ctx.save();
+    const hasUpper = HomeManager.hasItem('expansions', 'bedroom');
+    const hasConserv = HomeManager.hasItem('expansions', 'conservatory');
+    const hasBalcony = HomeManager.hasItem('expansions', 'balcony');
+
+    // House Chimney
+    ctx.fillStyle = '#db2777';
+    ctx.fillRect(46, hasUpper ? 44 : 88, 20, 42);
+
+    // Upper floor if unlocked
+    if (hasUpper) {
+      ctx.fillStyle = '#fdf2f8';
+      ctx.beginPath();
+      ctx.roundRect(22, 92, 160, 74, [8, 8, 0, 0]);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(236, 72, 153, 0.25)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Upper pitched roof
+      ctx.fillStyle = '#ec4899';
+      ctx.beginPath();
+      ctx.moveTo(8, 98);
+      ctx.lineTo(102, 42);
+      ctx.lineTo(196, 98);
+      ctx.closePath();
+      ctx.fill();
+
+      // Upper bedroom window + balcony railing
+      ctx.fillStyle = '#bae6fd';
+      ctx.beginPath();
+      ctx.roundRect(54, 108, 42, 34, [8]);
+      ctx.roundRect(114, 108, 42, 34, [8]);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      if (hasBalcony) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.fillRect(104, 146, 86, 6);
+        for (let bx = 110; bx <= 182; bx += 14) {
+          ctx.fillRect(bx, 132, 4, 18);
+        }
+      }
+    } else {
+      // Single-story pitched roof
+      ctx.fillStyle = '#ec4899';
+      ctx.beginPath();
+      ctx.moveTo(8, 168);
+      ctx.lineTo(102, 96);
+      ctx.lineTo(196, 168);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Ground Floor Walls
+    const wallG = ctx.createLinearGradient(18, 164, 18, floorY);
+    wallG.addColorStop(0, '#fff1f2');
+    wallG.addColorStop(1, '#fce7f3');
+    ctx.fillStyle = wallG;
+    ctx.beginPath();
+    ctx.roundRect(18, 164, 168, floorY - 164, [4, 4, 0, 0]);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(236, 72, 153, 0.28)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Conservatory glass side-room if built!
+    if (hasConserv) {
+      ctx.fillStyle = 'rgba(186, 230, 253, 0.78)';
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(184, floorY - 96, 44, 96, [18, 18, 0, 0]);
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    // Cozy Living Room / Kitchen Windows on House Exterior
+    ctx.fillStyle = '#bae6fd';
+    ctx.beginPath();
+    ctx.roundRect(34, floorY - 122, 44, 46, [10]);
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(254, 240, 138, 0.45)';
+    ctx.fillRect(38, floorY - 118, 36, 38);
+
+    // House Name Banner on Facade
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.roundRect(30, floorY - 156, 138, 22, [11]);
+    ctx.fill();
+    ctx.font = '800 10.5px "Plus Jakarta Sans", sans-serif';
+    ctx.fillStyle = '#be185d';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🏡 Dein Traumhaus', 99, floorY - 145);
+
+    // Open House Archway leading straight inside (no door blocking!)
+    drawDoorPortal(ctx, 102, floorY - 108, 58, 108, '◀ Ins Haus', 'living_room', w - 130, 'arch');
+    ctx.restore();
+
+    // Crisp White Garden Picket Fence along background & dividing House Terrace from Garden
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+    for (let fx = 248; fx < w - 20; fx += 34) {
       ctx.beginPath();
       ctx.roundRect(fx, floorY - 38, 12, 38, [6, 6, 0, 0]);
       ctx.fill();
     }
+    ctx.fillRect(246, floorY - 26, w - 266, 5);
 
-    // Lush Lawn
+    // Lush Lawn & House Terrace Stone Patio
     const lawnG = ctx.createLinearGradient(0, floorY, 0, h);
     lawnG.addColorStop(0, '#34d399');
     lawnG.addColorStop(1, '#059669');
@@ -1477,15 +1675,55 @@ export function setupHomeScreen(stateManager) {
     ctx.fillStyle = '#a7f3d0';
     ctx.fillRect(0, floorY, w, 6);
 
+    // Stone Terrace under the House (x: 0..246)
+    ctx.fillStyle = '#fef3c7';
+    ctx.fillRect(0, floorY, 246, h - floorY);
+    ctx.fillStyle = '#fde68a';
+    ctx.fillRect(0, floorY, 246, 6);
+
+    // GARDEN FENCE + SWINGING GARTENTOR at x = 246!
+    ctx.save();
+    // Solid fence posts above/below gate path
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.roundRect(240, floorY - 46, 12, 46, [5]);
+    ctx.roundRect(240, floorY + 26, 12, h - floorY - 26, [4]);
+    ctx.fill();
+
+    // Swinging Wooden Gartentor!
+    ctx.translate(246, floorY - 2);
+    ctx.rotate(-gardenGateOpen * 1.15);
+    ctx.fillStyle = '#fde68a';
+    ctx.strokeStyle = '#d97706';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.roundRect(-5, -24, 10, 48, [4]);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+    // Gartentor Badge
+    ctx.save();
+    ctx.fillStyle = gardenGateOpen > 0.3 ? '#10b981' : '#ffffff';
+    ctx.beginPath();
+    ctx.roundRect(206, floorY - 72, 82, 22, [11]);
+    ctx.fill();
+    ctx.font = '800 10.5px "Plus Jakarta Sans", sans-serif';
+    ctx.fillStyle = gardenGateOpen > 0.3 ? '#ffffff' : '#047857';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🚪 Gartentor', 247, floorY - 61);
+    ctx.restore();
+
     const growth = state.needs.gardenGrowth;
 
     // Flowerbed
     if (HomeManager.hasItem('garden', 'flowerbed')) {
       ctx.fillStyle = '#92400e';
       ctx.beginPath();
-      ctx.roundRect(145, floorY - 12, 95, 14, [6]);
+      ctx.roundRect(275, floorY - 12, 88, 14, [6]);
       ctx.fill();
-      [165, 192, 220].forEach((fx, i) => {
+      [294, 319, 344].forEach((fx, i) => {
         ctx.fillStyle = '#10b981';
         ctx.fillRect(fx - 2, floorY - 28, 4, 16);
         if (growth >= 35) {
@@ -1501,9 +1739,9 @@ export function setupHomeScreen(stateManager) {
     if (HomeManager.hasItem('garden', 'veggies')) {
       ctx.fillStyle = '#78350f';
       ctx.beginPath();
-      ctx.roundRect(300, floorY - 12, 95, 14, [6]);
+      ctx.roundRect(386, floorY - 12, 88, 14, [6]);
       ctx.fill();
-      [320, 348, 376].forEach((vx) => {
+      [404, 430, 456].forEach((vx) => {
         ctx.fillStyle = '#34d399';
         ctx.beginPath();
         ctx.arc(vx, floorY - 18, 8, 0, Math.PI * 2);
@@ -1515,18 +1753,18 @@ export function setupHomeScreen(stateManager) {
     if (HomeManager.hasItem('garden', 'apple_tree')) {
       ctx.fillStyle = '#92400e';
       ctx.beginPath();
-      ctx.roundRect(496, floorY - 108, 18, 108, [6]);
+      ctx.roundRect(516, floorY - 108, 18, 108, [6]);
       ctx.fill();
-      const treeG = ctx.createRadialGradient(495, floorY - 135, 8, 505, floorY - 122, 52);
+      const treeG = ctx.createRadialGradient(515, floorY - 135, 8, 525, floorY - 122, 52);
       treeG.addColorStop(0, '#bbf7d0');
       treeG.addColorStop(1, '#059669');
       ctx.fillStyle = treeG;
       ctx.beginPath();
-      ctx.arc(505, floorY - 122, 48, 0, Math.PI * 2);
+      ctx.arc(525, floorY - 122, 48, 0, Math.PI * 2);
       ctx.fill();
       if (growth >= 65) {
         ctx.fillStyle = '#f43f5e';
-        [[485, floorY - 115], [520, floorY - 132], [508, floorY - 98]].forEach(([ax, ay]) => {
+        [[505, floorY - 115], [540, floorY - 132], [528, floorY - 98]].forEach(([ax, ay]) => {
           ctx.beginPath();
           ctx.arc(ax, ay, 6, 0, Math.PI * 2);
           ctx.fill();
@@ -1536,12 +1774,12 @@ export function setupHomeScreen(stateManager) {
 
     // Turquoise Pool Deck
     if (HomeManager.hasItem('expansions', 'pool_deck')) {
-      const poolG = ctx.createRadialGradient(625, floorY + 26, 8, 625, floorY + 28, 72);
+      const poolG = ctx.createRadialGradient(600, floorY + 26, 8, 600, floorY + 28, 66);
       poolG.addColorStop(0, '#67e8f9');
       poolG.addColorStop(1, '#0891b2');
       ctx.fillStyle = poolG;
       ctx.beginPath();
-      ctx.ellipse(625, floorY + 28, 72, 18, 0, 0, Math.PI * 2);
+      ctx.ellipse(600, floorY + 28, 66, 17, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 3;
@@ -1554,14 +1792,13 @@ export function setupHomeScreen(stateManager) {
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.roundRect(615, floorY - 82, 86, 82, [28, 28, 0, 0]);
+      ctx.roundRect(585, floorY - 82, 76, 82, [26, 26, 0, 0]);
       ctx.fill();
       ctx.stroke();
     }
 
-    // Door back inside to Living Room & Gate to the Neighbors' Pet Sitting!
-    drawDoorPortal(ctx, 24, floorY - 138, 66, 138, '◀ Ins Haus', 'living_room', 240);
-    drawDoorPortal(ctx, w - 98, floorY - 138, 76, 138, 'Nachbarn 🐾 ▶', 'state:PETSITTING', 140);
+    // Neighbor Gartentor on the right side of the Garden!
+    drawDoorPortal(ctx, w - 92, floorY - 138, 72, 138, 'Nachbarn 🐾 ▶', 'state:PETSITTING', 140, 'gate');
   }
 
   function drawActiveTaskTargets(ctx, floorY) {
@@ -1765,9 +2002,12 @@ export function setupHomeScreen(stateManager) {
     }
   });
 
-  stateManager.onStateChange((newState) => {
+  stateManager.onStateChange((newState, payload) => {
     if (newState === 'HOME') {
       const dailyBonus = HomeManager.claimDailyVisitBonus();
+      if (payload && payload.room) {
+        switchRoom(payload.room, payload.room === 'garden' ? 285 : 240);
+      }
       updateUI();
       renderRoomTabs();
       renderTabs();

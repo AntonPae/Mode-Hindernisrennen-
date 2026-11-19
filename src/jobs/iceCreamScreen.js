@@ -595,6 +595,8 @@ export function setupIceCreamScreen(stateManager) {
 
   if (toEditorBtn) toEditorBtn.addEventListener('click', () => stateManager.setState('EDITOR'));
   if (toHomeBtn) toHomeBtn.addEventListener('click', () => stateManager.setState('HOME'));
+  const toTownBtn = document.getElementById('iceToTownBtn');
+  if (toTownBtn) toTownBtn.addEventListener('click', () => stateManager.setState('TOWN', { from: 'ICECREAM' }));
 
   function movePlayerWithCounterCollision(dx, dy) {
     const nextX = Math.max(40, Math.min(820, player.x + dx));

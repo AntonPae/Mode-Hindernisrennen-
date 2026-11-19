@@ -2,6 +2,7 @@ import './style.css';
 import { StateManager, State } from './screens/stateManager.js';
 import { setupEditorUI } from './editor/editorUI.js';
 import { setupBackgroundSelectScreen } from './screens/backgroundSelect.js';
+import { setupTownScreen } from './town/townScreen.js';
 import { setupHomeScreen } from './home/homeScreen.js';
 import { setupIceCreamScreen } from './jobs/iceCreamScreen.js';
 import { setupPetSittingScreen } from './jobs/petSittingScreen.js';
@@ -14,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   setupEditorUI(stateManager);
   setupBackgroundSelectScreen(stateManager);
+  setupTownScreen(stateManager);
   setupHomeScreen(stateManager);
   setupIceCreamScreen(stateManager);
   setupPetSittingScreen(stateManager);
