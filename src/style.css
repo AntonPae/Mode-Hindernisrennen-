@@ -1315,6 +1315,22 @@ body, html {
   color: #3f1d0b !important;
 }
 
+.health-pill.is-sick {
+  background: #ffe4e6 !important;
+  border-color: #fb7185 !important;
+  color: #be123c !important;
+}
+
+.btn-care.btn-sleep-active {
+  background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+  color: #ffffff;
+}
+
+.btn-care.btn-health-alert {
+  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+  color: #ffffff;
+}
+
 .home-nav-row {
   display: flex;
   flex-wrap: wrap;

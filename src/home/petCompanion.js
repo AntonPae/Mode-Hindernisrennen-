@@ -55,13 +55,15 @@ export function drawVectorPet(ctx, petRef, x, y, opts = {}) {
     badgeColor = '#ec4899',
     speechText = '',
     command = 'follow',
-    trickTimer = 0
+    trickTimer = 0,
+    isSick = false,
+    isSleeping = false
   } = opts;
 
   const meta = getPetMeta(petRef);
   const petId = meta.species || (typeof petRef === 'string' ? petRef : 'dog');
-  const isSitPose = command === 'sit' || command === 'stay';
-  const isRestPose = command === 'rest';
+  const isRestPose = command === 'rest' || isSleeping;
+  const isSitPose = !isRestPose && (command === 'sit' || command === 'stay');
   const spinHop = trickTimer > 0 ? Math.abs(Math.sin(trickTimer * 0.28)) * 12 : 0;
 
   const walkBob = isWalking
@@ -223,7 +225,7 @@ export function drawVectorPet(ctx, petRef, x, y, opts = {}) {
     ctx.fill();
   }
 
-  // Eye (peaceful closed eyelid when resting, sparkling open eye otherwise)
+  // Eye (peaceful closed eyelid when resting, sleepy/feverish if sick, sparkling open eye otherwise)
   if (isRestPose) {
     ctx.strokeStyle = '#1e1b4b';
     ctx.lineWidth = 1.6;
@@ -241,12 +243,47 @@ export function drawVectorPet(ctx, petRef, x, y, opts = {}) {
     ctx.fill();
   }
 
+  // Fever blush + tiny thermometer if pet is sick
+  if (isSick) {
+    ctx.fillStyle = 'rgba(244, 63, 94, 0.45)';
+    ctx.beginPath();
+    ctx.arc(13, headY + 2.8, 2.6, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.save();
+    ctx.translate(16, headY + 3.2);
+    ctx.rotate(0.35);
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.roundRect(0, -1.2, 8, 2.4, [1]);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(1, -0.6, 4.5, 1.2);
+    ctx.restore();
+  }
+
   ctx.restore();
 
+  // Gentle Zzz indicator when sleeping
+  if (isRestPose && !speechText) {
+    const zFloat = Math.sin(frame * 0.08) * 2.5;
+    ctx.save();
+    ctx.font = '800 11px "Plus Jakarta Sans", sans-serif';
+    ctx.fillStyle = '#6366f1';
+    ctx.textAlign = 'center';
+    ctx.fillText('💤', 14 * scale, -30 * scale + zFloat);
+    ctx.restore();
+  }
+
   // Command status pill or custom badge
-  const effectiveBadge = badgeText
-    || (command === 'stay' ? '🐾 Bleibt' : command === 'sit' ? '🪑 Sitz' : command === 'rest' ? '💤 Schlaf' : '');
-  const effectiveColor = badgeText ? badgeColor : '#0284c7';
+  const effectiveBadge = isSick
+    ? '🤒 Braucht Pflege'
+    : badgeText
+      || (command === 'stay' ? '🐾 Bleibt' : command === 'sit' ? '🪑 Sitz' : isRestPose ? '💤 Schläft' : '');
+  const effectiveColor = isSick ? '#e11d48' : badgeText ? badgeColor : '#0284c7';
 
   if (effectiveBadge && !speechText) {
     ctx.save();
@@ -478,13 +515,16 @@ export class PetFollowerController {
       showLeashes = false,
       anchorX = 0,
       anchorY = 0,
-      facing = 1
+      facing = 1,
+      sleepMode = false
     } = opts;
 
+    const sickPets = HomeManager.getState().health?.sickPets || {};
     this.hitboxes = [];
 
     this.followers.forEach((f, idx) => {
       const meta = getPetMeta(f.petRef);
+      const isSick = Boolean(sickPets[f.id]);
       const stayingFar = f.command === 'stay' && Math.hypot(anchorX - f.x, anchorY - f.y) > 95;
       if ((showLeashes || f.isSitting) && !stayingFar && f.fetchTimer <= 0) {
         ctx.save();
@@ -506,9 +546,11 @@ export class PetFollowerController {
         frame: animFrame + idx * 17,
         facing: f.facing,
         scale,
-        isWalking: f.isWalking,
+        isWalking: sleepMode ? false : f.isWalking,
         tapBounce: f.tapBounce,
-        command: f.fetchTimer > 0 ? 'follow' : f.command,
+        command: sleepMode ? 'rest' : (f.fetchTimer > 0 ? 'follow' : f.command),
+        isSleeping: sleepMode,
+        isSick,
         trickTimer: f.trickTimer,
         badgeText: f.isSitting ? `🐾 ${meta.name}` : '',
         badgeColor: '#0284c7',

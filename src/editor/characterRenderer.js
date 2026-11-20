@@ -199,6 +199,32 @@ export function renderCharacter(ctx, x, y, playerConfig, animationState = { fram
     leanAngle = 0.16;
     headTilt = 0.12;
     torsoBounce = Math.abs(wave) * 1.5;
+  } else if (pose === 'sit') {
+    const breathe = Math.sin(f * 0.055);
+    frontThigh = -1.46;
+    frontKnee = 1.36;
+    backThigh = -1.38;
+    backKnee = 1.32;
+    frontUpperArm = -0.52 + breathe * 0.03;
+    frontElbow = -0.68;
+    backUpperArm = -0.34 - breathe * 0.03;
+    backElbow = -0.62;
+    torsoBounce = -14 * scaleY + breathe * 0.8;
+    leanAngle = 0.04;
+    headTilt = breathe * 0.02;
+  } else if (pose === 'sleep') {
+    const breathe = Math.sin(f * 0.045);
+    frontThigh = -0.14;
+    frontKnee = 0.18;
+    backThigh = 0.08;
+    backKnee = 0.12;
+    frontUpperArm = -0.38 + breathe * 0.03;
+    frontElbow = -0.65;
+    backUpperArm = 0.12;
+    backElbow = -0.35;
+    torsoBounce = breathe * 0.9;
+    leanAngle = 0;
+    headTilt = 0.06;
   } else {
     // Graceful idle breathing + gentle sway
     const breathe = Math.sin(f * 0.06);
@@ -212,18 +238,26 @@ export function renderCharacter(ctx, x, y, playerConfig, animationState = { fram
 
   ctx.scale(squashX, squashY);
 
-  // Soft Ambient Ground Shadow
-  ctx.save();
-  const shadowW = 26 * scaleX * (pose === 'jump' ? 0.72 : 1.0);
-  const shGrad = ctx.createRadialGradient(0, 2, 2, 0, 2, shadowW);
-  shGrad.addColorStop(0, 'rgba(65, 25, 85, 0.30)');
-  shGrad.addColorStop(0.6, 'rgba(65, 25, 85, 0.12)');
-  shGrad.addColorStop(1, 'rgba(65, 25, 85, 0)');
-  ctx.fillStyle = shGrad;
-  ctx.beginPath();
-  ctx.ellipse(0, 2, shadowW, 7.5, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  // Soft Ambient Ground Shadow (suppressed while lying on a bed/sofa)
+  if (pose !== 'sleep' && !animationState.noShadow) {
+    ctx.save();
+    const shadowW = 26 * scaleX * (pose === 'jump' ? 0.72 : pose === 'sit' ? 0.82 : 1.0);
+    const shGrad = ctx.createRadialGradient(0, 2, 2, 0, 2, shadowW);
+    shGrad.addColorStop(0, 'rgba(65, 25, 85, 0.30)');
+    shGrad.addColorStop(0.6, 'rgba(65, 25, 85, 0.12)');
+    shGrad.addColorStop(1, 'rgba(65, 25, 85, 0)');
+    ctx.fillStyle = shGrad;
+    ctx.beginPath();
+    ctx.ellipse(0, 2, shadowW, 7.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  if (pose === 'sleep') {
+    // Rotate character horizontally onto the mattress/sofa centered gently around hips/waist
+    ctx.translate(22 * scaleY, -14 * scaleX);
+    ctx.rotate(-Math.PI / 2);
+  }
 
   ctx.translate(0, -torsoBounce);
   ctx.rotate(leanAngle);
@@ -313,8 +347,11 @@ export function renderCharacter(ctx, x, y, playerConfig, animationState = { fram
   );
 
   // 8. Sculpted 3/4 Animated Feature Head, Face & Front Hair
-  const isBlinking = (f % 190) > 184;
-  drawSculptedHead(ctx, 2 * scaleX, headY, headW, headH, headTilt, playerConfig.body, isBlinking, f);
+  const isBlinking = pose === 'sleep' || (f % 190) > 184;
+  drawSculptedHead(ctx, 2 * scaleX, headY, headW, headH, headTilt, playerConfig.body, isBlinking, f, {
+    isSleeping: pose === 'sleep',
+    isSick: Boolean(animationState.isSick)
+  });
 
   ctx.restore();
 }
@@ -1049,7 +1086,8 @@ function drawSculptedHairBack(ctx, x, headY, headW, headH, hairId, hairBase, fra
   ctx.restore();
 }
 
-function drawSculptedHead(ctx, x, y, w, h, tilt, bodyConfig, isBlinking, frame) {
+function drawSculptedHead(ctx, x, y, w, h, tilt, bodyConfig, isBlinking, frame, headOpts = {}) {
+  const { isSleeping = false, isSick = false } = headOpts;
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(tilt);
@@ -1089,13 +1127,14 @@ function drawSculptedHead(ctx, x, y, w, h, tilt, bodyConfig, isBlinking, frame) 
   drawFaceContour();
   ctx.fill();
 
-  // Soft Warm Cheekbone Blush + Highlighter
+  // Soft Warm Cheekbone Blush + Highlighter (warmer rose if feverish/sick)
+  const blushAlpha = isSick ? 0.54 : 0.34;
   [
-    { cx: -w * 0.34, cy: h * 0.24, rx: w * 0.26 },
-    { cx: w * 0.56, cy: h * 0.24, rx: w * 0.24 }
+    { cx: -w * 0.34, cy: h * 0.24, rx: w * (isSick ? 0.31 : 0.26) },
+    { cx: w * 0.56, cy: h * 0.24, rx: w * (isSick ? 0.29 : 0.24) }
   ].forEach((b) => {
     const blush = ctx.createRadialGradient(b.cx, b.cy, 0.5, b.cx, b.cy, b.rx);
-    blush.addColorStop(0, 'rgba(244, 63, 94, 0.34)');
+    blush.addColorStop(0, `rgba(244, 63, 94, ${blushAlpha})`);
     blush.addColorStop(1, 'rgba(244, 63, 94, 0)');
     ctx.fillStyle = blush;
     ctx.beginPath();
@@ -1104,7 +1143,7 @@ function drawSculptedHead(ctx, x, y, w, h, tilt, bodyConfig, isBlinking, frame) 
   });
 
   // Delicate 3/4 Sculpted Nose (soft bridge shadow + pearl tip highlight)
-  ctx.fillStyle = 'rgba(195, 110, 82, 0.32)';
+  ctx.fillStyle = isSick ? 'rgba(225, 29, 72, 0.42)' : 'rgba(195, 110, 82, 0.32)';
   ctx.beginPath();
   ctx.ellipse(w * 0.26, h * 0.14, 2.2, 1.5, 0.1, 0, Math.PI * 2);
   ctx.fill();
@@ -1114,7 +1153,24 @@ function drawSculptedHead(ctx, x, y, w, h, tilt, bodyConfig, isBlinking, frame) 
   ctx.fill();
 
   // Sculpted Expressive Feature-Film Face
-  drawSculptedFace(ctx, w, h, bodyConfig.faceId, isBlinking);
+  drawSculptedFace(ctx, w, h, bodyConfig.faceId, isBlinking, { isSleeping, isSick });
+
+  // Tiny Thermometer if sick
+  if (isSick && bodyConfig.faceId !== 'face_5') {
+    ctx.save();
+    ctx.translate(w * 0.35, h * 0.48);
+    ctx.rotate(0.45);
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(0, -1.6, 13, 3.2, [1.5]);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(1.5, -0.8, 6.5, 1.6);
+    ctx.restore();
+  }
 
   // Lush Layered Front Hair & Accessories
   const hairBase = bodyConfig.hairColor || '#d97706';
@@ -1123,7 +1179,8 @@ function drawSculptedHead(ctx, x, y, w, h, tilt, bodyConfig, isBlinking, frame) 
   ctx.restore();
 }
 
-function drawSculptedFace(ctx, w, h, faceId, isBlinking) {
+function drawSculptedFace(ctx, w, h, faceId, isBlinking, faceOpts = {}) {
+  const { isSleeping = false, isSick = false } = faceOpts;
   // 3/4 shifted eye positions
   const eyeLx = -w * 0.20;
   const eyeRx = w * 0.50;
@@ -1182,9 +1239,9 @@ function drawSculptedFace(ctx, w, h, faceId, isBlinking) {
     case 'face_4': // Starry Wonder Eyes
       drawBrow(ctx, eyeLx, eyeY - eyeH * 1.75, eyeW * 1.1, -0.14);
       drawBrow(ctx, eyeRx, eyeY - eyeH * 1.75, eyeW * 0.95, 0.14);
-      drawAlmondEye(ctx, eyeLx, eyeY, eyeW * 1.05, eyeH * 1.08, false, '#f59e0b', 'star');
-      drawAlmondEye(ctx, eyeRx, eyeY, eyeW * 0.88, eyeH * 1.08, false, '#f59e0b', 'star');
-      drawGlossyLips(ctx, w * 0.16, h * 0.45, w * 0.30, true);
+      drawAlmondEye(ctx, eyeLx, eyeY, eyeW * 1.05, eyeH * 1.08, isSleeping, '#f59e0b', 'star');
+      drawAlmondEye(ctx, eyeRx, eyeY, eyeW * 0.88, eyeH * 1.08, isSleeping, '#f59e0b', 'star');
+      drawGlossyLips(ctx, w * 0.16, h * 0.45, w * 0.30, !isSleeping && !isSick);
       break;
 
     case 'face_5': // Sleek Velvet Ninja Veil
@@ -1204,9 +1261,9 @@ function drawSculptedFace(ctx, w, h, faceId, isBlinking) {
     case 'face_6': // Dreamy Heart Eyes
       drawBrow(ctx, eyeLx, eyeY - eyeH * 1.65, eyeW * 1.05, -0.12);
       drawBrow(ctx, eyeRx, eyeY - eyeH * 1.65, eyeW * 0.9, 0.12);
-      drawAlmondEye(ctx, eyeLx, eyeY, eyeW * 1.05, eyeH * 1.05, false, '#ec4899', 'heart');
-      drawAlmondEye(ctx, eyeRx, eyeY, eyeW * 0.88, eyeH * 1.05, false, '#ec4899', 'heart');
-      drawGlossyLips(ctx, w * 0.16, h * 0.45, w * 0.30, true);
+      drawAlmondEye(ctx, eyeLx, eyeY, eyeW * 1.05, eyeH * 1.05, isSleeping, '#ec4899', 'heart');
+      drawAlmondEye(ctx, eyeRx, eyeY, eyeW * 0.88, eyeH * 1.05, isSleeping, '#ec4899', 'heart');
+      drawGlossyLips(ctx, w * 0.16, h * 0.45, w * 0.30, !isSleeping && !isSick);
       break;
 
     case 'face_7': { // Futuristic Hologram Visor

@@ -46,21 +46,30 @@ export function setupHomeScreen(stateManager) {
 
   const cleanBar = document.getElementById('cleanBar');
   const hungerBar = document.getElementById('hungerBar');
+  const energyBar = document.getElementById('energyBar');
   const petBar = document.getElementById('petBar');
+  const petEnergyBar = document.getElementById('petEnergyBar');
   const gardenBar = document.getElementById('gardenBar');
 
   const cleanPct = document.getElementById('cleanPct');
   const hungerPct = document.getElementById('hungerPct');
+  const energyPct = document.getElementById('energyPct');
   const petPct = document.getElementById('petPct');
+  const petEnergyPct = document.getElementById('petEnergyPct');
   const gardenPct = document.getElementById('gardenPct');
 
   const foodCountEl = document.getElementById('foodCountVal');
   const petFoodCountEl = document.getElementById('petFoodCountVal');
+  const medCountEl = document.getElementById('homeMedCountVal');
+  const healthPillEl = document.getElementById('homeHealthPill');
 
   const cookBtn = document.getElementById('cookBtn');
   const cleanBtn = document.getElementById('cleanBtn');
+  const sitTableBtn = document.getElementById('sitTableBtn');
+  const sleepBtn = document.getElementById('sleepBtn');
   const feedPetsBtn = document.getElementById('feedPetsBtn');
   const petAnimalsBtn = document.getElementById('petAnimalsBtn');
+  const healBtn = document.getElementById('healBtn');
   const gardenBtn = document.getElementById('gardenBtn');
   const homeLeashAllBtn = document.getElementById('homeLeashAllBtn');
 
@@ -85,7 +94,10 @@ export function setupHomeScreen(stateManager) {
     pose: 'idle',
     poseTimer: 0,
     speechText: '',
-    speechTimer: 0
+    speechTimer: 0,
+    sittingAt: null,
+    sleepingAt: null,
+    pendingSitSleep: null
   };
 
   const keys = { left: false, right: false, up: false, down: false };
@@ -94,8 +106,11 @@ export function setupHomeScreen(stateManager) {
   let activeTask = null;
   let doorHotspots = [];
   let petHotspots = [];
+  let seatHotspots = [];
+  let sleepHotspots = [];
   let fridgeHotspot = null;
   let fridgeOpen = false;
+  let sleepStepCounter = 0;
   const petFollowers = new PetFollowerController();
   const roamingPetFx = new Map(); // { speechText, speechTimer, trickTimer, tapBounce }
   const fxParticles = [];
@@ -268,6 +283,9 @@ export function setupHomeScreen(stateManager) {
     activeTask = null;
     activeFind = null;
     fridgeOpen = false;
+    player.sittingAt = null;
+    player.sleepingAt = null;
+    player.pendingSitSleep = null;
     player.x = entryX !== null ? entryX : 240;
     player.z = 0;
     player.targetX = null;
@@ -279,13 +297,16 @@ export function setupHomeScreen(stateManager) {
       petRoomBar.classList.toggle('hidden', activeRoom !== 'pet_room');
     }
     updateFridgeUI();
+    updateUI();
     renderRoomTabs();
     if (activeRoom === 'pet_room') {
       setTaskBanner('🐾 Tierzimmer: Hier bleiben deine Tiere! Tippe ein Tier an, um es abzuholen & mitzunehmen!', false);
     } else if (activeRoom === 'kitchen') {
-      setTaskBanner('🍳 Küche: Dein Essen liegt sicher im 🧊 Kühlschrank – tippe auf den Kühlschrank zum Öffnen!', false);
+      setTaskBanner('🍳 Küche: Essen im 🧊 Kühlschrank · Tippe auf den 🪑 Esstisch, um Platz zu nehmen!', false);
+    } else if (activeRoom === 'bedroom') {
+      setTaskBanner('🛏️ Schlafzimmer: Tippe aufs Bett, um dich und deine Tiere schlafen zu legen!', false);
     } else {
-      setTaskBanner(`Du bist jetzt in: ${room.label.replace(/^[^\s]+\s/, '')} · Klicke auf den Boden oder gehe frei von Raum zu Raum!`, false);
+      setTaskBanner(`Du bist jetzt in: ${room.label.replace(/^[^\s]+\s/, '')} · Klicke auf den Boden, Stuhl oder Bett!`, false);
     }
     return true;
   }
@@ -331,11 +352,52 @@ export function setupHomeScreen(stateManager) {
 
     setBar(cleanBar, cleanPct, state.needs.cleanliness);
     setBar(hungerBar, hungerPct, state.needs.hunger);
+    setBar(energyBar, energyPct, state.needs.energy ?? 88);
     setBar(petBar, petPct, state.owned.pets.length > 0 ? state.needs.petCare : 100);
+    setBar(petEnergyBar, petEnergyPct, state.owned.pets.length > 0 ? (state.needs.petEnergy ?? 88) : 100);
     setBar(gardenBar, gardenPct, state.needs.gardenGrowth);
 
     if (foodCountEl) foodCountEl.textContent = (state.inventory.food || 0) + (state.inventory.fridgeSnacks || 0);
     if (petFoodCountEl) petFoodCountEl.textContent = state.inventory.petFood || 0;
+    if (medCountEl) medCountEl.textContent = (state.inventory.medicine || 0) + (state.inventory.petMedicine || 0);
+
+    const playerSick = state.health?.playerSick;
+    const sickPetIds = Object.keys(state.health?.sickPets || {});
+    const anyoneSick = Boolean(playerSick) || sickPetIds.length > 0;
+
+    if (healthPillEl) {
+      healthPillEl.classList.toggle('is-sick', anyoneSick);
+      if (playerSick) {
+        healthPillEl.textContent = `🤒 ${playerSick.label}`;
+      } else if (sickPetIds.length > 0) {
+        const meta = getPetMeta(sickPetIds[0]);
+        healthPillEl.textContent = `🤒 ${meta.name} kränkelt`;
+      } else {
+        healthPillEl.textContent = '❤️ Fit & Gesund';
+      }
+    }
+
+    if (healBtn) {
+      healBtn.classList.toggle('btn-health-alert', anyoneSick);
+      if (playerSick) {
+        healBtn.textContent = `🍵 Tee nehmen (${state.inventory.medicine || 0})`;
+      } else if (sickPetIds.length > 0) {
+        healBtn.textContent = `💊 Tier pflegen (${state.inventory.petMedicine || 0})`;
+      } else {
+        healBtn.textContent = '🩺 Gesundheit checken';
+      }
+    }
+
+    if (sleepBtn) {
+      const sleeping = Boolean(player.sleepingAt);
+      sleepBtn.classList.toggle('btn-sleep-active', sleeping);
+      sleepBtn.textContent = sleeping ? '☀️ Aufwachen' : '😴 Schlafen gehen';
+    }
+
+    if (sitTableBtn) {
+      sitTableBtn.textContent = player.sittingAt ? '🧍 Aufstehen' : '🪑 Am Tisch sitzen';
+    }
+
     updateFridgeUI();
 
     if (gardenBtn) {
@@ -380,8 +442,8 @@ export function setupHomeScreen(stateManager) {
       type: 'cook',
       phase: 'fridge',
       stirProgress: 0,
-      fridgeX: 168,
-      stoveX: 470
+      fridgeX: 148,
+      stoveX: 435
     };
     setTaskBanner('🧊 Kochen (1/2): Geh links zum Kühlschrank (oder tippe ihn an), um die frischen Zutaten herauszuholen!', false);
   }
@@ -491,11 +553,149 @@ export function setupHomeScreen(stateManager) {
     stirBtn.addEventListener('click', performStirAction);
   }
 
-  if (cookBtn) cookBtn.addEventListener('click', startCookingTask);
-  if (cleanBtn) cleanBtn.addEventListener('click', startCleaningTask);
-  if (feedPetsBtn) feedPetsBtn.addEventListener('click', () => startPetTask('feed'));
-  if (petAnimalsBtn) petAnimalsBtn.addEventListener('click', () => startPetTask('pet'));
-  if (gardenBtn) gardenBtn.addEventListener('click', startGardenTask);
+  function standUpIfNeeded(silent = true) {
+    const wasResting = Boolean(player.sittingAt || player.sleepingAt);
+    if (!wasResting) return false;
+    player.sittingAt = null;
+    player.sleepingAt = null;
+    player.pose = 'idle';
+    if (!silent) {
+      updateUI();
+    }
+    return true;
+  }
+
+  function engageSeatAtTable(seat) {
+    activeTask = null;
+    player.sleepingAt = null;
+    player.pendingSitSleep = null;
+    player.sittingAt = { ...seat };
+    player.x = seat.seatX;
+    player.z = seat.seatZ ?? 4;
+    player.facing = seat.facing || 1;
+    player.pose = 'sit';
+    player.poseTimer = 0;
+    updateUI();
+    setTaskBanner(`🪑 Du sitzt gemütlich am ${seat.label}! Klicke auf den Boden oder drücke ← →, um wieder aufzustehen.`, false);
+    showToast(`🪑 Am ${seat.label} Platz genommen!`, 'success');
+  }
+
+  function engageSleepSpot(spot) {
+    activeTask = null;
+    player.sittingAt = null;
+    player.pendingSitSleep = null;
+    player.sleepingAt = { ...spot };
+    player.x = spot.approachX;
+    player.z = 2;
+    player.facing = spot.facing || 1;
+    player.pose = 'sleep';
+    player.poseTimer = 0;
+    sleepStepCounter = 0;
+    updateUI();
+    setTaskBanner(`😴 Gute Nacht! Du und deine Tiere schlaft tief & tankt neue Energie (Klick/Taste zum Aufwachen).`, false);
+    showToast(`😴 Schlafenszeit im ${spot.label}! Deine Tiere schlafen gleich mit ein 💤`, 'info');
+  }
+
+  function walkToSeatAction() {
+    if (player.sittingAt) {
+      standUpIfNeeded(false);
+      setTaskBanner('🧍 Du bist wieder aufgestanden!', false);
+      return;
+    }
+    if (activeRoom !== 'kitchen') {
+      switchRoom('kitchen', 480);
+    }
+    const seat = { room: 'kitchen', seatX: 534, seatZ: 4, facing: 1, label: 'Küchen-Esstisch' };
+    player.sleepingAt = null;
+    player.targetX = seat.seatX;
+    player.targetZ = seat.seatZ;
+    player.pendingSitSleep = { type: 'sit', payload: seat };
+    setTaskBanner('🚶 Du gehst zum Küchen-Esstisch, um dich hinzusetzen...', false);
+  }
+
+  function toggleSleepAction() {
+    if (player.sleepingAt) {
+      standUpIfNeeded(false);
+      setTaskBanner('☀️ Ausgeschlafen und hellwach!', false);
+      showToast('☀️ Guten Morgen! Bereit für neue Abenteuer!', 'success');
+      return;
+    }
+    const hasBedroom = isRoomUnlocked(ROOMS.find((r) => r.id === 'bedroom'));
+    if (hasBedroom) {
+      if (activeRoom !== 'bedroom') switchRoom('bedroom', 260);
+      const spot = { room: 'bedroom', approachX: 265, bedX: 305, bedY: 280, facing: 1, isDreamBed: true, label: 'Traum-Bett' };
+      player.targetX = spot.approachX;
+      player.targetZ = 0;
+      player.pendingSitSleep = { type: 'sleep', payload: spot };
+      setTaskBanner('🛏️ Du gehst zu deinem Traum-Bett zum Schlafen...', false);
+    } else {
+      if (activeRoom !== 'living_room') switchRoom('living_room', 175);
+      const hasSofa = HomeManager.hasItem('furniture', 'sofa');
+      const spot = {
+        room: 'living_room',
+        approachX: 145,
+        bedX: 168,
+        bedY: 294,
+        facing: 1,
+        isDreamBed: HomeManager.hasItem('furniture', 'bed'),
+        label: hasSofa ? 'Kuschel-Sofa' : 'Ruhebett'
+      };
+      player.targetX = spot.approachX;
+      player.targetZ = 0;
+      player.pendingSitSleep = { type: 'sleep', payload: spot };
+      setTaskBanner('😴 Du gehst zum Ausruhen ins Wohnzimmer...', false);
+    }
+  }
+
+  function handleHealAction() {
+    const state = HomeManager.getState();
+    if (state.health?.playerSick) {
+      const res = HomeManager.healPlayer();
+      if (res.ok) {
+        player.pose = 'pet';
+        player.poseTimer = 26;
+        player.speechText = '🍵 Schmeckt gut & hilft!';
+        player.speechTimer = 115;
+        spawnFX('heart', player.x, 220, 8);
+        updateUI();
+        notifyMoneyOrMissionChange();
+        showToast(`🍵 Tee & Medizin genommen – du bist wieder kerngesund! (+${res.bonusCoins} 🪙)`, 'success');
+      } else {
+        showToast('🍵 Keine Medizin mehr! Schlaf dich im Bett gesund oder kauf Tee im 🛒 Supermarkt!', 'warn');
+      }
+      return;
+    }
+
+    const sickPets = Object.keys(state.health?.sickPets || {});
+    if (sickPets.length > 0) {
+      const res = HomeManager.healPet(sickPets[0]);
+      if (res.ok) {
+        const meta = getPetMeta(res.petId);
+        player.pose = 'pet';
+        player.poseTimer = 24;
+        petFollowers.setSpeech(res.petId, '❤️ Danke!', 120);
+        roamingPetFx.set(res.petId, { speechText: '❤️ Wieder fit!', speechTimer: 120, trickTimer: 0, tapBounce: 26 });
+        spawnFX('heart', player.x, 260, 8);
+        updateUI();
+        notifyMoneyOrMissionChange();
+        showToast(`💊 ${meta.name} wurde gesund gepflegt & hüpft wieder fröhlich! (+${res.bonusCoins} 🪙)`, 'success');
+      } else {
+        showToast('💊 Keine Tier-Medizin mehr! Hol neue in der 🐾 Tierhandlung oder schlaf gemeinsam eine Runde!', 'warn');
+      }
+      return;
+    }
+
+    showToast('❤️ Du und alle deine Tiere sind fit und kerngesund!', 'info');
+  }
+
+  if (cookBtn) cookBtn.addEventListener('click', () => { standUpIfNeeded(); startCookingTask(); });
+  if (cleanBtn) cleanBtn.addEventListener('click', () => { standUpIfNeeded(); startCleaningTask(); });
+  if (sitTableBtn) sitTableBtn.addEventListener('click', walkToSeatAction);
+  if (sleepBtn) sleepBtn.addEventListener('click', toggleSleepAction);
+  if (healBtn) healBtn.addEventListener('click', handleHealAction);
+  if (feedPetsBtn) feedPetsBtn.addEventListener('click', () => { standUpIfNeeded(); startPetTask('feed'); });
+  if (petAnimalsBtn) petAnimalsBtn.addEventListener('click', () => { standUpIfNeeded(); startPetTask('pet'); });
+  if (gardenBtn) gardenBtn.addEventListener('click', () => { standUpIfNeeded(); startGardenTask(); });
 
   if (fridgeEatSnackBtn) {
     fridgeEatSnackBtn.addEventListener('click', () => {
@@ -522,12 +722,12 @@ export function setupHomeScreen(stateManager) {
         type: 'cook',
         phase: 'stir',
         stirProgress: 0,
-        fridgeX: 168,
-        stoveX: 470
+        fridgeX: 148,
+        stoveX: 435
       };
       fridgeOpen = false;
       updateFridgeUI();
-      player.targetX = 470;
+      player.targetX = 435;
       setTaskBanner('🍳 Kochen: Lauf zum Herd in der Mitte & tippe auf "🥄 Rühren!"', true);
     });
   }
@@ -604,20 +804,30 @@ export function setupHomeScreen(stateManager) {
     if (document.querySelector('.modal:not(.hidden)')) return;
 
     if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+      standUpIfNeeded(false);
       keys.left = true;
       player.targetX = null;
+      player.pendingSitSleep = null;
     } else if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+      standUpIfNeeded(false);
       keys.right = true;
       player.targetX = null;
+      player.pendingSitSleep = null;
     } else if (e.code === 'ArrowUp' || e.code === 'KeyW') {
+      standUpIfNeeded(false);
       keys.up = true;
       player.targetZ = null;
+      player.pendingSitSleep = null;
     } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+      standUpIfNeeded(false);
       keys.down = true;
       player.targetZ = null;
+      player.pendingSitSleep = null;
     } else if (e.code === 'Space') {
       e.preventDefault();
-      if (activeTask && activeTask.type === 'cook' && activeTask.phase === 'stir' && Math.abs(player.x - activeTask.stoveX) <= 75) {
+      if (player.sittingAt || player.sleepingAt) {
+        standUpIfNeeded(false);
+      } else if (activeTask && activeTask.type === 'cook' && activeTask.phase === 'stir' && Math.abs(player.x - activeTask.stoveX) <= 75) {
         performStirAction();
       } else if (player.yOffset === 0) {
         player.vy = -8.5;
@@ -640,8 +850,10 @@ export function setupHomeScreen(stateManager) {
     if (!btn) return;
     const onDown = (e) => {
       e.preventDefault();
+      standUpIfNeeded(false);
       holdPad[dir] = true;
       player.targetX = null;
+      player.pendingSitSleep = null;
     };
     const onUp = () => {
       holdPad[dir] = false;
@@ -704,10 +916,26 @@ export function setupHomeScreen(stateManager) {
         }
       }
 
-      // 2c. Tap directly on a Pet in the room/garden to take it everywhere with you (or leave it in Tierzimmer)!
+      // 2c. Tap directly on a Pet: heal if sick & medicine available, otherwise take with you / leave in Tierzimmer!
       for (let i = petHotspots.length - 1; i >= 0; i--) {
         const ph = petHotspots[i];
         if (Math.hypot(cx - ph.x, cy - ph.y) <= ph.r) {
+          const curHealth = HomeManager.getState().health;
+          if (!ph.isSitting && curHealth?.sickPets?.[ph.petId]) {
+            const healRes = HomeManager.healPet(ph.petId);
+            const meta = getPetMeta(ph.petId);
+            if (healRes.ok) {
+              player.pose = 'pet';
+              player.poseTimer = 24;
+              petFollowers.setSpeech(ph.petId, '❤️ Danke!', 120);
+              roamingPetFx.set(ph.petId, { speechText: '❤️ Wieder fit!', speechTimer: 120, trickTimer: 0, tapBounce: 26 });
+              spawnFX('heart', ph.x, ph.y - 12, 8);
+              updateUI();
+              notifyMoneyOrMissionChange();
+              showToast(`💊 ${meta.name} gepflegt & geheilt! (+${healRes.bonusCoins} 🪙)`, 'success');
+              return;
+            }
+          }
           if (ph.isSitting) {
             const meta = getPetMeta(ph.petRef || ph.petId);
             HomeManager.cuddleCompanionPet(ph.petId);
@@ -748,9 +976,47 @@ export function setupHomeScreen(stateManager) {
         }
       }
 
+      // 2d. Clickable Chairs / Table to Sit Down!
+      for (const seat of seatHotspots) {
+        if (cx >= seat.x && cx <= seat.x + seat.w && cy >= seat.y && cy <= seat.y + seat.h) {
+          standUpIfNeeded(false);
+          if (Math.abs(player.x - seat.seatX) <= 22) {
+            engageSeatAtTable(seat);
+          } else {
+            player.targetX = seat.seatX;
+            player.targetZ = seat.seatZ ?? 4;
+            player.pendingSitSleep = { type: 'sit', payload: seat };
+            setTaskBanner(`🚶 Gehst zum ${seat.label}...`, false);
+          }
+          return;
+        }
+      }
+
+      // 2e. Clickable Beds / Sofas to Sleep!
+      for (const bed of sleepHotspots) {
+        if (cx >= bed.x && cx <= bed.x + bed.w && cy >= bed.y && cy <= bed.y + bed.h) {
+          if (player.sleepingAt && player.sleepingAt.label === bed.label) {
+            standUpIfNeeded(false);
+            showToast('☀️ Ausgeschlafen & munter!', 'success');
+            return;
+          }
+          standUpIfNeeded(false);
+          if (Math.abs(player.x - bed.approachX) <= 24) {
+            engageSleepSpot(bed);
+          } else {
+            player.targetX = bed.approachX;
+            player.targetZ = 0;
+            player.pendingSitSleep = { type: 'sleep', payload: bed };
+            setTaskBanner(`😴 Gehst zum ${bed.label} zum Schlafen...`, false);
+          }
+          return;
+        }
+      }
+
       // 3. Clickable Open Archways, Mailbox & Garden Gates inside Canvas
       for (const door of doorHotspots) {
         if (cx >= door.x && cx <= door.x + door.w && cy >= door.y && cy <= door.y + door.h) {
+          standUpIfNeeded(false);
           if (door.targetRoom === 'action:MAILBOX') {
             window.dispatchEvent(new CustomEvent('runner:open-mailbox', { detail: { tab: 'inbox' } }));
             return;
@@ -768,7 +1034,9 @@ export function setupHomeScreen(stateManager) {
         }
       }
 
-      // 4. Otherwise walk character strictly on walkable floor / garden path!
+      // 4. Otherwise stand up (if sitting/sleeping) and walk strictly on walkable floor / garden path!
+      standUpIfNeeded(false);
+      player.pendingSitSleep = null;
       const clampedX = Math.max(55, Math.min(canvas.width - 55, cx));
       const floorBaseY = canvas.height - 62;
       let clampedZ = Math.max(-6, Math.min(22, cy - floorBaseY));
@@ -922,7 +1190,40 @@ export function setupHomeScreen(stateManager) {
       }
     }
 
-    // Determine Pose
+    // Gentle energy & recovery ticking while sleeping
+    if (player.sleepingAt) {
+      sleepStepCounter++;
+      if (sleepStepCounter >= 95) {
+        sleepStepCounter = 0;
+        const { recovered } = HomeManager.sleepStep(Boolean(player.sleepingAt.isDreamBed));
+        updateUI();
+        if (recovered) {
+          showToast('✨ Durch erholsamen Schlaf seid ihr wieder gesund geworden!', 'success');
+        }
+      }
+      player.pose = 'sleep';
+      return;
+    }
+
+    if (player.sittingAt) {
+      player.pose = 'sit';
+      return;
+    }
+
+    // Determine Pose & handle pending walk-to-sit / walk-to-sleep arrival
+    if (player.pendingSitSleep && player.targetX === null && player.targetZ === null) {
+      const pending = player.pendingSitSleep;
+      player.pendingSitSleep = null;
+      if (pending.type === 'sit') {
+        engageSeatAtTable(pending.payload);
+        return;
+      }
+      if (pending.type === 'sleep') {
+        engageSleepSpot(pending.payload);
+        return;
+      }
+    }
+
     if (player.yOffset < -2) {
       player.pose = 'jump';
     } else if (player.poseTimer > 0) {
@@ -1089,6 +1390,8 @@ export function setupHomeScreen(stateManager) {
     const floorY = h - 66;
     const state = HomeManager.getState();
     doorHotspots = [];
+    seatHotspots = [];
+    sleepHotspots = [];
     fridgeHotspot = null;
 
     ctx.clearRect(0, 0, w, h);
@@ -1109,6 +1412,14 @@ export function setupHomeScreen(stateManager) {
       drawLivingRoom(ctx, w, h, floorY, state);
     }
 
+    // Soft cozy evening nightglow overlay while sleeping
+    if (player.sleepingAt) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(30, 27, 75, 0.14)';
+      ctx.fillRect(0, 0, w, h);
+      ctx.restore();
+    }
+
     // Dirty floor dust overlay if cleanliness is low (and no clean task active)
     if (state.needs.cleanliness < 60 && (!activeTask || activeTask.type !== 'clean')) {
       const specks = state.needs.cleanliness < 35 ? 6 : 3;
@@ -1123,30 +1434,56 @@ export function setupHomeScreen(stateManager) {
     // Active Task Visual Targets inside Room
     drawActiveTaskTargets(ctx, floorY);
 
-    // Character (Walks & Animates smoothly inside the active room!)
+    // Character (Walks, sits at table, or lies on bed/sofa cleanly!)
     const drawY = floorY + 12 + player.z + player.yOffset;
+    const isPlayerSick = Boolean(state.health?.playerSick);
 
-    // Animated Vector Pets (roaming pets + companion pets following you!)
+    // Animated Vector Pets (roaming pets + companion pets following you or sleeping beside you!)
     drawRoomPets(ctx, floorY, state, drawY);
 
+    const charX = player.sleepingAt ? player.sleepingAt.bedX : player.x;
+    const charY = player.sleepingAt ? player.sleepingAt.bedY : drawY;
+    const charFacing = player.sleepingAt ? player.sleepingAt.facing : player.facing;
+
     ctx.save();
-    ctx.translate(player.x, drawY);
+    ctx.translate(charX, charY);
     ctx.scale(0.86, 0.86);
     renderCharacter(ctx, 0, 0, PlayerConfig, {
       frame: animFrame,
       pose: player.pose,
-      facing: player.facing
+      facing: charFacing,
+      isSick: isPlayerSick
     });
     ctx.restore();
 
-    // Thought prompt if hungry or active player speech bubble
+    // Foreground Dining Tabletop overlay when seated in Kitchen so knees sit naturally under table!
+    if (activeRoom === 'kitchen' && player.sittingAt) {
+      drawKitchenTableForeground(ctx, floorY);
+    }
+
+    // Soft animated Zzz when sleeping
+    if (player.sleepingAt) {
+      const zFloat = Math.sin(animFrame * 0.08) * 5;
+      ctx.save();
+      ctx.font = '800 14px "Outfit", sans-serif';
+      ctx.fillStyle = '#4f46e5';
+      ctx.textAlign = 'center';
+      ctx.fillText('Z z z 💤', charX - 65, charY - 38 + zFloat);
+      ctx.restore();
+    }
+
+    // Thought prompt if hungry/tired/sick or active player speech bubble
     if (player.speechTimer > 0 && player.speechText) {
-      drawCanvasSpeechBubble(ctx, player.x, drawY - 114, player.speechText, {
+      drawCanvasSpeechBubble(ctx, charX, charY - (player.sleepingAt ? 46 : 114), player.speechText, {
         accent: '#ec4899',
         maxX: w - 10
       });
-    } else if (state.needs.hunger < 40 && (!activeTask || activeTask.type !== 'cook')) {
-      drawFloatingHint(ctx, player.x, drawY - 134, 'Hunger!', '#f43f5e');
+    } else if (isPlayerSick && !player.sleepingAt) {
+      drawFloatingHint(ctx, charX, charY - 134, '🤒 Erkältet', '#e11d48');
+    } else if ((state.needs.energy ?? 88) < 28 && !player.sleepingAt) {
+      drawFloatingHint(ctx, charX, charY - 134, '😴 Müde!', '#6366f1');
+    } else if (state.needs.hunger < 40 && (!activeTask || activeTask.type !== 'cook') && !player.sleepingAt) {
+      drawFloatingHint(ctx, charX, charY - 134, 'Hunger!', '#f43f5e');
     }
 
     // Ground-level Lucky Coin Find (never floating mid-air)
@@ -1493,7 +1830,7 @@ export function setupHomeScreen(stateManager) {
       ctx.fill();
     }
 
-    // Tufted Velvet Sofa
+    // Tufted Velvet Sofa OR Starter Cozy Daybed (clickable to rest / sleep!)
     if (HomeManager.hasItem('furniture', 'sofa')) {
       const sofaG = ctx.createLinearGradient(70, floorY - 62, 200, floorY);
       sofaG.addColorStop(0, '#f472b6');
@@ -1511,6 +1848,35 @@ export function setupHomeScreen(stateManager) {
       ctx.fillStyle = '#d97706';
       ctx.fillRect(78, floorY - 10, 8, 10);
       ctx.fillRect(188, floorY - 10, 8, 10);
+
+      sleepHotspots.push({
+        x: 68, y: floorY - 58, w: 140, h: 60,
+        approachX: 145, bedX: 168, bedY: floorY - 26, facing: 1,
+        room: 'living_room', isDreamBed: HomeManager.hasItem('furniture', 'bed'), label: 'Kuschel-Sofa'
+      });
+    } else {
+      // Starter Cozy Daybed / Ruhe-Sofa so every player can sleep right away
+      ctx.fillStyle = '#e2e8f0';
+      ctx.beginPath();
+      ctx.roundRect(76, floorY - 36, 126, 28, [10]);
+      ctx.fill();
+      ctx.fillStyle = '#f9a8d4';
+      ctx.beginPath();
+      ctx.roundRect(108, floorY - 38, 90, 24, [8]);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.roundRect(82, floorY - 46, 30, 14, [6]);
+      ctx.fill();
+      ctx.fillStyle = '#d97706';
+      ctx.fillRect(84, floorY - 8, 7, 8);
+      ctx.fillRect(188, floorY - 8, 7, 8);
+
+      sleepHotspots.push({
+        x: 74, y: floorY - 48, w: 130, h: 50,
+        approachX: 145, bedX: 168, bedY: floorY - 26, facing: 1,
+        room: 'living_room', isDreamBed: HomeManager.hasItem('furniture', 'bed'), label: 'Ruhebett'
+      });
     }
 
     // Grand Rose-Gold Piano
@@ -1640,9 +2006,9 @@ export function setupHomeScreen(stateManager) {
     ctx.stroke();
 
     // Retro Rounded Interactive Pastel Fridge (Left-Center — ALL FOOD LIVES INSIDE!)
-    const fridgeX = 124;
+    const fridgeX = 108;
     const fridgeY = floorY - 176;
-    const fridgeW = isDeluxe ? 92 : 78;
+    const fridgeW = isDeluxe ? 86 : 74;
     const fridgeH = 176;
     fridgeHotspot = { x: fridgeX - 6, y: fridgeY - 10, w: fridgeW + (fridgeOpen ? 44 : 12), h: fridgeH + 10 };
 
@@ -1716,41 +2082,41 @@ export function setupHomeScreen(stateManager) {
     const totalFridgeItems = (state.inventory.food || 0) + (state.inventory.fridgeSnacks || 0);
     ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
     ctx.beginPath();
-    ctx.roundRect(fridgeX - 6, fridgeY - 26, fridgeW + 14, 20, [10]);
+    ctx.roundRect(fridgeX - 8, fridgeY - 26, fridgeW + 16, 20, [10]);
     ctx.fill();
     ctx.font = '800 10.5px "Plus Jakarta Sans", sans-serif';
     ctx.fillStyle = '#0369a1';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`🧊 Kühlschrank (${totalFridgeItems})`, fridgeX + fridgeW / 2 + 1, fridgeY - 16);
+    ctx.fillText(`🧊 Kühlschrank (${totalFridgeItems})`, fridgeX + fridgeW / 2, fridgeY - 16);
 
     // Kitchen Counter & Quartz Top
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.roundRect(230, floorY - 82, 340, 82, [8, 8, 0, 0]);
+    ctx.roundRect(204, floorY - 82, 282, 82, [8, 8, 0, 0]);
     ctx.fill();
     ctx.fillStyle = '#f9a8d4';
     ctx.beginPath();
-    ctx.roundRect(226, floorY - 88, 348, 12, [6]);
+    ctx.roundRect(200, floorY - 88, 290, 12, [6]);
     ctx.fill();
 
-    // Sleek Oven & Glowing Cooktop at x = 470
+    // Sleek Oven & Glowing Cooktop at x = 435
     ctx.fillStyle = '#312e81';
     ctx.beginPath();
-    ctx.roundRect(432, floorY - 74, 76, 66, [6]);
+    ctx.roundRect(397, floorY - 74, 76, 66, [6]);
     ctx.fill();
     ctx.fillStyle = '#fb923c';
     ctx.beginPath();
-    ctx.roundRect(442, floorY - 58, 56, 36, [4]);
+    ctx.roundRect(407, floorY - 58, 56, 36, [4]);
     ctx.fill();
 
-    // Simmering Pot on Burner (x = 470)
+    // Simmering Pot on Burner (x = 435)
     ctx.fillStyle = '#ec4899';
     ctx.beginPath();
-    ctx.roundRect(448, floorY - 110, 44, 24, [4, 4, 10, 10]);
+    ctx.roundRect(413, floorY - 110, 44, 24, [4, 4, 10, 10]);
     ctx.fill();
     ctx.fillStyle = '#fde047';
-    ctx.fillRect(445, floorY - 114, 50, 5);
+    ctx.fillRect(410, floorY - 114, 50, 5);
 
     // Rising Steam Wisps if Cooking
     if (activeTask && activeTask.type === 'cook' && activeTask.phase === 'stir') {
@@ -1758,41 +2124,103 @@ export function setupHomeScreen(stateManager) {
         const sy = floorY - 122 - ((animFrame * 0.9 + s * 16) % 44);
         ctx.fillStyle = 'rgba(255, 255, 255, 0.72)';
         ctx.beginPath();
-        ctx.arc(462 + Math.sin(sy * 0.1 + s) * 8, sy, 6, 0, Math.PI * 2);
+        ctx.arc(427 + Math.sin(sy * 0.1 + s) * 8, sy, 6, 0, Math.PI * 2);
         ctx.fill();
       }
       // Cooking Progress Bar above Stove
       ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
       ctx.beginPath();
-      ctx.roundRect(422, floorY - 152, 96, 14, [7]);
+      ctx.roundRect(387, floorY - 152, 96, 14, [7]);
       ctx.fill();
       ctx.fillStyle = '#10b981';
       ctx.beginPath();
-      ctx.roundRect(425, floorY - 149, Math.max(8, (activeTask.stirProgress / 100) * 90), 8, [4]);
+      ctx.roundRect(390, floorY - 149, Math.max(8, (activeTask.stirProgress / 100) * 90), 8, [4]);
       ctx.fill();
     }
 
-    // Dining Table (if owned)
-    if (HomeManager.hasItem('furniture', 'table')) {
-      ctx.fillStyle = '#d97706';
+    // Cozy Kitchen Dining Table & Sittable Chairs (always ready, upgraded if "Esstisch" owned!)
+    const hasDeluxeTable = HomeManager.hasItem('furniture', 'table');
+    const woodMain = hasDeluxeTable ? '#b45309' : '#d97706';
+    const woodDark = hasDeluxeTable ? '#78350f' : '#92400e';
+
+    // Left Dining Chair (behind seated character!)
+    ctx.fillStyle = woodDark;
+    ctx.beginPath();
+    ctx.roundRect(514, floorY - 56, 8, 56, [3]); // backrest post
+    ctx.roundRect(514, floorY - 26, 28, 7, [3]); // seat cushion
+    ctx.fillRect(534, floorY - 20, 6, 20); // front leg
+    ctx.fill();
+    ctx.fillStyle = '#f472b6';
+    ctx.beginPath();
+    ctx.roundRect(518, floorY - 30, 22, 5, [3]);
+    ctx.fill();
+
+    // Right Dining Chair
+    ctx.fillStyle = woodDark;
+    ctx.beginPath();
+    ctx.roundRect(638, floorY - 56, 8, 56, [3]);
+    ctx.roundRect(618, floorY - 26, 28, 7, [3]);
+    ctx.fillRect(620, floorY - 20, 6, 20);
+    ctx.fill();
+
+    // Draw the table itself unless character is actively sitting (then foreground tabletop renders on top of knees!)
+    if (!player.sittingAt) {
+      drawKitchenTableForeground(ctx, floorY, woodMain);
+    }
+
+    // Clickable badge & hotspot for sitting at the table
+    seatHotspots.push({
+      x: 510, y: floorY - 72, w: 138, h: 74,
+      seatX: 534, seatZ: 4, facing: 1, room: 'kitchen', label: 'Küchen-Esstisch'
+    });
+    if (!player.sittingAt) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
       ctx.beginPath();
-      ctx.roundRect(592, floorY - 64, 96, 10, [5]);
+      ctx.roundRect(540, floorY - 78, 86, 19, [9.5]);
       ctx.fill();
-      ctx.fillRect(606, floorY - 54, 8, 54);
-      ctx.fillRect(666, floorY - 54, 8, 54);
+      ctx.font = '800 10px "Plus Jakarta Sans", sans-serif';
+      ctx.fillStyle = '#9d174d';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🪑 Hinsetzen', 583, floorY - 68.5);
     }
 
     // Pet Food Bowl
     if (HomeManager.hasItem('petItems', 'bowl')) {
       ctx.fillStyle = '#fbbf24';
       ctx.beginPath();
-      ctx.roundRect(594, floorY - 10, 32, 12, [4, 4, 8, 8]);
+      ctx.roundRect(492, floorY - 10, 30, 12, [4, 4, 8, 8]);
       ctx.fill();
     }
 
     // Open archways back to Living Room & straight into Garden
-    drawDoorPortal(ctx, 26, floorY - 148, 72, 148, '◀ Wohnzimmer', 'living_room', w - 150, 'arch');
-    drawDoorPortal(ctx, w - 102, floorY - 148, 72, 148, 'Garten ➔', 'garden', 290, 'arch');
+    drawDoorPortal(ctx, 22, floorY - 148, 72, 148, '◀ Wohnzimmer', 'living_room', w - 150, 'arch');
+    drawDoorPortal(ctx, w - 98, floorY - 148, 72, 148, 'Garten ➔', 'garden', 290, 'arch');
+  }
+
+  function drawKitchenTableForeground(ctx, floorY, woodColor = null) {
+    const hasDeluxe = HomeManager.hasItem('furniture', 'table');
+    const col = woodColor || (hasDeluxe ? '#b45309' : '#d97706');
+    ctx.save();
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.roundRect(546, floorY - 46, 80, 9, [4]);
+    ctx.fill();
+    ctx.fillRect(556, floorY - 37, 7, 37);
+    ctx.fillRect(610, floorY - 37, 7, 37);
+
+    // Table runner / cute mug or flower vase
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.roundRect(562, floorY - 54, 12, 8, [2, 2, 4, 4]);
+    ctx.fill();
+    ctx.fillStyle = '#ec4899';
+    ctx.fillRect(584, floorY - 58, 8, 12);
+    ctx.fillStyle = '#fde047';
+    ctx.beginPath();
+    ctx.arc(588, floorY - 61, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
 
   function drawPetRoom(ctx, w, h, floorY, state) {
@@ -2105,7 +2533,7 @@ export function setupHomeScreen(stateManager) {
       ctx.fill();
     }
 
-    // Plush Canopy / Dream Bed
+    // Plush Canopy / Dream Bed (clickable to sleep!)
     const bedHeadGrad = ctx.createLinearGradient(170, floorY - 135, 360, floorY);
     bedHeadGrad.addColorStop(0, '#ec4899');
     bedHeadGrad.addColorStop(1, '#a855f7');
@@ -2127,6 +2555,12 @@ export function setupHomeScreen(stateManager) {
     ctx.beginPath();
     ctx.roundRect(184, floorY - 72, 48, 20, [8]);
     ctx.fill();
+
+    sleepHotspots.push({
+      x: 165, y: floorY - 126, w: 210, h: 120,
+      approachX: 265, bedX: 305, bedY: floorY - 44, facing: 1,
+      room: 'bedroom', isDreamBed: true, label: 'Traum-Bett'
+    });
 
     // Door back to Living Room
     drawDoorPortal(ctx, 28, floorY - 148, 72, 148, '◀ Wohnzimmer', 'living_room', 240);
@@ -2716,55 +3150,79 @@ export function setupHomeScreen(stateManager) {
     const hasPetRoom = HomeManager.hasPetRoom();
     const companionIds = HomeManager.getCompanionPets();
     const roamingPets = state.owned.pets.filter((id) => !companionIds.includes(id));
+    const sickPets = state.health?.sickPets || {};
+    const petsTired = (state.needs.petEnergy ?? 88) < 28;
+    const sleepAllPets = Boolean(player.sleepingAt);
 
-    // 1. Companion pets walk right beside you (with leashes / follow badge)
-    petFollowers.update(player.x, playerDrawY, player.facing, {
-      minX: 38,
-      maxX: canvas.width - 38,
-      minY: floorY - 4,
-      maxY: floorY + 38
-    });
+    // 1. Companion pets walk right beside you (or curl up to sleep when you sleep!)
+    if (!sleepAllPets) {
+      petFollowers.update(player.x, playerDrawY, player.facing, {
+        minX: 38,
+        maxX: canvas.width - 38,
+        minY: floorY - 4,
+        maxY: floorY + 38
+      });
+    }
+
     petFollowers.followers.forEach((f, idx) => {
       const meta = getPetMeta(f.petRef || f.id);
-      ctx.save();
-      ctx.strokeStyle = meta.collar;
-      ctx.lineWidth = 2.2;
-      ctx.beginPath();
-      ctx.moveTo(player.x + player.facing * 10, playerDrawY - 38);
-      ctx.quadraticCurveTo((player.x + f.x) / 2, Math.max(playerDrawY, f.y) - 8, f.x + f.facing * 8, f.y - 12);
-      ctx.stroke();
-      ctx.restore();
+      const isSick = Boolean(sickPets[f.id]);
+      const drawPetX = sleepAllPets ? Math.max(60, Math.min(canvas.width - 60, player.x + (idx % 2 === 0 ? -48 : 48) + idx * 12)) : f.x;
+      const drawPetY = sleepAllPets ? floorY + 14 + (idx % 2) * 8 : f.y;
 
-      drawVectorPet(ctx, f.petRef || f.id, f.x, f.y, {
+      if (!sleepAllPets) {
+        ctx.save();
+        ctx.strokeStyle = meta.collar;
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(player.x + player.facing * 10, playerDrawY - 38);
+        ctx.quadraticCurveTo((player.x + f.x) / 2, Math.max(playerDrawY, f.y) - 8, f.x + f.facing * 8, f.y - 12);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      drawVectorPet(ctx, f.petRef || f.id, drawPetX, drawPetY, {
         frame: animFrame + idx * 17,
         facing: f.facing,
         scale: 0.96,
-        isWalking: f.isWalking,
+        isWalking: sleepAllPets ? false : f.isWalking,
         tapBounce: f.tapBounce,
-        command: f.fetchTimer > 0 ? 'follow' : f.command,
+        command: sleepAllPets ? 'rest' : (f.fetchTimer > 0 ? 'follow' : f.command),
+        isSleeping: sleepAllPets,
+        isSick,
         trickTimer: f.trickTimer,
         speechText: f.speechTimer > 0 ? f.speechText : '',
-        badgeText: f.isSitting
-          ? `🐾 ${meta.name} (Sitten)`
-          : activeRoom === 'pet_room'
-            ? '🎒 Kommt mit · Hier lassen'
-            : '🎒 Kommt mit',
+        badgeText: isSick
+          ? ''
+          : f.isSitting
+            ? `🐾 ${meta.name} (Sitten)`
+            : activeRoom === 'pet_room'
+              ? '🎒 Kommt mit · Hier lassen'
+              : '🎒 Kommt mit',
         badgeColor: f.isSitting ? '#0284c7' : '#059669'
       });
-      petHotspots.push({ petId: f.id, petRef: f.petRef, isSitting: f.isSitting, x: f.x, y: f.y - 14, r: 36 });
+      petHotspots.push({ petId: f.id, petRef: f.petRef, isSitting: f.isSitting, x: drawPetX, y: drawPetY - 14, r: 36 });
     });
 
     // 2. If Tierzimmer is owned, non-companion pets ALWAYS stay inside pet_room so you can pick them up there!
     const shouldShowStayingPets = hasPetRoom ? activeRoom === 'pet_room' : true;
     if (shouldShowStayingPets) {
+      const hasPetBed = HomeManager.hasItem('petItems', 'pet_bed');
+      const hasCushion = HomeManager.hasItem('petItems', 'pet_cushion');
       roamingPets.forEach((petId, idx) => {
         const spots = [190, 305, 390, 495, 595, 655];
-        const basePos = activeRoom === 'pet_room'
+        let basePos = activeRoom === 'pet_room'
           ? spots[idx % spots.length]
           : 180 + ((idx * 145) % 460);
         const cmdState = PetCommandStore.getCommand(petId).command;
         const fx = roamingPetFx.get(petId);
-        const isStationary = cmdState === 'sit' || cmdState === 'stay' || cmdState === 'rest';
+        const isSick = Boolean(sickPets[petId]);
+        const autoSleep = sleepAllPets || petsTired || cmdState === 'rest';
+        if (autoSleep && activeRoom === 'pet_room') {
+          if (hasPetBed && idx === 0) basePos = 386;
+          else if (hasCushion && idx <= 1) basePos = 302;
+        }
+        const isStationary = autoSleep || isSick || cmdState === 'sit' || cmdState === 'stay';
         const walkX = isStationary ? basePos : basePos + Math.sin(animFrame * 0.024 + idx * 2.1) * 32;
         const walkY = floorY + 14 + (idx % 2 === 0 ? -4 : 6);
         const dir = isStationary
@@ -2776,11 +3234,13 @@ export function setupHomeScreen(stateManager) {
           facing: dir,
           scale: 1,
           isWalking: !isStationary,
-          command: cmdState,
+          command: autoSleep ? 'rest' : cmdState,
+          isSleeping: autoSleep,
+          isSick,
           trickTimer: fx ? fx.trickTimer : 0,
           tapBounce: fx ? fx.tapBounce : 0,
           speechText: fx && fx.speechTimer > 0 ? fx.speechText : '',
-          badgeText: hasPetRoom ? '👆 Abholen' : '👆 Mitnehmen',
+          badgeText: isSick ? '' : (hasPetRoom ? '👆 Abholen' : '👆 Mitnehmen'),
           badgeColor: '#db2777'
         });
         petHotspots.push({ petId, x: walkX, y: walkY - 14, r: 38 });
@@ -2808,7 +3268,7 @@ export function setupHomeScreen(stateManager) {
     }
     if (!decayInterval) {
       decayInterval = setInterval(() => {
-        HomeManager.tickNeeds();
+        HomeManager.tickNeeds({ isSleeping: Boolean(player.sleepingAt) });
         updateUI();
       }, 6000);
     }

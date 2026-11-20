@@ -143,8 +143,9 @@ export function setupIceCreamScreen(stateManager) {
     y: AISLE_Y,
     facing: 1,
     waypoints: [],
-    pendingAction: null, // { type: 'pickup', itemId } | { type: 'pickup_station', stationId } | { type: 'serve', tableIdx } | { type: 'trash' }
+    pendingAction: null, // { type: 'pickup', itemId } | { type: 'pickup_station', stationId } | { type: 'serve', tableIdx } | { type: 'sit', tableIdx } | { type: 'trash' }
     pendingCallback: null,
+    sittingTableIdx: null,
     pose: 'idle',
     poseTimer: 0,
     speechText: '',
@@ -662,14 +663,22 @@ export function setupIceCreamScreen(stateManager) {
       }
     }
 
-    // 2. Clicked on a table, guest, or speech bubble in the dining room?
+    // 2. Clicked on a table, guest, or empty chair in the dining room?
     if (cy >= 235) {
       for (let i = 0; i < TABLE_POS.length; i++) {
         const tb = TABLE_POS[i];
         const c = tables[i];
-        if (!c) continue;
+        if (!c) {
+          if (trayItems.length === 0 && Math.abs(cx - tb.x) <= 72 && cy >= 340 && cy <= 448) {
+            player.sittingTableIdx = null;
+            navigateToPoint(tb.standX, tb.standY, { type: 'sit', tableIdx: i });
+            return;
+          }
+          continue;
+        }
         // Clicking directly on the seated guest with an empty tray walks up & starts a friendly chat!
         if (trayItems.length === 0 && Math.hypot(cx - tb.guestX, cy - (tb.y - 34)) <= 36) {
+          player.sittingTableIdx = null;
           const guestTargetId = `guest_${i}_${c.preset.name}`;
           navigateToPoint(tb.standX, tb.standY, null, () => {
             player.facing = tb.guestX >= player.x ? 1 : -1;
@@ -685,6 +694,7 @@ export function setupIceCreamScreen(stateManager) {
         }
         if (Math.abs(cx - tb.x) <= 84 && cy >= 242 && cy <= 455) {
           if (c.state === 'waiting') {
+            player.sittingTableIdx = null;
             navigateToPoint(tb.standX, tb.standY, { type: 'serve', tableIdx: i });
             return;
           }
@@ -692,7 +702,8 @@ export function setupIceCreamScreen(stateManager) {
       }
     }
 
-    // 3. Otherwise walk to clicked floor point (routing around counter if needed)
+    // 3. Otherwise stand up (if sitting) and walk to clicked floor point (routing around counter if needed)
+    player.sittingTableIdx = null;
     const targetY = cy < 200 ? AISLE_Y : Math.max(255, Math.min(442, cy));
     navigateToPoint(cx, targetY, null);
   }
@@ -808,11 +819,20 @@ export function setupIceCreamScreen(stateManager) {
 
     const speed = 4.6;
     if (moveX !== 0 || moveY !== 0) {
+      if (player.sittingTableIdx !== null) {
+        const prevTb = TABLE_POS[player.sittingTableIdx];
+        player.sittingTableIdx = null;
+        if (prevTb) {
+          player.x = prevTb.standX;
+          player.y = prevTb.standY;
+        }
+      }
       const len = Math.hypot(moveX, moveY) || 1;
       movePlayerWithCounterCollision((moveX / len) * speed, (moveY / len) * speed);
       if (moveX !== 0) player.facing = Math.sign(moveX);
       player.pose = 'walk';
     } else if (player.waypoints.length > 0) {
+      player.sittingTableIdx = null;
       const wp = player.waypoints[0];
       const dx = wp.x - player.x;
       const dy = wp.y - player.y;
@@ -830,6 +850,17 @@ export function setupIceCreamScreen(stateManager) {
             if (act.type === 'pickup') addItemToTray(act.itemId);
             else if (act.type === 'pickup_station') smartPickupAtStation(act.stationId);
             else if (act.type === 'serve') serveTable(act.tableIdx);
+            else if (act.type === 'sit') {
+              const tb = TABLE_POS[act.tableIdx];
+              if (tb && !tables[act.tableIdx]) {
+                player.sittingTableIdx = act.tableIdx;
+                player.x = tb.guestX + 6;
+                player.y = tb.y + 8;
+                player.facing = 1;
+                player.pose = 'sit';
+                setStatus(`🪑 Kurze Pause an Tisch ${act.tableIdx + 1}! Zum Aufstehen einfach gehen oder irgendwo hinklicken.`);
+              }
+            }
             else if (act.type === 'trash') clearTray();
           }
           if (player.pendingCallback) {
@@ -842,6 +873,21 @@ export function setupIceCreamScreen(stateManager) {
         if (Math.abs(dx) > 1) player.facing = dx > 0 ? 1 : -1;
         movePlayerWithCounterCollision((dx / dist) * speed, (dy / dist) * speed);
         player.pose = 'walk';
+      }
+    } else if (player.sittingTableIdx !== null) {
+      const tb = TABLE_POS[player.sittingTableIdx];
+      if (!tb || tables[player.sittingTableIdx]) {
+        player.sittingTableIdx = null;
+        if (tb) {
+          player.x = tb.standX;
+          player.y = tb.standY;
+        }
+        player.pose = 'idle';
+      } else {
+        player.x = tb.guestX + 6;
+        player.y = tb.y + 8;
+        player.facing = 1;
+        player.pose = 'sit';
       }
     } else if (player.poseTimer > 0) {
       player.poseTimer--;
@@ -859,7 +905,7 @@ export function setupIceCreamScreen(stateManager) {
     for (let i = 0; i < 4; i++) {
       const c = tables[i];
       if (!c) {
-        if (quietPauseTimer <= 0 && activeCount < maxSimultaneous) {
+        if (quietPauseTimer <= 0 && activeCount < maxSimultaneous && player.sittingTableIdx !== i) {
           tableTimers[i]--;
           if (tableTimers[i] <= 0) {
             tables[i] = createCustomer(i);
@@ -1118,6 +1164,23 @@ export function setupIceCreamScreen(stateManager) {
       ctx.fill();
     }
 
+    ctx.restore();
+  }
+
+  function drawEmptyBistroChair(tb) {
+    ctx.save();
+    ctx.translate(tb.guestX, tb.y + 8);
+    ctx.fillStyle = '#fb7185';
+    ctx.beginPath();
+    ctx.roundRect(-16, -42, 32, 22, [8]);
+    ctx.fill();
+    ctx.fillStyle = '#fda4af';
+    ctx.beginPath();
+    ctx.roundRect(-14, -18, 28, 7, [4]);
+    ctx.fill();
+    ctx.fillStyle = '#64748b';
+    ctx.fillRect(-10, -11, 4, 14);
+    ctx.fillRect(6, -11, 4, 14);
     ctx.restore();
   }
 
@@ -1435,10 +1498,17 @@ export function setupIceCreamScreen(stateManager) {
       drawCounter();
     }
 
-    // 3. Draw 4 Tables + Customers
+    // 3. Draw 4 Tables + Chairs + Customers (with proper layering if player is sitting at an empty table)
     TABLE_POS.forEach((tb, idx) => {
       const c = tables[idx];
-      if (c) drawCustomerAtTable(c, tb);
+      if (c) {
+        drawCustomerAtTable(c, tb);
+      } else {
+        drawEmptyBistroChair(tb);
+        if (player.sittingTableIdx === idx) {
+          drawPlayerWithTray();
+        }
+      }
       drawTable(tb, idx, c);
     });
 
@@ -1476,7 +1546,7 @@ export function setupIceCreamScreen(stateManager) {
       ctx.restore();
     }
 
-    // If player walked out in front of the counter, draw pets & player on top so they are always visible!
+    // If player walked out in front of the counter (and isn't already layered into a table chair), draw pets & player on top!
     if (player.y >= 210) {
       petFollowers.draw(ctx, animFrame, {
         scale: 0.88,
@@ -1485,7 +1555,9 @@ export function setupIceCreamScreen(stateManager) {
         anchorY: player.y + 4,
         facing: player.facing
       });
-      drawPlayerWithTray();
+      if (player.sittingTableIdx === null) {
+        drawPlayerWithTray();
+      }
     }
 
     if (player.speechTimer > 0 && player.speechText) {

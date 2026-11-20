@@ -40,11 +40,14 @@ const STORE_CONFIG = {
     aisles: [
       {
         id: 'snacks',
-        label: '🍓 Obst & Snacks',
+        label: '🍓 Obst & 🍵 Tee',
         x: 178,
         color: '#f43f5e',
-        hint: 'Frisches Obst & Snacks — landen direkt in deinem Kühlschrank!',
-        sources: [{ kind: 'home', category: 'supplies', filter: (i) => i.key === 'fridgeSnacks' }]
+        hint: 'Frisches Obst, Snacks für den Kühlschrank & wohltuender Kräutertee bei Erkältung!',
+        sources: [
+          { kind: 'home', category: 'supplies', tabLabel: '🍓 Obst & Snacks', filter: (i) => i.key === 'fridgeSnacks' },
+          { kind: 'home', category: 'supplies', tabLabel: '🍵 Tee & Medizin', filter: (i) => i.key === 'medicine' }
+        ]
       },
       {
         id: 'fridge',
@@ -59,8 +62,11 @@ const STORE_CONFIG = {
         label: '🦴 Tierfutter-Regal',
         x: 472,
         color: '#f59e0b',
-        hint: 'Leckeres Futter & Knochen für deine Haustiere!',
-        sources: [{ kind: 'home', category: 'supplies', filter: (i) => i.key === 'petFood' }]
+        hint: 'Leckeres Futter, Knochen & Tier-Medizin für deine Haustiere!',
+        sources: [
+          { kind: 'home', category: 'supplies', tabLabel: '🦴 Tierfutter', filter: (i) => i.key === 'petFood' },
+          { kind: 'home', category: 'supplies', tabLabel: '💊 Tier-Medizin', filter: (i) => i.key === 'petMedicine' }
+        ]
       }
     ]
   },
@@ -303,11 +309,14 @@ const STORE_CONFIG = {
       },
       {
         id: 'petFood',
-        label: '🦴 Futter-Ecke',
+        label: '🦴 Futter & 💊 Medizin',
         x: 510,
         color: '#f59e0b',
-        hint: 'Knuspriges Tierfutter & Leckerlis für glückliche Haustiere!',
-        sources: [{ kind: 'home', category: 'supplies', filter: (i) => i.key === 'petFood' }]
+        hint: 'Knuspriges Tierfutter, Leckerlis & Medizin für glückliche, gesunde Haustiere!',
+        sources: [
+          { kind: 'home', category: 'supplies', tabLabel: '🦴 Tierfutter', filter: (i) => i.key === 'petFood' },
+          { kind: 'home', category: 'supplies', tabLabel: '💊 Tier-Medizin', filter: (i) => i.key === 'petMedicine' }
+        ]
       }
     ]
   }

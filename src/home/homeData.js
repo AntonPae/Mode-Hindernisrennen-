@@ -78,6 +78,8 @@ export const HOME_CATALOG = {
     { id: 'buy_snacks', name: 'Obst & Snacks (+3)', icon: '🍓', price: 14, isConsumable: true, key: 'fridgeSnacks', amount: 3, desc: 'Leckere Snacks direkt für deinen Kühlschrank' },
     { id: 'buy_cheese_box', name: 'Käse & Pasta-Box (+4)', icon: '🧀', price: 18, isConsumable: true, key: 'food', amount: 4, desc: 'Große Vorratsbox für den Kühlschrank (4x Kochen)' },
     { id: 'buy_pet_food', name: 'Tierfutter (+3)', icon: '🦴', price: 15, isConsumable: true, key: 'petFood', amount: 3, desc: 'Leckeres Futter für 3x Füttern' },
+    { id: 'buy_medicine', name: 'Kräutertee & Medizin (+3)', icon: '🍵', price: 16, isConsumable: true, key: 'medicine', amount: 3, desc: 'Hilft dir schnell wieder gesund zu werden, wenn du mal erkältet bist' },
+    { id: 'buy_pet_medicine', name: 'Tier-Medizin (+3)', icon: '💊', price: 16, isConsumable: true, key: 'petMedicine', amount: 3, desc: 'Pflegt ein kränkelndes Tier schnell wieder fit und munter' },
     { id: 'vacuum', name: 'Turbo-Staubsauger', icon: '🧹', price: 75, desc: 'Putzt blitzschnell & gibt +5 🪙 Extra beim Putzen' },
     { id: 'gold_can', name: 'Gold-Gießkanne', icon: '🚿', price: 80, desc: 'Verdoppelt das Wachstum beim Gießen!' },
     { id: 'robot_helper', name: 'Haus-Roboter', icon: '🤖', price: 240, unlockLevel: 2, isNew: true, desc: 'Hält dein Haus länger sauber & schenkt extra Münzen!' }
@@ -107,13 +109,23 @@ function getDefaultHomeState() {
     inventory: {
       food: 3,
       petFood: 3,
-      fridgeSnacks: 2
+      fridgeSnacks: 2,
+      medicine: 2,
+      petMedicine: 2
     },
     needs: {
       cleanliness: 75,
       hunger: 70,
       petCare: 80,
-      gardenGrowth: 40
+      gardenGrowth: 40,
+      energy: 88,
+      petEnergy: 88
+    },
+    health: {
+      playerSick: null,
+      sickPets: {},
+      lastSickTime: 0,
+      ticksSinceSickCheck: 0
     },
     companionPets: [],
     sittingCompanions: [],
@@ -137,6 +149,11 @@ export const HomeManager = {
         owned: { ...def.owned, ...(parsed.owned || {}) },
         inventory: { ...def.inventory, ...(parsed.inventory || {}) },
         needs: { ...def.needs, ...(parsed.needs || {}) },
+        health: {
+          ...def.health,
+          ...(parsed.health || {}),
+          sickPets: { ...(parsed.health?.sickPets || {}) }
+        },
         companionPets: Array.isArray(parsed.companionPets) ? parsed.companionPets : [],
         sittingCompanions: Array.isArray(parsed.sittingCompanions) ? parsed.sittingCompanions : [],
         lastDailyBonusDate: parsed.lastDailyBonusDate || '',
@@ -462,30 +479,167 @@ export const HomeManager = {
     return { ok: true, category: pick.category, item: pick.item, remainingCoins: ShopManager.getCoins() };
   },
 
+  _maybeTriggerRareSickness(state, source = 'tick') {
+    if (!state.health) {
+      state.health = { playerSick: null, sickPets: {}, lastSickTime: 0, ticksSinceSickCheck: 0 };
+    }
+    const now = Date.now();
+    const cooldownMs = 180000; // Mindestens 3 Minuten Pause zwischen seltenen Krankheiten
+    if (now - (state.health.lastSickTime || 0) < cooldownMs) return null;
+
+    const alreadyPlayerSick = Boolean(state.health.playerSick);
+    const ownedPets = Array.isArray(state.owned?.pets) ? state.owned.pets : [];
+    const healthyPets = ownedPets.filter((id) => !state.health.sickPets?.[id]);
+    if (alreadyPlayerSick && healthyPets.length === 0) return null;
+
+    state.health.ticksSinceSickCheck = (state.health.ticksSinceSickCheck || 0) + 1;
+    if (source === 'tick' && state.health.ticksSinceSickCheck < 5) return null;
+
+    const lowPlayer = (state.needs.energy || 80) < 28 || (state.needs.hunger || 70) < 25;
+    const lowPet = (state.needs.petEnergy || 80) < 28 || (state.needs.petCare || 80) < 28;
+    let chance = source === 'run' ? 0.06 : 0.014;
+    if (lowPlayer || lowPet) chance *= 2.1;
+
+    if (Math.random() >= chance) return null;
+
+    state.health.lastSickTime = now;
+    state.health.ticksSinceSickCheck = 0;
+
+    const choosePet = healthyPets.length > 0 && (alreadyPlayerSick || Math.random() < 0.5);
+    if (choosePet) {
+      const petId = healthyPets[Math.floor(Math.random() * healthyPets.length)];
+      const kinds = [
+        { kind: 'cold', label: 'Kleiner Schnupfen' },
+        { kind: 'tummy', label: 'Leichtes Bauchweh' }
+      ];
+      const pick = kinds[Math.floor(Math.random() * kinds.length)];
+      state.health.sickPets[petId] = { ...pick, since: now };
+      return { target: 'pet', petId, ...pick };
+    }
+
+    const pKinds = [
+      { kind: 'cold', label: 'Leichte Erkältung' },
+      { kind: 'tired', label: 'Hatschi-Schnupfen' }
+    ];
+    const pick = pKinds[Math.floor(Math.random() * pKinds.length)];
+    state.health.playerSick = { ...pick, since: now };
+    return { target: 'player', ...pick };
+  },
+
   onRunCompleted() {
     const state = this.getState();
     const hasRobot = this.hasItem('supplies', 'robot_helper');
     const cleanDrop = hasRobot ? 5 : 12;
     state.needs.cleanliness = Math.max(15, state.needs.cleanliness - cleanDrop);
     state.needs.hunger = Math.max(10, state.needs.hunger - 14);
+    state.needs.energy = Math.max(10, (state.needs.energy ?? 88) - 16);
     if (state.owned.pets.length > 0) {
       state.needs.petCare = Math.max(10, state.needs.petCare - 15);
+      state.needs.petEnergy = Math.max(10, (state.needs.petEnergy ?? 88) - 14);
     }
+    this._maybeTriggerRareSickness(state, 'run');
     this.saveState(state);
   },
 
-  tickNeeds() {
+  tickNeeds(options = {}) {
+    const { isSleeping = false } = options;
     const state = this.getState();
     const hasRobot = this.hasItem('supplies', 'robot_helper');
     if (!hasRobot || Math.random() < 0.4) {
       state.needs.cleanliness = Math.max(10, state.needs.cleanliness - 1);
     }
-    state.needs.hunger = Math.max(10, state.needs.hunger - 1);
-    if (state.owned.pets.length > 0) {
-      state.needs.petCare = Math.max(10, state.needs.petCare - 1);
+    state.needs.hunger = Math.max(10, state.needs.hunger - (isSleeping ? 0 : 1));
+
+    if (isSleeping) {
+      const hasBed = this.hasItem('furniture', 'bed') || this.hasItem('expansions', 'bedroom');
+      const energyGain = hasBed ? 12 : 8;
+      state.needs.energy = Math.min(100, (state.needs.energy ?? 88) + energyGain);
+      if (state.owned.pets.length > 0) {
+        const hasPetBed = this.hasItem('petItems', 'pet_bed') || this.hasItem('petItems', 'pet_cushion');
+        state.needs.petEnergy = Math.min(100, (state.needs.petEnergy ?? 88) + (hasPetBed ? 14 : 10));
+      }
+      if (state.needs.energy >= 95 && state.health?.playerSick) {
+        state.health.playerSick = null;
+      }
+    } else {
+      state.needs.energy = Math.max(8, (state.needs.energy ?? 88) - 1);
+      if (state.owned.pets.length > 0) {
+        state.needs.petCare = Math.max(10, state.needs.petCare - 1);
+        state.needs.petEnergy = Math.max(8, (state.needs.petEnergy ?? 88) - 1);
+      }
+      this._maybeTriggerRareSickness(state, 'tick');
     }
+
     this.saveState(state);
     return state;
+  },
+
+  sleepStep(isDreamBed = false) {
+    const state = this.getState();
+    const gain = isDreamBed ? 8 : 5;
+    state.needs.energy = Math.min(100, (state.needs.energy ?? 88) + gain);
+    if (state.owned.pets.length > 0) {
+      const hasPetBed = this.hasItem('petItems', 'pet_bed') || this.hasItem('petItems', 'pet_cushion');
+      state.needs.petEnergy = Math.min(100, (state.needs.petEnergy ?? 88) + (hasPetBed ? 9 : 6));
+    }
+    let recovered = false;
+    if (state.needs.energy >= 92 && state.health?.playerSick) {
+      state.health.playerSick = null;
+      recovered = true;
+    }
+    const sickIds = Object.keys(state.health?.sickPets || {});
+    if (state.needs.petEnergy >= 94 && sickIds.length > 0) {
+      state.health.sickPets = {};
+      recovered = true;
+    }
+    this.saveState(state);
+    return { state, recovered };
+  },
+
+  healPlayer() {
+    const state = this.getState();
+    if (!state.health?.playerSick) {
+      return { ok: false, reason: 'healthy', state };
+    }
+    const meds = state.inventory.medicine || 0;
+    if (meds <= 0) {
+      return { ok: false, reason: 'no_medicine', state };
+    }
+    state.inventory.medicine = meds - 1;
+    state.health.playerSick = null;
+    state.needs.energy = Math.min(100, (state.needs.energy ?? 80) + 22);
+    state.needs.hunger = Math.min(100, (state.needs.hunger ?? 70) + 10);
+    this.saveState(state);
+    const bonusCoins = 8;
+    ShopManager.addCoins(bonusCoins);
+    EarnMoneyManager.recordEvent({ care: 1 });
+    return { ok: true, bonusCoins, remaining: state.inventory.medicine, state };
+  },
+
+  healPet(petId = 'all') {
+    const state = this.getState();
+    const sickMap = state.health?.sickPets || {};
+    const sickIds = petId === 'all' ? Object.keys(sickMap) : (sickMap[petId] ? [petId] : []);
+    if (sickIds.length === 0) {
+      return { ok: false, reason: 'healthy', state };
+    }
+    const meds = state.inventory.petMedicine || 0;
+    if (meds <= 0) {
+      return { ok: false, reason: 'no_pet_medicine', state };
+    }
+    const targetId = sickIds[0];
+    state.inventory.petMedicine = meds - 1;
+    delete state.health.sickPets[targetId];
+    state.needs.petCare = Math.min(100, (state.needs.petCare ?? 80) + 24);
+    state.needs.petEnergy = Math.min(100, (state.needs.petEnergy ?? 80) + 18);
+    this.saveState(state);
+    const bonusCoins = 10;
+    ShopManager.addCoins(bonusCoins);
+    ShopManager.recordProgress(0, 1);
+    EarnMoneyManager.recordEvent({ care: 1 });
+    window.dispatchEvent(new CustomEvent('runner:pets-updated', { detail: { companionPets: state.companionPets } }));
+    const item = HOME_CATALOG.pets.find((p) => p.id === targetId);
+    return { ok: true, petId: targetId, item, bonusCoins, remaining: state.inventory.petMedicine, state };
   },
 
   eatFridgeSnack() {

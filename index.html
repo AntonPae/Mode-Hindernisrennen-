@@ -263,6 +263,8 @@
           <span class="level-pill">🏆 Level <strong id="homeLevelVal">1</strong></span>
           <span class="supply-pill">🧊 Kühlschrank: <strong id="foodCountVal">5</strong></span>
           <span class="supply-pill">🦴 Tierfutter: <strong id="petFoodCountVal">3</strong></span>
+          <span class="supply-pill">🩺 Medizin: <strong id="homeMedCountVal">4</strong></span>
+          <span id="homeHealthPill" class="supply-pill health-pill">❤️ Fit &amp; Gesund</span>
           <button type="button" id="openEarnHomeBtn" class="btn btn-earn">💰 Geld verdienen</button>
           <button type="button" id="homeMailboxBtn" class="btn btn-mailbox">📬 Briefkasten</button>
         </div>
@@ -310,8 +312,16 @@
               <div class="need-track"><div id="hungerBar" class="need-fill"></div></div>
             </div>
             <div class="need-card">
+              <div class="need-label"><span>😴 Energie (Schlaf)</span><strong id="energyPct">88%</strong></div>
+              <div class="need-track"><div id="energyBar" class="need-fill"></div></div>
+            </div>
+            <div class="need-card">
               <div class="need-label"><span>🐾 Tier-Wohl</span><strong id="petPct">80%</strong></div>
               <div class="need-track"><div id="petBar" class="need-fill"></div></div>
+            </div>
+            <div class="need-card">
+              <div class="need-label"><span>💤 Tier-Energie</span><strong id="petEnergyPct">88%</strong></div>
+              <div class="need-track"><div id="petEnergyBar" class="need-fill"></div></div>
             </div>
             <div class="need-card">
               <div class="need-label"><span>🌱 Garten-Wachstum</span><strong id="gardenPct">40%</strong></div>
@@ -322,8 +332,11 @@
           <div class="home-actions-bar">
             <button type="button" id="cookBtn" class="btn btn-care">🍳 Kochen starten</button>
             <button type="button" id="cleanBtn" class="btn btn-care">🧹 Zimmer putzen</button>
+            <button type="button" id="sitTableBtn" class="btn btn-care">🪑 Am Tisch sitzen</button>
+            <button type="button" id="sleepBtn" class="btn btn-care">😴 Schlafen gehen</button>
             <button type="button" id="feedPetsBtn" class="btn btn-care">🦴 Tiere füttern</button>
             <button type="button" id="petAnimalsBtn" class="btn btn-care">🤗 Streicheln</button>
+            <button type="button" id="healBtn" class="btn btn-care">🩺 Pflegen / Medizin</button>
             <button type="button" id="gardenBtn" class="btn btn-care">🚿 Garten gießen</button>
             <button type="button" id="homeLeashAllBtn" class="btn btn-care">🐕 Alle an Leine</button>
           </div>
