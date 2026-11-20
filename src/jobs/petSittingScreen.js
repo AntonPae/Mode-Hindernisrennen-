@@ -3,7 +3,10 @@ import { renderCharacter } from '../editor/characterRenderer.js';
 import { ShopManager } from '../editor/shopData.js';
 import { EarnMoneyManager } from '../economy/earnMoneyData.js';
 import { HomeManager } from '../home/homeData.js';
-import { PetFollowerController } from '../home/petCompanion.js';
+import { PetFollowerController, getPetMeta } from '../home/petCompanion.js';
+import { generatePersonReply, parsePetCommand } from '../social/socialData.js';
+import { drawCanvasSpeechBubble } from '../social/canvasSpeech.js';
+import { mountTalkPanel } from '../social/talkPanel.js';
 
 export const CARE_ACTIONS = [
   { id: 'feed', icon: '🦴', label: 'Füttern', short: 'Futter 🦴', color: '#f59e0b', light: '#fef3c7', reward: 7 },
@@ -156,8 +159,11 @@ export function setupPetSittingScreen(stateManager) {
     facing: 1,
     waypoints: [],
     pendingAction: null,
+    pendingCallback: null,
     pose: 'idle',
-    poseTimer: 0
+    poseTimer: 0,
+    speechText: '',
+    speechTimer: 0
   };
 
   const keys = { left: false, right: false, up: false, down: false };
@@ -171,6 +177,167 @@ export function setupPetSittingScreen(stateManager) {
   const waterDrops = [];
   let ballFx = null;
   const petFollowers = new PetFollowerController({ includeSitting: false });
+  const neighborSpeeches = new Map();
+
+  const NEIGHBOR_IDS = ['weber', 'frieda', 'kaya'];
+  const NEIGHBOR_ROLES = [
+    'Nachbar & Hundefreund',
+    'Nachbarin & Bäckerin',
+    'Tierliebhaberin & Gärtnerin'
+  ];
+  const NEIGHBOR_ICONS = ['🐕', '🏡', '🐱'];
+
+  function setNeighborSpeech(houseIdx, text, duration = 165) {
+    neighborSpeeches.set(NEIGHBOR_IDS[houseIdx], { text, timer: duration });
+  }
+
+  function applyCommandToNeighborPet(visit, parsed, cmdText) {
+    if (!visit) return;
+    if (parsed.command === 'spin') {
+      visit.trickTimer = 28;
+      visit.cuddleTimer = 26;
+    } else if (parsed.command === 'fetch') {
+      visit.fetchTimer = 64;
+      visit.command = 'follow';
+    } else if (parsed.command === 'praise') {
+      visit.cuddleTimer = 30;
+    } else {
+      visit.command = parsed.command;
+      if (parsed.command === 'stay') {
+        visit.stayX = visit.x;
+        visit.stayY = visit.y;
+      } else {
+        visit.stayX = null;
+        visit.stayY = null;
+      }
+    }
+    visit.speechText = parsed.speech || `${cmdText} 🐾`;
+    visit.speechTimer = 120;
+  }
+
+  function getPetSittingTalkTargets() {
+    const people = NEIGHBOR_HOUSES.map((h, idx) => ({
+      id: NEIGHBOR_IDS[idx],
+      type: 'person',
+      kind: 'neighbor',
+      houseIdx: idx,
+      name: h.neighborName,
+      icon: NEIGHBOR_ICONS[idx],
+      role: NEIGHBOR_ROLES[idx],
+      x: h.neighborX,
+      y: NEIGHBOR_STAND_Y
+    })).sort((a, b) => Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y));
+
+    const neighborPets = [];
+    houseSlots.forEach((v, idx) => {
+      if (v && v.state !== 'happy_leaving') {
+        const sp = v.info.species;
+        neighborPets.push({
+          id: `neighbor_pet_${idx}`,
+          type: 'pet',
+          isNeighborPet: true,
+          houseIdx: idx,
+          name: `${v.info.name} (Pflege)`,
+          rawName: v.info.name,
+          species: sp,
+          icon: sp === 'cat' ? '🐱' : sp === 'bunny' ? '🐰' : sp === 'parrot' ? '🦜' : sp === 'turtle' ? '🐢' : '🐕'
+        });
+      }
+    });
+
+    const ownIds = HomeManager.getCompanionPets();
+    const ownPets = ownIds.map((id) => {
+      const meta = getPetMeta(id);
+      return {
+        id,
+        type: 'pet',
+        name: meta.name,
+        rawName: meta.name,
+        species: meta.species,
+        icon: meta.icon
+      };
+    });
+
+    const allPets = [...neighborPets, ...ownPets];
+    const petTargets = allPets.length > 0
+      ? [{ id: 'all', type: 'pet', name: 'Alle Tiere', icon: '🐾' }, ...allPets]
+      : [];
+
+    return [...people, ...petTargets];
+  }
+
+  const talkPanel = mountTalkPanel({
+    mountEl: document.getElementById('petTalkMount'),
+    getTargets: getPetSittingTalkTargets,
+    onFocusTarget: (target) => {
+      if (target.type === 'person') {
+        const h = NEIGHBOR_HOUSES[target.houseIdx];
+        if (h) {
+          navigateToPoint(h.neighborX + 14, 266, null, () => {
+            player.facing = h.neighborX >= player.x ? 1 : -1;
+          });
+        }
+      }
+    },
+    onTalkPerson: (target, phrase) => {
+      const h = NEIGHBOR_HOUSES[target.houseIdx];
+      if (!h) return;
+      const runChat = () => {
+        player.facing = h.neighborX >= player.x ? 1 : -1;
+        player.speechText = phrase;
+        player.speechTimer = 135;
+        player.pose = 'pet';
+        player.poseTimer = 20;
+        const res = generatePersonReply(target, phrase, { scene: 'petsitting' });
+        setNeighborSpeech(target.houseIdx, res.bubble, 175);
+        talkPanel.refresh(`${target.icon} ${target.name}: „${res.reply}“`);
+        setStatus(`💬 ${target.name}: „${res.reply}“`);
+      };
+      if (Math.hypot(player.x - h.neighborX, player.y - NEIGHBOR_STAND_Y) > 130) {
+        navigateToPoint(h.neighborX + 14, 266, null, runChat);
+      } else {
+        runChat();
+      }
+    },
+    onCommandPet: (target, payload) => {
+      const firstFollower = petFollowers.followers[0];
+      const fallbackSpecies = target.species || (firstFollower ? getPetMeta(firstFollower.petRef).species : 'dog');
+      const meta = {
+        name: target.rawName || target.name,
+        species: fallbackSpecies,
+        say: getPetMeta(fallbackSpecies).say
+      };
+      const parsed = payload.commandId
+        ? {
+            command: payload.commandId,
+            speech: payload.commandId === 'praise' ? `❤️ ${meta.say}` : `${payload.text} 🐾`,
+            reply: `${target.name} führt „${payload.text}“ sofort aus!`
+          }
+        : parsePetCommand(payload.text, meta);
+
+      player.speechText = `${target.id === 'all' ? 'Alle' : meta.name}: ${payload.text}`;
+      player.speechTimer = 115;
+      player.pose = 'pet';
+      player.poseTimer = 22;
+
+      if (target.id === 'all') {
+        petFollowers.issueCommand('all', parsed.command, parsed.speech, { x: player.x, y: player.y });
+        houseSlots.forEach((v) => {
+          if (v && v.state !== 'happy_leaving') {
+            applyCommandToNeighborPet(v, parsed, payload.text);
+          }
+        });
+      } else if (target.isNeighborPet) {
+        const visit = houseSlots[target.houseIdx];
+        applyCommandToNeighborPet(visit, parsed, payload.text);
+      } else {
+        petFollowers.issueCommand(target.id, parsed.command, parsed.speech, { x: player.x, y: player.y });
+      }
+
+      talkPanel.refresh(`🐾 ${parsed.reply}`);
+      setStatus(parsed.reply);
+    }
+  });
 
   function showToast(msg, type = 'info') {
     if (!toastEl) return;
@@ -289,7 +456,14 @@ export function setupPetSittingScreen(stateManager) {
       patience: 100,
       bowlTimer: 0,
       bowlType: null,
-      cuddleTimer: 0
+      cuddleTimer: 0,
+      command: 'follow',
+      stayX: null,
+      stayY: null,
+      trickTimer: 0,
+      fetchTimer: 0,
+      speechText: '',
+      speechTimer: 0
     };
   }
 
@@ -323,15 +497,19 @@ export function setupPetSittingScreen(stateManager) {
     player.facing = 1;
     player.waypoints = [];
     player.pendingAction = null;
+    player.pendingCallback = null;
     player.pose = 'idle';
     player.poseTimer = 0;
+    player.speechText = '';
+    player.speechTimer = 0;
+    neighborSpeeches.clear();
     petFollowers.reset(player.x, player.y + 4);
 
     const saved = HomeManager.getPetSittingSlots();
     if (saved && saved.some((v) => v && (v.state === 'caring' || v.state === 'offering'))) {
       for (let i = 0; i < 3; i++) {
         const s = saved[i];
-        houseSlots[i] = s ? { ...s } : null;
+        houseSlots[i] = s ? { command: 'follow', stayX: null, stayY: null, trickTimer: 0, fetchTimer: 0, speechText: '', speechTimer: 0, ...s } : null;
         houseCooldowns[i] = s ? 0 : 220 + i * 110;
         if (houseSlots[i] && houseSlots[i].state === 'caring' && houseSlots[i].onLeash) {
           houseSlots[i].x = player.x - 32 - i * 24;
@@ -355,7 +533,8 @@ export function setupPetSittingScreen(stateManager) {
     updateHUD();
     renderHouseTabs();
     renderCareButtons();
-    setStatus('Hol Pflegehunde bei den Nachbarn ab – du kannst sie an der Leine ÜBERALLhin (Haus, Stadt, Café, Rennen & Events) mitnehmen!');
+    talkPanel.refresh();
+    setStatus('Hol Pflegehunde bei den Nachbarn ab, redet mit allen Nachbarn oder gebt den Tieren Anweisungen!');
   }
 
   function updateHUD() {
@@ -486,6 +665,7 @@ export function setupPetSittingScreen(stateManager) {
     const h = NEIGHBOR_HOUSES[emptyIdx];
     syncSittingSlots();
     updateHUD();
+    talkPanel.refresh();
     showToast(`👋 ${h.neighborName} kommt mit ${houseSlots[emptyIdx].info.name} vor die Tür!`, 'success');
     setStatus(`${h.neighborName} wartet jetzt vor dem Haus mit ${houseSlots[emptyIdx].info.name}!`);
   }
@@ -610,6 +790,7 @@ export function setupPetSittingScreen(stateManager) {
 
     syncSittingSlots();
     updateHUD();
+    talkPanel.refresh();
 
     if (grandTotal === 0) {
       showToast('Gerade warten keine Tiere – tippe auf „🔔 Nachbar rufen“!', 'info');
@@ -739,7 +920,7 @@ export function setupPetSittingScreen(stateManager) {
     });
   }
 
-  function navigateToPoint(tx, ty, pendingAction = null) {
+  function navigateToPoint(tx, ty, pendingAction = null, pendingCallback = null) {
     const dest = snapToNeighborhoodPath(tx, ty);
     const wps = [];
     const curX = player.x;
@@ -792,6 +973,7 @@ export function setupPetSittingScreen(stateManager) {
           addWp(dest.x, dest.y);
           player.waypoints = wps;
           player.pendingAction = pendingAction;
+          player.pendingCallback = pendingCallback;
           return;
         }
         const hubY = destOnLower ? 412 : 270;
@@ -823,6 +1005,7 @@ export function setupPetSittingScreen(stateManager) {
     if (wps.length === 0) addWp(dest.x, dest.y);
     player.waypoints = wps;
     player.pendingAction = pendingAction;
+    player.pendingCallback = pendingCallback;
   }
 
   function acceptNeighborJob(houseIdx, autoLeash = true) {
@@ -848,6 +1031,7 @@ export function setupPetSittingScreen(stateManager) {
     visit.cuddleTimer = 45;
     syncSittingSlots();
     updateHUD();
+    talkPanel.refresh();
 
     const firstNeed = CARE_BY_ID[visit.need];
     if (autoLeash) {
@@ -907,6 +1091,7 @@ export function setupPetSittingScreen(stateManager) {
 
     syncSittingSlots();
     updateHUD();
+    talkPanel.refresh();
     if (finishedVisit) {
       showToast(`🎉 ${house.neighborName} sagt Danke für ${visit.info.name}! +${totalEarned} 🪙 Trinkgeld!`, 'success');
       setStatus(`Super gemacht! Lauf frei weiter oder schau bei den anderen Häusern vorbei.`);
@@ -971,11 +1156,12 @@ export function setupPetSittingScreen(stateManager) {
     const cx = (clientX - rect.left) * scaleX;
     const cy = (clientY - rect.top) * scaleY;
 
-    // 0. Tapping one of your own companion pets cuddles them right here!
+    // 0. Tapping one of your own companion pets cuddles them & selects them for commands!
     const tappedPet = petFollowers.handleTap(cx, cy);
     if (tappedPet.hit) {
       player.pose = 'pet';
       player.poseTimer = 22;
+      talkPanel.selectTarget(tappedPet.petId, `🐾 ${tappedPet.meta.name} wedelt fröhlich – gib gern eine Anweisung!`);
       showToast(`❤️ ${tappedPet.meta.name} wedelt fröhlich und freut sich!`, 'success');
       return;
     }
@@ -990,22 +1176,43 @@ export function setupPetSittingScreen(stateManager) {
     for (let i = 0; i < NEIGHBOR_HOUSES.length; i++) {
       const h = NEIGHBOR_HOUSES[i];
       const visit = houseSlots[i];
-      if (!visit || visit.state === 'happy_leaving') continue;
-
       const hitNeighbor = Math.hypot(cx - h.neighborX, cy - (NEIGHBOR_STAND_Y - 36)) <= 44;
-      const hitPet = Math.hypot(cx - visit.x, cy - (visit.y - 16)) <= 46;
-      const hitBubble = visit.state === 'offering'
+      const hitPet = visit && visit.state !== 'happy_leaving' && Math.hypot(cx - visit.x, cy - (visit.y - 16)) <= 46;
+      const hitBubble = visit && visit.state === 'offering'
         ? (Math.abs(cx - (h.neighborX + 12)) <= 80 && cy >= 80 && cy <= 165)
-        : (visit.state === 'caring' && Math.abs(cx - (visit.x + 8)) <= 84 && cy >= visit.y - 122 && cy <= visit.y - 45);
+        : (visit && visit.state === 'caring' && Math.abs(cx - (visit.x + 8)) <= 84 && cy >= visit.y - 122 && cy <= visit.y - 45);
 
       if (hitNeighbor || hitPet || hitBubble) {
         selectedHouseIdx = i;
         updateHUD();
-        if (visit.state === 'offering') {
+        if (visit && visit.state === 'offering') {
+          talkPanel.selectTarget(NEIGHBOR_IDS[i]);
           navigateToPoint(h.neighborX + 14, 266, { type: 'accept', houseIdx: i });
           return;
         }
-        if (visit.state === 'caring') {
+        if (hitNeighbor) {
+          const targetObj = {
+            id: NEIGHBOR_IDS[i],
+            type: 'person',
+            kind: 'neighbor',
+            houseIdx: i,
+            name: h.neighborName,
+            icon: NEIGHBOR_ICONS[i],
+            role: NEIGHBOR_ROLES[i]
+          };
+          navigateToPoint(h.neighborX + 14, 266, null, () => {
+            player.facing = h.neighborX >= player.x ? 1 : -1;
+            player.speechText = 'Hallo! 😊';
+            player.speechTimer = 110;
+            const res = generatePersonReply(targetObj, 'Hallo!', { scene: 'petsitting' });
+            setNeighborSpeech(i, res.bubble, 175);
+            talkPanel.selectTarget(NEIGHBOR_IDS[i], `${NEIGHBOR_ICONS[i]} ${h.neighborName}: „${res.reply}“`);
+            setStatus(`💬 ${h.neighborName}: „${res.reply}“`);
+          });
+          return;
+        }
+        if (visit && visit.state === 'caring') {
+          talkPanel.selectTarget(`neighbor_pet_${i}`);
           if (visit.onLeash && visit.walkReady) {
             finishLeashWalk(i);
             return;
@@ -1057,6 +1264,7 @@ export function setupPetSittingScreen(stateManager) {
       holdPad[dir] = true;
       player.waypoints = [];
       player.pendingAction = null;
+      player.pendingCallback = null;
     };
     const off = () => {
       holdPad[dir] = false;
@@ -1117,6 +1325,11 @@ export function setupPetSittingScreen(stateManager) {
   function updateSimulation() {
     const prevX = player.x;
     const prevY = player.y;
+    if (player.speechTimer > 0) player.speechTimer--;
+    neighborSpeeches.forEach((sp, key) => {
+      sp.timer--;
+      if (sp.timer <= 0) neighborSpeeches.delete(key);
+    });
 
     let moveX = 0;
     let moveY = 0;
@@ -1163,14 +1376,21 @@ export function setupPetSittingScreen(stateManager) {
           player.y = wp.y;
         }
         player.waypoints.shift();
-        if (player.waypoints.length === 0 && player.pendingAction) {
-          const act = player.pendingAction;
-          player.pendingAction = null;
-          if (act.type === 'go_home') stateManager.setState('HOME');
-          else if (act.type === 'accept') acceptNeighborJob(act.houseIdx, false);
-          else if (act.type === 'accept_and_leash') acceptNeighborJob(act.houseIdx, true);
-          else if (act.type === 'care') performCareAtHouse(act.houseIdx, act.actionId);
-          else if (act.type === 'smart_care') performCareAtHouse(act.houseIdx, null);
+        if (player.waypoints.length === 0) {
+          if (player.pendingAction) {
+            const act = player.pendingAction;
+            player.pendingAction = null;
+            if (act.type === 'go_home') stateManager.setState('HOME');
+            else if (act.type === 'accept') acceptNeighborJob(act.houseIdx, false);
+            else if (act.type === 'accept_and_leash') acceptNeighborJob(act.houseIdx, true);
+            else if (act.type === 'care') performCareAtHouse(act.houseIdx, act.actionId);
+            else if (act.type === 'smart_care') performCareAtHouse(act.houseIdx, null);
+          }
+          if (player.pendingCallback) {
+            const cb = player.pendingCallback;
+            player.pendingCallback = null;
+            cb();
+          }
         }
       } else {
         if (Math.abs(dx) > 1) player.facing = dx > 0 ? 1 : -1;
@@ -1208,21 +1428,45 @@ export function setupPetSittingScreen(stateManager) {
       updateHUD();
     }
 
-    // Update ALL leashed neighbor animals together in a neat 2-column staggered pack!
+    // Update ALL leashed neighbor animals together in a neat 2-column staggered pack (respecting pet commands!)
     const leashed = getLeashedVisits();
     let hudDirty = false;
     leashed.forEach((p, idx) => {
-      const row = Math.floor(idx / 2);
-      const col = idx % 2;
-      const slotDist = 36 + row * 28;
-      const sideOffset = (col === 0 ? 1 : -1) * (10 + (row % 2) * 6);
-      const rawX = Math.max(28, Math.min(832, player.x - player.facing * slotDist));
-      const rawY = Math.max(SIDEWALK_MIN_Y, Math.min(LOWER_PARK_MAX_Y, player.y + sideOffset));
-      const snappedPet = isOnNeighborhoodPath(rawX, rawY) ? { x: rawX, y: rawY } : { x: player.x - player.facing * 24, y: player.y + 4 };
-      p.x += (snappedPet.x - p.x) * 0.16;
-      p.y += (snappedPet.y - p.y) * 0.16;
+      if (p.trickTimer > 0) p.trickTimer--;
+      if (p.speechTimer > 0) p.speechTimer--;
+      if (p.fetchTimer > 0) {
+        p.fetchTimer--;
+        const fx = p.fetchTimer > 28 ? player.x + player.facing * 72 : player.x - player.facing * 32;
+        const fy = Math.max(SIDEWALK_MIN_Y, Math.min(LOWER_PARK_MAX_Y, player.y + 4));
+        p.x += (fx - p.x) * 0.22;
+        p.y += (fy - p.y) * 0.22;
+      } else if (p.command === 'stay') {
+        if (p.stayX == null || p.stayY == null) {
+          p.stayX = p.x;
+          p.stayY = p.y;
+        }
+        p.x += (p.stayX - p.x) * 0.16;
+        p.y += (p.stayY - p.y) * 0.16;
+      } else if (p.command === 'sit' || p.command === 'rest') {
+        // Sit or rest calmly in place unless too far away
+        const distToPlayer = Math.hypot(player.x - p.x, player.y - p.y);
+        if (distToPlayer > 72) {
+          p.x += (player.x - player.facing * 38 - p.x) * 0.14;
+          p.y += (player.y + 6 - p.y) * 0.14;
+        }
+      } else {
+        const row = Math.floor(idx / 2);
+        const col = idx % 2;
+        const slotDist = 36 + row * 28;
+        const sideOffset = (col === 0 ? 1 : -1) * (10 + (row % 2) * 6);
+        const rawX = Math.max(28, Math.min(832, player.x - player.facing * slotDist));
+        const rawY = Math.max(SIDEWALK_MIN_Y, Math.min(LOWER_PARK_MAX_Y, player.y + sideOffset));
+        const snappedPet = isOnNeighborhoodPath(rawX, rawY) ? { x: rawX, y: rawY } : { x: player.x - player.facing * 24, y: player.y + 4 };
+        p.x += (snappedPet.x - p.x) * 0.16;
+        p.y += (snappedPet.y - p.y) * 0.16;
+      }
 
-      if (movedStep > 0.4) {
+      if (movedStep > 0.4 && p.command !== 'stay' && p.command !== 'sit' && p.command !== 'rest') {
         const beforeReady = p.walkReady;
         p.leashDistance += movedStep;
         if (p.leashDistance >= WALK_GOAL_DISTANCE) {
@@ -1238,11 +1482,16 @@ export function setupPetSittingScreen(stateManager) {
     });
     if (hudDirty) updateHUD();
 
-    // Update bowl & cuddle timers cleanly on ground
+    // Update bowl, cuddle, command & speech timers cleanly on ground
     houseSlots.forEach((v) => {
       if (!v) return;
       if (v.bowlTimer > 0) v.bowlTimer--;
       if (v.cuddleTimer > 0) v.cuddleTimer--;
+      if (!v.onLeash) {
+        if (v.trickTimer > 0) v.trickTimer--;
+        if (v.speechTimer > 0) v.speechTimer--;
+        if (v.fetchTimer > 0) v.fetchTimer--;
+      }
     });
 
     // Calm neighbor pacing & occasional quiet break so neighbors aren't nonstop waiting
@@ -1266,6 +1515,7 @@ export function setupPetSittingScreen(stateManager) {
             houseSlots[i] = createNeighborVisit(i, i === 0 || Math.random() < 0.55);
             syncSittingSlots();
             updateHUD();
+            talkPanel.refresh();
           } else if (houseCooldowns[i] <= 0) {
             houseCooldowns[i] = 150;
           }
@@ -1280,6 +1530,7 @@ export function setupPetSittingScreen(stateManager) {
             houseCooldowns[i] = 240 + Math.floor(Math.random() * 200);
             syncSittingSlots();
             updateHUD();
+            talkPanel.refresh();
           }
         }
       }
@@ -1455,7 +1706,15 @@ export function setupPetSittingScreen(stateManager) {
     });
     ctx.restore();
 
-    if (isOffering) {
+    const activeTalk = neighborSpeeches.get(NEIGHBOR_IDS[h.id]);
+    if (activeTalk) {
+      drawCanvasSpeechBubble(ctx, nx, ny - (isOffering ? 198 : 132), activeTalk.text, {
+        borderColor: '#0ea5e9',
+        textColor: '#0f172a',
+        maxWidth: 185,
+        canvasWidth: 860
+      });
+    } else if (isOffering) {
       const waveCoin = Math.sin(animFrame * 0.16 + h.id) * 4;
       ctx.fillStyle = '#fbbf24';
       ctx.beginPath();
@@ -1517,13 +1776,18 @@ export function setupPetSittingScreen(stateManager) {
   }
 
   function drawNeighborPet(p) {
-    const bob = p.onLeash
+    const isSitPose = p.command === 'sit' || p.command === 'stay';
+    const isRestPose = p.command === 'rest';
+    const spinHop = p.trickTimer > 0 ? Math.abs(Math.sin(p.trickTimer * 0.28)) * 12 : 0;
+    const bob = p.onLeash && !isSitPose && !isRestPose
       ? Math.abs(Math.sin(animFrame * 0.28 + p.houseIdx)) * 4
       : p.cuddleTimer > 0
         ? Math.abs(Math.sin(animFrame * 0.35 + p.houseIdx)) * 5
-        : Math.sin(animFrame * 0.1 + p.houseIdx) * 1.5;
+        : isRestPose
+          ? Math.sin(animFrame * 0.05 + p.houseIdx) * 0.5
+          : Math.sin(animFrame * 0.1 + p.houseIdx) * 1.5;
     const px = p.x;
-    const py = p.y - bob;
+    const py = p.y - bob - spinHop + (isRestPose ? 4 : isSitPose ? 1.5 : 0);
     const info = p.info;
 
     // Grounded realistic food or water bowl right beside pet!
@@ -1556,6 +1820,13 @@ export function setupPetSittingScreen(stateManager) {
 
     ctx.save();
     ctx.translate(px, py);
+    if (p.trickTimer > 0) {
+      ctx.rotate((1 - p.trickTimer / 28) * Math.PI * 2);
+    } else if (isSitPose) {
+      ctx.rotate(-0.14);
+    } else if (isRestPose) {
+      ctx.scale(1.06, 0.78);
+    }
 
     // Shadow
     ctx.fillStyle = 'rgba(15, 23, 42, 0.16)';
@@ -1582,11 +1853,13 @@ export function setupPetSittingScreen(stateManager) {
     ctx.fill();
 
     // Legs
-    ctx.fillStyle = info.body;
-    ctx.beginPath();
-    ctx.roundRect(-11, -6, 6, 10, [3]);
-    ctx.roundRect(6, -6, 6, 10, [3]);
-    ctx.fill();
+    if (!isRestPose) {
+      ctx.fillStyle = info.body;
+      ctx.beginPath();
+      ctx.roundRect(-11, -6, 6, isSitPose ? 7 : 10, [3]);
+      ctx.roundRect(6, -6, 6, 10, [3]);
+      ctx.fill();
+    }
 
     // Collar
     ctx.strokeStyle = info.collar;
@@ -1623,14 +1896,22 @@ export function setupPetSittingScreen(stateManager) {
     }
 
     // Eye & Nose
-    ctx.fillStyle = '#1e1b4b';
-    ctx.beginPath();
-    ctx.arc(19, -26, 2.4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(19.6, -26.8, 0.9, 0, Math.PI * 2);
-    ctx.fill();
+    if (isRestPose) {
+      ctx.strokeStyle = '#1e1b4b';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.arc(19, -26, 2.4, 0.1, Math.PI - 0.1);
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = '#1e1b4b';
+      ctx.beginPath();
+      ctx.arc(19, -26, 2.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(19.6, -26.8, 0.9, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     ctx.fillStyle = '#1e1b4b';
     ctx.beginPath();
@@ -1812,15 +2093,23 @@ export function setupPetSittingScreen(stateManager) {
       drawNeighborPerson(h, houseSlots[idx]);
     });
 
-    // 4. Draw Neighbor Pets + Speech Bubbles / Leash Progress
+    // 4. Draw Neighbor Pets + Command/Speech Bubbles / Leash Progress
     houseSlots.forEach((p) => {
       if (!p) return;
       drawNeighborPet(p);
-      if (p.onLeash) {
+      if (p.speechTimer > 0 && p.speechText) {
+        drawCanvasSpeechBubble(ctx, p.x, p.y - 54, p.speechText, {
+          borderColor: '#ec4899',
+          textColor: '#be185d',
+          maxWidth: 165,
+          canvasWidth: w
+        });
+      } else if (p.onLeash) {
         const pct = Math.min(100, Math.round((p.leashDistance / WALK_GOAL_DISTANCE) * 100));
         ctx.save();
         ctx.font = '800 10px "Plus Jakarta Sans", sans-serif';
-        const label = p.walkReady ? `✨ ${p.info.name} fertig!` : `🐕 Leine ${pct}%`;
+        const cmdSuffix = p.command === 'sit' ? ' · 🪑 Sitz' : p.command === 'stay' ? ' · 🐾 Bleibt' : p.command === 'rest' ? ' · 💤 Schlaf' : '';
+        const label = p.walkReady ? `✨ ${p.info.name} fertig!${cmdSuffix}` : `🐕 Leine ${pct}%${cmdSuffix}`;
         const lw = ctx.measureText(label).width + 16;
         ctx.fillStyle = p.walkReady ? '#ecfdf5' : '#f5f3ff';
         ctx.strokeStyle = p.walkReady ? '#10b981' : '#8b5cf6';
@@ -1876,6 +2165,15 @@ export function setupPetSittingScreen(stateManager) {
       facing: player.facing
     });
     ctx.restore();
+
+    if (player.speechTimer > 0 && player.speechText) {
+      drawCanvasSpeechBubble(ctx, player.x, player.y - 122, player.speechText, {
+        borderColor: '#0ea5e9',
+        textColor: '#0369a1',
+        maxWidth: 185,
+        canvasWidth: w
+      });
+    }
 
     if (ballFx) {
       ctx.save();

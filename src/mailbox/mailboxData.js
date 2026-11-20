@@ -11,6 +11,24 @@ export const MAIL_CONTACTS = [
   { id: 'leo', name: 'Leo', icon: '🏃', role: 'Lauf-Freund im Stadion' }
 ];
 
+const MET_FRIEND_PROFILES = [
+  { id: 'mila', name: 'Mila', icon: '📸', role: 'Tierfotografin (Neue Bekanntschaft)' },
+  { id: 'tom', name: 'Tom', icon: '🛹', role: 'Gärtner & Skater (Neue Bekanntschaft)' },
+  { id: 'lina', name: 'Lina', icon: '🎨', role: 'Malerin & Buchfreundin (Neue Bekanntschaft)' }
+];
+
+export function getAllMailContacts() {
+  let metMap = {};
+  try {
+    const saved = JSON.parse(localStorage.getItem('runner_social_state') || '{}');
+    metMap = saved.acquaintances || {};
+  } catch {
+    metMap = {};
+  }
+  const unlocked = MET_FRIEND_PROFILES.filter((p) => (metMap[p.id]?.stage || 0) >= 1);
+  return [...MAIL_CONTACTS, ...unlocked];
+}
+
 export const INVITE_EVENT_TYPES = [
   { id: 'treasure_hunt', icon: '🗺️', label: 'Schatzsuche am Meer', defaultMsg: 'Ich habe eine geheimnisvolle Schatzkarte gefunden! Lass uns zusammen echte Schätze ausgraben!', activity: { kind: 'treasure_hunt', theme: 'treasure_island', title: 'Schatzsuche auf der Insel', reward: 34 } },
   { id: 'band_jam', icon: '🎶', label: 'Musik- & Band-Konzert', defaultMsg: 'Wir gründen heute eine Band auf der Bühne! Schnapp dir ein Instrument und spiel mit!', activity: { kind: 'band_jam', theme: 'stage', title: 'Traumstadt-Band-Konzert', reward: 34 } },
@@ -265,7 +283,9 @@ function getTodayKey() {
 }
 
 function getContact(id) {
-  return MAIL_CONTACTS.find((c) => c.id === id) || MAIL_CONTACTS[0];
+  return getAllMailContacts().find((c) => c.id === id)
+    || MET_FRIEND_PROFILES.find((c) => c.id === id)
+    || MAIL_CONTACTS[0];
 }
 
 function getDefaultMailboxState() {
@@ -403,6 +423,41 @@ export const MailboxManager = {
     const mail = createMailFromTemplate(picked, todayKey);
     state.inbox.unshift(mail);
     state.nextTemplateIdx = (state.nextTemplateIdx + 1) % LETTER_TEMPLATES.length;
+    if (state.inbox.length > 40) state.inbox = state.inbox.slice(0, 40);
+    this.saveState(state);
+    return { ok: true, mail };
+  },
+
+  deliverCustomMail(entry) {
+    if (!entry) return { ok: false };
+    const state = this.getState();
+    const todayKey = getTodayKey();
+    if (entry.id && state.inbox.some((m) => m.id === entry.id)) {
+      return { ok: false, duplicate: true };
+    }
+    const mail = {
+      id: entry.id || `mail_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+      dateKey: todayKey,
+      timestamp: Date.now(),
+      category: entry.category || 'friend',
+      categoryLabel: entry.categoryLabel || '💌 Brief',
+      senderId: entry.senderId || 'mila',
+      senderName: entry.senderName || 'Neue Freundin',
+      senderIcon: entry.senderIcon || '🌟',
+      title: entry.title || 'Hallo aus der Traumstadt!',
+      body: entry.body || '',
+      eventTime: entry.eventTime || '',
+      isInvitation: !!entry.isInvitation,
+      rsvpStatus: entry.isInvitation ? 'pending' : null,
+      rewardCoins: entry.rewardCoins || 15,
+      giftSupply: entry.giftSupply || null,
+      giftClaimed: false,
+      targetState: entry.targetState || null,
+      targetPayload: entry.targetPayload || null,
+      activity: entry.activity || null,
+      read: false
+    };
+    state.inbox.unshift(mail);
     if (state.inbox.length > 40) state.inbox = state.inbox.slice(0, 40);
     this.saveState(state);
     return { ok: true, mail };
@@ -547,7 +602,8 @@ export const MailboxManager = {
 
   sendInvitation({ recipientId, eventTypeId, whenLabel, note }) {
     const evt = INVITE_EVENT_TYPES.find((e) => e.id === eventTypeId) || INVITE_EVENT_TYPES[0];
-    const contacts = recipientId === 'all' ? MAIL_CONTACTS : [getContact(recipientId)];
+    const allContacts = getAllMailContacts();
+    const contacts = recipientId === 'all' ? allContacts : [getContact(recipientId)];
     const state = this.getState();
     const todayKey = getTodayKey();
     const cleanNote = (note || '').trim() || evt.defaultMsg;

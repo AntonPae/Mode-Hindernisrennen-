@@ -2,7 +2,11 @@ import { PlayerConfig } from '../editor/characterData.js';
 import { renderCharacter } from '../editor/characterRenderer.js';
 import { ShopManager } from '../editor/shopData.js';
 import { EarnMoneyManager } from '../economy/earnMoneyData.js';
-import { PetFollowerController } from '../home/petCompanion.js';
+import { HomeManager } from '../home/homeData.js';
+import { PetFollowerController, getPetMeta } from '../home/petCompanion.js';
+import { generatePersonReply, parsePetCommand } from '../social/socialData.js';
+import { drawCanvasSpeechBubble } from '../social/canvasSpeech.js';
+import { mountTalkPanel } from '../social/talkPanel.js';
 
 export const CAFE_STATIONS = [
   { id: 'ice', label: '🍦 Eis-Truhe', x: 112, color: '#f43f5e', light: '#ffe4e6' },
@@ -140,8 +144,11 @@ export function setupIceCreamScreen(stateManager) {
     facing: 1,
     waypoints: [],
     pendingAction: null, // { type: 'pickup', itemId } | { type: 'pickup_station', stationId } | { type: 'serve', tableIdx } | { type: 'trash' }
+    pendingCallback: null,
     pose: 'idle',
-    poseTimer: 0
+    poseTimer: 0,
+    speechText: '',
+    speechTimer: 0
   };
 
   const keys = { left: false, right: false, up: false, down: false };
@@ -154,6 +161,100 @@ export function setupIceCreamScreen(stateManager) {
   let guestsSinceBreak = 0;
   const fxParticles = [];
   const petFollowers = new PetFollowerController();
+
+  function getCafeTalkTargets() {
+    const guests = [];
+    tables.forEach((c, idx) => {
+      if (!c) return;
+      guests.push({
+        id: `guest_${idx}_${c.preset.name}`,
+        type: 'person',
+        kind: 'guest',
+        tableIdx: idx,
+        name: `${c.preset.name} (Tisch ${idx + 1})`,
+        rawName: c.preset.name,
+        icon: '🍨',
+        role: `Café-Gast an Tisch ${idx + 1}`
+      });
+    });
+
+    const companionIds = HomeManager.getCompanionPets();
+    const sitPets = HomeManager.getSittingCompanions();
+    const petTargets = [];
+    if (companionIds.length + sitPets.length > 0) {
+      petTargets.push({ id: 'all', type: 'pet', name: 'Alle Tiere', icon: '🐾' });
+      companionIds.forEach((id) => {
+        const meta = getPetMeta(id);
+        petTargets.push({ id, type: 'pet', name: meta.name, icon: meta.icon });
+      });
+      sitPets.forEach((sit) => {
+        const meta = getPetMeta(sit);
+        petTargets.push({ id: sit.id, type: 'pet', name: meta.name, icon: meta.icon });
+      });
+    }
+    return [...guests, ...petTargets];
+  }
+
+  const talkPanel = mountTalkPanel({
+    mountEl: document.getElementById('iceTalkMount'),
+    getTargets: getCafeTalkTargets,
+    onFocusTarget: (target) => {
+      if (target.type === 'person' && typeof target.tableIdx === 'number') {
+        const tb = TABLE_POS[target.tableIdx];
+        if (tb) {
+          navigateToPoint(tb.standX, tb.standY, null, () => {
+            player.facing = tb.guestX >= player.x ? 1 : -1;
+          });
+        }
+      }
+    },
+    onTalkPerson: (target, phrase) => {
+      const idx = target.tableIdx;
+      const c = tables[idx];
+      const tb = TABLE_POS[idx];
+      if (!c || !tb) {
+        talkPanel.refresh('💬 Dieser Gast ist gerade gegangen – lade gern einen neuen Gast ein!');
+        return;
+      }
+      const runChat = () => {
+        player.facing = tb.guestX >= player.x ? 1 : -1;
+        player.speechText = phrase;
+        player.speechTimer = 135;
+        player.pose = 'pet';
+        player.poseTimer = 20;
+        const res = generatePersonReply({ id: target.rawName, name: target.rawName, kind: 'guest' }, phrase, { scene: 'icecream' });
+        c.chatText = res.bubble;
+        c.chatTimer = 185;
+        talkPanel.refresh(`🍨 ${target.rawName}: „${res.reply}“`);
+        setStatus(`💬 ${target.rawName}: „${res.reply}“`);
+      };
+      if (player.y < 205 || Math.hypot(player.x - tb.guestX, player.y - tb.y) > 140) {
+        navigateToPoint(tb.standX, tb.standY, null, runChat);
+      } else {
+        runChat();
+      }
+    },
+    onCommandPet: (target, payload) => {
+      const firstPet = petFollowers.followers[0];
+      const meta = getPetMeta(target.id === 'all' ? (firstPet?.petRef || 'dog') : (firstPet?.petRef || target.id));
+      const parsed = payload.commandId
+        ? {
+            command: payload.commandId,
+            speech: payload.commandId === 'praise' ? `❤️ ${meta.say}` : `${payload.text} 🐾`,
+            reply: `${target.name} führt „${payload.text}“ sofort aus!`
+          }
+        : parsePetCommand(payload.text, meta);
+
+      player.speechText = `${target.id === 'all' ? 'Alle' : target.name}: ${payload.text}`;
+      player.speechTimer = 115;
+      player.pose = 'pet';
+      player.poseTimer = 22;
+
+      petFollowers.issueCommand(target.id, parsed.command, parsed.speech, { x: player.x, y: player.y });
+      talkPanel.refresh(`🐾 ${parsed.reply}`);
+      setStatus(parsed.reply);
+    }
+  });
 
   function showToast(msg, type = 'info') {
     if (!toastEl) return;
@@ -231,7 +332,9 @@ export function setupIceCreamScreen(stateManager) {
       state: 'entering', // 'entering' | 'waiting' | 'eating_leaving'
       yOffset: 55,
       happyTimer: 0,
-      servedItems: null
+      servedItems: null,
+      chatText: '',
+      chatTimer: 0
     };
   }
 
@@ -245,8 +348,11 @@ export function setupIceCreamScreen(stateManager) {
     player.y = AISLE_Y;
     player.waypoints = [];
     player.pendingAction = null;
+    player.pendingCallback = null;
     player.pose = 'idle';
     player.poseTimer = 0;
+    player.speechText = '';
+    player.speechTimer = 0;
     petFollowers.reset(player.x, player.y + 4);
 
     // Start calmly with 1 guest instead of a packed restaurant; more arrive gradually!
@@ -262,7 +368,8 @@ export function setupIceCreamScreen(stateManager) {
     updateHUD();
     renderStationTabs();
     renderMenuButtons();
-    setStatus('Gemütlicher Start im Café! Hol Bestellungen hinter der Theke – nicht immer stehen überall Gäste.');
+    talkPanel.refresh();
+    setStatus('Gemütlicher Start im Café! Redet mit den Gästen an den Tischen oder gebt euren Tieren Anweisungen!');
   }
 
   function updateHUD() {
@@ -347,7 +454,7 @@ export function setupIceCreamScreen(stateManager) {
   }
 
   // Pathfinding around the counter (`COUNTER_LEFT..COUNTER_RIGHT`, `y: 178..224`) and dining tables
-  function navigateToPoint(tx, ty, pendingAction = null) {
+  function navigateToPoint(tx, ty, pendingAction = null, pendingCallback = null) {
     let clampedX = Math.max(46, Math.min(814, tx));
     let clampedY = Math.max(158, Math.min(445, ty));
     if (insideIceObstacle(clampedX, clampedY)) {
@@ -388,6 +495,7 @@ export function setupIceCreamScreen(stateManager) {
     waypoints.push({ x: clampedX, y: clampedY });
     player.waypoints = waypoints;
     player.pendingAction = pendingAction;
+    player.pendingCallback = pendingCallback;
   }
 
   function addItemToTray(itemId) {
@@ -498,6 +606,7 @@ export function setupIceCreamScreen(stateManager) {
     quietPauseTimer = 0;
     tables[emptyIdx] = createCustomer(emptyIdx);
     tableTimers[emptyIdx] = 0;
+    talkPanel.refresh();
     setStatus(`🔔 Ein neuer Gast setzt sich an Tisch ${emptyIdx + 1}!`);
   }
 
@@ -514,6 +623,7 @@ export function setupIceCreamScreen(stateManager) {
     if (petTap.hit) {
       player.pose = 'pet';
       player.poseTimer = 20;
+      talkPanel.selectTarget(petTap.petId, `🐾 ${petTap.meta.name} wedelt fröhlich – gib gern eine Anweisung!`);
       setStatus(`❤️ ${petTap.meta.name} wedelt fröhlich neben dir!`);
       showToast(`❤️ ${petTap.meta.name} gestreichelt!`, 'success');
       return;
@@ -556,8 +666,25 @@ export function setupIceCreamScreen(stateManager) {
     if (cy >= 235) {
       for (let i = 0; i < TABLE_POS.length; i++) {
         const tb = TABLE_POS[i];
+        const c = tables[i];
+        if (!c) continue;
+        // Clicking directly on the seated guest with an empty tray walks up & starts a friendly chat!
+        if (trayItems.length === 0 && Math.hypot(cx - tb.guestX, cy - (tb.y - 34)) <= 36) {
+          const guestTargetId = `guest_${i}_${c.preset.name}`;
+          navigateToPoint(tb.standX, tb.standY, null, () => {
+            player.facing = tb.guestX >= player.x ? 1 : -1;
+            player.speechText = `Hallo ${c.preset.name}! 😊`;
+            player.speechTimer = 120;
+            const res = generatePersonReply({ id: c.preset.name, name: c.preset.name, kind: 'guest' }, 'Hallo!', { scene: 'icecream' });
+            c.chatText = res.bubble;
+            c.chatTimer = 180;
+            talkPanel.selectTarget(guestTargetId, `🍨 ${c.preset.name}: „${res.reply}“`);
+            setStatus(`💬 ${c.preset.name}: „${res.reply}“`);
+          });
+          return;
+        }
         if (Math.abs(cx - tb.x) <= 84 && cy >= 242 && cy <= 455) {
-          if (tables[i] && tables[i].state === 'waiting') {
+          if (c.state === 'waiting') {
             navigateToPoint(tb.standX, tb.standY, { type: 'serve', tableIdx: i });
             return;
           }
@@ -604,6 +731,7 @@ export function setupIceCreamScreen(stateManager) {
       holdPad[dir] = true;
       player.waypoints = [];
       player.pendingAction = null;
+      player.pendingCallback = null;
     };
     const off = () => {
       holdPad[dir] = false;
@@ -670,6 +798,7 @@ export function setupIceCreamScreen(stateManager) {
   }
 
   function updateSimulation() {
+    if (player.speechTimer > 0) player.speechTimer--;
     let moveX = 0;
     let moveY = 0;
     if (keys.left || holdPad.left) moveX -= 1;
@@ -694,13 +823,20 @@ export function setupIceCreamScreen(stateManager) {
           player.y = wp.y;
         }
         player.waypoints.shift();
-        if (player.waypoints.length === 0 && player.pendingAction) {
-          const act = player.pendingAction;
-          player.pendingAction = null;
-          if (act.type === 'pickup') addItemToTray(act.itemId);
-          else if (act.type === 'pickup_station') smartPickupAtStation(act.stationId);
-          else if (act.type === 'serve') serveTable(act.tableIdx);
-          else if (act.type === 'trash') clearTray();
+        if (player.waypoints.length === 0) {
+          if (player.pendingAction) {
+            const act = player.pendingAction;
+            player.pendingAction = null;
+            if (act.type === 'pickup') addItemToTray(act.itemId);
+            else if (act.type === 'pickup_station') smartPickupAtStation(act.stationId);
+            else if (act.type === 'serve') serveTable(act.tableIdx);
+            else if (act.type === 'trash') clearTray();
+          }
+          if (player.pendingCallback) {
+            const cb = player.pendingCallback;
+            player.pendingCallback = null;
+            cb();
+          }
         }
       } else {
         if (Math.abs(dx) > 1) player.facing = dx > 0 ? 1 : -1;
@@ -718,6 +854,7 @@ export function setupIceCreamScreen(stateManager) {
     if (quietPauseTimer > 0) quietPauseTimer--;
     const activeCount = tables.filter(Boolean).length;
     const maxSimultaneous = quietPauseTimer > 0 ? 0 : 2;
+    let talkListDirty = false;
 
     for (let i = 0; i < 4; i++) {
       const c = tables[i];
@@ -727,10 +864,13 @@ export function setupIceCreamScreen(stateManager) {
           if (tableTimers[i] <= 0) {
             tables[i] = createCustomer(i);
             guestsSinceBreak += 1;
+            talkListDirty = true;
           }
         }
         continue;
       }
+
+      if (c.chatTimer > 0) c.chatTimer--;
 
       if (c.state === 'entering') {
         c.yOffset = Math.max(0, c.yOffset - 2.4);
@@ -743,6 +883,7 @@ export function setupIceCreamScreen(stateManager) {
         if (c.happyTimer <= 0) {
           tables[i] = null;
           tableTimers[i] = 240 + Math.floor(Math.random() * 260);
+          talkListDirty = true;
           if (guestsSinceBreak >= 3 && tables.filter(Boolean).length === 0) {
             quietPauseTimer = 260 + Math.floor(Math.random() * 180);
             guestsSinceBreak = 0;
@@ -751,6 +892,7 @@ export function setupIceCreamScreen(stateManager) {
         }
       }
     }
+    if (talkListDirty) talkPanel.refresh();
 
     for (let i = fxParticles.length - 1; i >= 0; i--) {
       const p = fxParticles[i];
@@ -1300,10 +1442,20 @@ export function setupIceCreamScreen(stateManager) {
       drawTable(tb, idx, c);
     });
 
-    // 4. Speech bubbles above tables
+    // 4. Order bubbles & friendly chat speech bubbles above tables
     TABLE_POS.forEach((tb, idx) => {
       const c = tables[idx];
-      if (c) drawSpeechBubble(c, tb);
+      if (!c) return;
+      drawSpeechBubble(c, tb);
+      if (c.chatTimer > 0 && c.chatText) {
+        const bubbleY = c.state === 'waiting' ? 196 : tb.y - 102;
+        drawCanvasSpeechBubble(ctx, tb.guestX + 14, bubbleY, c.chatText, {
+          borderColor: '#0ea5e9',
+          textColor: '#0f172a',
+          maxWidth: 185,
+          canvasWidth: w
+        });
+      }
     });
 
     // Peaceful empty café sign when no guests are currently seated
@@ -1334,6 +1486,15 @@ export function setupIceCreamScreen(stateManager) {
         facing: player.facing
       });
       drawPlayerWithTray();
+    }
+
+    if (player.speechTimer > 0 && player.speechText) {
+      drawCanvasSpeechBubble(ctx, player.x, Math.max(46, player.y - 122), player.speechText, {
+        borderColor: '#0ea5e9',
+        textColor: '#0369a1',
+        maxWidth: 185,
+        canvasWidth: w
+      });
     }
 
     // 5. Sparkling FX particles

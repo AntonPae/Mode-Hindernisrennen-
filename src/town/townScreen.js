@@ -3,7 +3,15 @@ import { renderCharacter } from '../editor/characterRenderer.js';
 import { ShopManager } from '../editor/shopData.js';
 import { HomeManager } from '../home/homeData.js';
 import { MailboxManager } from '../mailbox/mailboxData.js';
-import { PetFollowerController } from '../home/petCompanion.js';
+import { PetFollowerController, getPetMeta } from '../home/petCompanion.js';
+import {
+  NEW_ACQUAINTANCES,
+  SocialManager,
+  generatePersonReply,
+  parsePetCommand
+} from '../social/socialData.js';
+import { drawCanvasSpeechBubble } from '../social/canvasSpeech.js';
+import { mountTalkPanel } from '../social/talkPanel.js';
 
 const WORLD_WIDTH = 3420;
 const GARDEN_LEFT_X = 280;
@@ -21,9 +29,54 @@ const GARDEN_PATH_MAX_Y = 376;
 const CROSSWALK_XS = [1350, 1665, 1980, 2295, 2610, 2925];
 const CROSSWALK_HALF_W = 26;
 const RESIDENTIAL_NEIGHBORS = [
-  { x: 700, y: 222, shirt: '#0284c7', icon: '🐕' },
-  { x: 885, y: 222, shirt: '#a855f7', icon: '🐱' },
-  { x: 1070, y: 222, shirt: '#10b981', icon: '🐶' }
+  {
+    id: 'weber',
+    name: 'Herr Weber',
+    icon: '🐕',
+    role: 'Nachbar & Hundefreund',
+    x: 660,
+    y: 238,
+    charConfig: {
+      body: { height: 1.0, width: 1.0, faceId: 'face_1', hairId: 'hair_1', hairColor: '#78350f' },
+      clothes: {
+        top: { style: 'jacket', color: '#0284c7', stickers: [{ type: 'star', x: 0, y: 0.45, scale: 1 }] },
+        pants: { style: 'cargo', color: '#334155' },
+        shoes: { style: 'sneakers', color: '#f8fafc' }
+      }
+    }
+  },
+  {
+    id: 'frieda',
+    name: 'Oma Frieda',
+    icon: '🏡',
+    role: 'Nachbarin & Bäckerin',
+    x: 845,
+    y: 238,
+    charConfig: {
+      body: { height: 1.0, width: 1.0, faceId: 'face_6', hairId: 'hair_flower', hairColor: '#cbd5e1' },
+      clothes: {
+        top: { style: 'princess_coat', color: '#a855f7', stickers: [{ type: 'heart', x: 0, y: 0.45, scale: 1 }] },
+        pants: { style: 'jeans', color: '#475569' },
+        shoes: { style: 'glitter_boots', color: '#be185d' }
+      }
+    }
+  },
+  {
+    id: 'kaya',
+    name: 'Frau Kaya',
+    icon: '🐱',
+    role: 'Tierliebhaberin & Gärtnerin',
+    x: 1030,
+    y: 238,
+    charConfig: {
+      body: { height: 1.0, width: 1.0, faceId: 'face_8', hairId: 'hair_crown', hairColor: '#1e1b4b' },
+      clothes: {
+        top: { style: 'sparkle_top', color: '#10b981', stickers: [{ type: 'rainbow', x: 0, y: 0.45, scale: 1 }] },
+        pants: { style: 'star_jeans', color: '#1e3a8a' },
+        shoes: { style: 'wings', color: '#fef08a' }
+      }
+    }
+  }
 ];
 
 export const TOWN_PLACES = [
@@ -159,11 +212,114 @@ export function setupTownScreen(stateManager) {
     facing: 1,
     waypoints: [],
     pendingPlace: null,
+    pendingCallback: null,
     pose: 'idle',
-    poseTimer: 0
+    poseTimer: 0,
+    speechText: '',
+    speechTimer: 0
   };
 
+  const npcSpeeches = new Map();
   const petFollowers = new PetFollowerController();
+
+  const townPeople = [
+    ...RESIDENTIAL_NEIGHBORS.map((n) => ({
+      ...n,
+      type: 'person',
+      kind: 'neighbor',
+      isNewPerson: false
+    })),
+    ...NEW_ACQUAINTANCES.map((a) => ({
+      ...a,
+      x: a.townX,
+      y: a.townY,
+      type: 'person',
+      kind: 'acquaintance',
+      isNewPerson: true
+    }))
+  ];
+
+  const setNpcSpeech = (id, text, duration = 150) => {
+    npcSpeeches.set(id, { text, timer: duration });
+  };
+
+  const getTownTalkTargets = () => {
+    // Sort people by proximity to player so nearby people appear first!
+    const sortedPeople = [...townPeople].sort(
+      (a, b) => Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y)
+    );
+    const companionIds = HomeManager.getCompanionPets();
+    const sitPets = HomeManager.getSittingCompanions();
+    const petTargets = [];
+    if (companionIds.length + sitPets.length > 0) {
+      petTargets.push({ id: 'all', type: 'pet', name: 'Alle Tiere', icon: '🐾' });
+      companionIds.forEach((id) => {
+        const meta = getPetMeta(id);
+        petTargets.push({ id, type: 'pet', name: meta.name, icon: meta.icon });
+      });
+      sitPets.forEach((sit) => {
+        const meta = getPetMeta(sit);
+        petTargets.push({ id: sit.id, type: 'pet', name: meta.name, icon: meta.icon });
+      });
+    }
+    return [...sortedPeople, ...petTargets];
+  };
+
+  const talkPanel = mountTalkPanel({
+    mountEl: document.getElementById('townTalkMount'),
+    getTargets: getTownTalkTargets,
+    onFocusTarget: (target) => {
+      if (target.type === 'person') {
+        const standX = target.x + (player.x < target.x ? -44 : 44);
+        const standY = target.y >= LOWER_WALK_MIN_Y ? target.y : 268;
+        navigateInTown(standX, standY, null, () => {
+          player.facing = target.x >= player.x ? 1 : -1;
+        });
+      }
+    },
+    onTalkPerson: (target, phrase) => {
+      const standX = target.x + (player.x < target.x ? -44 : 44);
+      const standY = target.y >= LOWER_WALK_MIN_Y ? target.y : 268;
+      const runChat = () => {
+        player.facing = target.x >= player.x ? 1 : -1;
+        player.speechText = phrase;
+        player.speechTimer = 135;
+        player.pose = 'pet';
+        player.poseTimer = 20;
+        const res = generatePersonReply(target, phrase, { scene: 'town' });
+        setNpcSpeech(target.id, res.bubble, 175);
+        talkPanel.refresh(`${target.icon} ${target.name}: „${res.reply}“`);
+        if (statusEl) statusEl.textContent = `💬 ${target.name}: „${res.reply}“`;
+      };
+      if (Math.hypot(player.x - target.x, player.y - target.y) > 130) {
+        navigateInTown(standX, standY, null, runChat);
+      } else {
+        runChat();
+      }
+    },
+    onCommandPet: (target, payload) => {
+      const firstPet = petFollowers.followers[0];
+      const meta = getPetMeta(target.id === 'all' ? (firstPet?.petRef || 'dog') : (firstPet?.petRef || target.id));
+      const parsed = payload.commandId
+        ? {
+            command: payload.commandId,
+            speech: payload.commandId === 'praise'
+              ? `❤️ ${meta.say}`
+              : `${payload.text} 🐾`,
+            reply: `${target.name} führt „${payload.text}“ sofort aus!`
+          }
+        : parsePetCommand(payload.text, meta);
+
+      player.speechText = `${target.id === 'all' ? 'Alle' : target.name}: ${payload.text}`;
+      player.speechTimer = 115;
+      player.pose = 'pet';
+      player.poseTimer = 22;
+
+      petFollowers.issueCommand(target.id, parsed.command, parsed.speech, { x: player.x, y: player.y });
+      talkPanel.refresh(`🐾 ${parsed.reply}`);
+      if (statusEl) statusEl.textContent = parsed.reply;
+    }
+  });
 
   const streetCars = [
     { x: 1320, speed: 1.5, color: '#f43f5e', roof: '#ffe4e6', dir: 1 },
@@ -266,7 +422,7 @@ export function setupTownScreen(stateManager) {
     return { x, y };
   }
 
-  function navigateInTown(tx, ty, pendingPlace = null) {
+  function navigateInTown(tx, ty, pendingPlace = null, pendingCallback = null) {
     const dest = snapToTownPath(tx, ty);
     const clampedX = dest.x;
     const clampedY = dest.y;
@@ -313,6 +469,7 @@ export function setupTownScreen(stateManager) {
     waypoints.push({ x: clampedX, y: clampedY });
     player.waypoints = waypoints;
     player.pendingPlace = pendingPlace;
+    player.pendingCallback = pendingCallback;
   }
 
   function renderDistrictBar() {
@@ -361,8 +518,30 @@ export function setupTownScreen(stateManager) {
       if (petTap.hit) {
         player.pose = 'pet';
         player.poseTimer = 22;
+        talkPanel.selectTarget(petTap.petId, `🐾 ${petTap.meta.name} ausgewählt – gib eine Anweisung oder streichle es!`);
         if (statusEl) statusEl.textContent = `❤️ ${petTap.meta.name} wedelt fröhlich neben dir auf dem Weg!`;
         return;
+      }
+
+      // Click on any Neighbor or New Meetable Person on the street!
+      for (const person of townPeople) {
+        if (Math.hypot(worldX - person.x, worldY - (person.y - 36)) <= 42) {
+          const standX = person.x + (player.x < person.x ? -44 : 44);
+          const standY = person.y >= LOWER_WALK_MIN_Y ? person.y : 268;
+          navigateInTown(standX, standY, null, () => {
+            player.facing = person.x >= player.x ? 1 : -1;
+            const greetText = person.isNewPerson && SocialManager.getAcquaintanceProgress(person.id).stage === 0
+              ? 'Hallo! Wollen wir uns kennenlernen?'
+              : `Hallo ${person.name}!`;
+            player.speechText = greetText;
+            player.speechTimer = 125;
+            const res = generatePersonReply(person, greetText, { scene: 'town' });
+            setNpcSpeech(person.id, res.bubble, 175);
+            talkPanel.selectTarget(person.id, `${person.icon} ${person.name}: „${res.reply}“`);
+            if (statusEl) statusEl.textContent = `💬 ${person.name}: „${res.reply}“`;
+          });
+          return;
+        }
       }
 
       if (HomeManager.hasMailbox() && worldX >= 220 && worldX <= 268 && worldY >= 165 && worldY <= 250) {
@@ -467,7 +646,7 @@ export function setupTownScreen(stateManager) {
   }
 
   function hitsTownPerson(x, y) {
-    return RESIDENTIAL_NEIGHBORS.some((n) => Math.hypot(x - n.x, y - n.y) < 36);
+    return townPeople.some((n) => Math.hypot(x - n.x, y - n.y) < 34);
   }
 
   function moveWithGardenFence(dx, dy) {
@@ -518,10 +697,16 @@ export function setupTownScreen(stateManager) {
         player.x = wp.x;
         player.y = wp.y;
         player.waypoints.shift();
-        if (player.waypoints.length === 0 && player.pendingPlace) {
-          const dest = player.pendingPlace;
-          player.pendingPlace = null;
-          enterPlace(dest);
+        if (player.waypoints.length === 0) {
+          if (player.pendingPlace) {
+            const dest = player.pendingPlace;
+            player.pendingPlace = null;
+            enterPlace(dest);
+          } else if (player.pendingCallback) {
+            const cb = player.pendingCallback;
+            player.pendingCallback = null;
+            cb();
+          }
         }
       } else {
         if (Math.abs(dx) > 1) player.facing = dx > 0 ? 1 : -1;
@@ -535,6 +720,12 @@ export function setupTownScreen(stateManager) {
     } else {
       player.pose = 'idle';
     }
+
+    if (player.speechTimer > 0) player.speechTimer--;
+    npcSpeeches.forEach((sp, id) => {
+      sp.timer--;
+      if (sp.timer <= 0) npcSpeeches.delete(id);
+    });
 
     // Move cute background cars along the shopping street road!
     streetCars.forEach((car) => {
@@ -1023,18 +1214,28 @@ export function setupTownScreen(stateManager) {
     drawTownHouseBuilding(1070, 74, 152, 148, '#0284c7', '#e0f2fe', '🏘️ Frau Kaya', true);
 
     RESIDENTIAL_NEIGHBORS.forEach((n, i) => {
-      const bob = Math.sin(animFrame * 0.1 + i) * 2;
-      ctx.fillStyle = n.shirt;
+      ctx.save();
+      ctx.translate(n.x, n.y);
+      ctx.scale(0.84, 0.84);
+      renderCharacter(ctx, 0, 0, n.charConfig, {
+        frame: animFrame + i * 19,
+        pose: npcSpeeches.has(n.id) ? 'pet' : 'idle',
+        facing: player.x >= n.x ? 1 : -1
+      });
+      ctx.restore();
+
+      // Subtle name pill at feet
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
       ctx.beginPath();
-      ctx.roundRect(n.x - 10, n.y - 12 + bob, 20, 24, [7]);
+      ctx.roundRect(n.x - 42, n.y + 8, 84, 17, [8]);
       ctx.fill();
-      ctx.fillStyle = '#ffdecb';
-      ctx.beginPath();
-      ctx.arc(n.x, n.y - 22 + bob, 10, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.font = '18px sans-serif';
+      ctx.font = '800 9.5px "Plus Jakarta Sans", sans-serif';
+      ctx.fillStyle = '#1e293b';
       ctx.textAlign = 'center';
-      ctx.fillText(n.icon, n.x + 28, n.y);
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${n.icon} ${n.name}`, n.x, n.y + 16.5);
+      ctx.restore();
     });
 
     // --- ZONE 4: REAL CITY SHOPPING STREET ("Einkaufsstraße") WITH STORES! ---
@@ -1168,6 +1369,41 @@ export function setupTownScreen(stateManager) {
     // Animated city cars on the road (drawn behind player when player is in foreground, or nicely along lane)
     drawStreetCars();
 
+    // New People to Meet along the Shopping Street & Promenade!
+    NEW_ACQUAINTANCES.forEach((p, idx) => {
+      const prog = SocialManager.getAcquaintanceProgress(p.id);
+      ctx.save();
+      ctx.translate(p.townX, p.townY);
+      ctx.scale(0.84, 0.84);
+      renderCharacter(ctx, 0, 0, p.charConfig, {
+        frame: animFrame + idx * 23,
+        pose: npcSpeeches.has(p.id) ? 'pet' : 'idle',
+        facing: player.x >= p.townX ? 1 : -1
+      });
+      ctx.restore();
+
+      const badge = prog.stage === 0
+        ? `🆕 ${p.name} kennenlernen!`
+        : prog.stage >= 3
+          ? `💛 ${p.name}`
+          : `${p.icon} ${p.name}`;
+      ctx.save();
+      ctx.font = '800 9.5px "Plus Jakarta Sans", sans-serif';
+      const bw = ctx.measureText(badge).width + 14;
+      ctx.fillStyle = prog.stage === 0 ? '#fffbeb' : '#ffffff';
+      ctx.strokeStyle = prog.stage === 0 ? '#f59e0b' : '#ec4899';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.roundRect(p.townX - bw / 2, p.townY + 8, bw, 18, [9]);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = prog.stage === 0 ? '#92400e' : '#831843';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(badge, p.townX, p.townY + 17);
+      ctx.restore();
+    });
+
     // Companion Pets following player along the walkable paths!
     const petMinY = player.y >= LOWER_WALK_MIN_Y ? LOWER_WALK_MIN_Y : SIDEWALK_MIN_Y;
     const petMaxY = player.y >= LOWER_WALK_MIN_Y
@@ -1199,6 +1435,25 @@ export function setupTownScreen(stateManager) {
       facing: player.facing
     });
     ctx.restore();
+
+    // Comic speech bubbles for NPCs & Player!
+    townPeople.forEach((p) => {
+      const sp = npcSpeeches.get(p.id);
+      if (sp && sp.timer > 0) {
+        drawCanvasSpeechBubble(ctx, p.x, p.y - 102, sp.text, {
+          accent: p.isNewPerson ? '#f59e0b' : '#0ea5e9',
+          minX: 10,
+          maxX: WORLD_WIDTH - 10
+        });
+      }
+    });
+    if (player.speechTimer > 0 && player.speechText) {
+      drawCanvasSpeechBubble(ctx, player.x, player.y - 104, player.speechText, {
+        accent: '#ec4899',
+        minX: 10,
+        maxX: WORLD_WIDTH - 10
+      });
+    }
 
     ctx.restore();
 
@@ -1268,10 +1523,13 @@ export function setupTownScreen(stateManager) {
       }
       player.waypoints = [];
       player.pendingPlace = null;
+      player.pendingCallback = null;
+      player.speechTimer = 0;
       petFollowers.reset(player.x, player.y + 4);
       MailboxManager.ensureDailyMail();
       updateCoinsUI();
       renderDistrictBar();
+      talkPanel.refresh();
       startLoop();
     } else {
       stopLoop();

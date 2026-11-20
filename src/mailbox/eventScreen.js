@@ -1,10 +1,18 @@
 import { PlayerConfig } from '../editor/characterData.js';
 import { renderCharacter } from '../editor/characterRenderer.js';
 import { ShopManager } from '../editor/shopData.js';
-import { PetFollowerController } from '../home/petCompanion.js';
+import { HomeManager } from '../home/homeData.js';
+import { PetFollowerController, getPetMeta } from '../home/petCompanion.js';
 import { MailboxManager } from './mailboxData.js';
+import {
+  NEW_ACQUAINTANCES,
+  PET_COMMANDS,
+  SocialManager,
+  generatePersonReply,
+  parsePetCommand
+} from '../social/socialData.js';
 
-const FRIEND_TEMPLATES = [
+const BASE_FRIEND_TEMPLATES = [
   {
     id: 'frieda',
     name: 'Oma Frieda',
@@ -161,6 +169,31 @@ const FRIEND_TEMPLATES = [
     ]
   }
 ];
+
+function buildAllFriendTemplates() {
+  const newFriendTemplates = NEW_ACQUAINTANCES.map((a) => ({
+    id: a.id,
+    name: a.name,
+    icon: a.icon,
+    isNewPerson: true,
+    config: a.charConfig,
+    greetings: {
+      party: `Hey! So cool, dass ich als neue Bekanntschaft mitfeiern darf! 📸`,
+      trip: a.introLine,
+      race: `Los geht's! Ich feuer dich heute am lautesten an!`,
+      pet_show: `Darf ich Fotos von deinen tollen Tieren machen? 📸`,
+      garden_contest: `Diese Blumenfarben sind ein Traum!`,
+      cafe_contest: `Oh, danach gibt es bestimmt ${a.favoriteFood}!`,
+      treasure_hunt: `Gemeinsam finden wir jeden Schatz!`,
+      band_jam: `Super Rhythmus! Ich tanze mit!`,
+      hide_and_seek: `Psst! Mein Versteck ist richtig gut!`,
+      baking_fest: `Das duftet ja himmlisch!`,
+      stargazing: `Schau mal die vielen Sterne über uns! ✨`
+    },
+    replies: a.facts
+  }));
+  return [...BASE_FRIEND_TEMPLATES, ...newFriendTemplates];
+}
 
 const QUICK_CHAT_LINES = [
   'Hallo! Wie geht’s dir? 😊',
@@ -323,7 +356,7 @@ export function setupEventScreen(stateManager) {
     }
   }
 
-  function createEventFriends(kind) {
+  function createEventFriends(kind, senderName = '') {
     const startSlots = kind === 'race'
       ? [
           { x: 180, y: 215, minX: 80, maxX: 740, minY: 205, maxY: 222, lane: false },
@@ -356,8 +389,28 @@ export function setupEventScreen(stateManager) {
               { x: 430, y: 255, minX: 310, maxX: 550, minY: 225, maxY: 395 }
             ];
 
-    return FRIEND_TEMPLATES.map((tpl, idx) => {
-      const slot = startSlots[idx];
+    const allTemplates = buildAllFriendTemplates();
+    const activeTemplates = allTemplates.filter((tpl) => {
+      if (!tpl.isNewPerson) return true;
+      const met = SocialManager.getAcquaintanceProgress(tpl.id).stage >= 1;
+      const isSender = senderName && senderName.toLowerCase().includes(tpl.name.toLowerCase());
+      return met || isSender;
+    });
+
+    const chosenTemplates = kind === 'hide_and_seek'
+      ? activeTemplates.slice(0, 5)
+      : activeTemplates;
+
+    return chosenTemplates.map((tpl, idx) => {
+      const slot = idx < startSlots.length
+        ? startSlots[idx]
+        : kind === 'race'
+          ? { x: 460 + (idx - 5) * 90, y: 215, minX: 80, maxX: 740, minY: 205, maxY: 222, lane: false }
+          : {
+              ...startSlots[idx % startSlots.length],
+              x: Math.max(85, Math.min(775, startSlots[idx % startSlots.length].x + (idx % 2 === 0 ? 45 : -45))),
+              y: Math.max(230, Math.min(420, startSlots[idx % startSlots.length].y + 16))
+            };
       const matchedConfig = {
         ...tpl.config,
         body: {
@@ -388,7 +441,61 @@ export function setupEventScreen(stateManager) {
     });
   }
 
+  function getEventPetTargets() {
+    const companionIds = HomeManager.getCompanionPets();
+    const sitPets = HomeManager.getSittingCompanions();
+    const list = [];
+    if (companionIds.length + sitPets.length > 0) {
+      list.push({ id: 'pet:all', petId: 'all', name: 'Alle Tiere', icon: '🐾' });
+      companionIds.forEach((id) => {
+        const meta = getPetMeta(id);
+        list.push({ id: `pet:${id}`, petId: id, name: meta.name, icon: meta.icon });
+      });
+      sitPets.forEach((sit) => {
+        const meta = getPetMeta(sit);
+        list.push({ id: `pet:${sit.id}`, petId: sit.id, name: meta.name, icon: meta.icon });
+      });
+    }
+    return list;
+  }
+
+  function selectPetToTalk(petId) {
+    activeChatFriendId = `pet:${petId}`;
+    renderFriendChatBar();
+    const meta = getPetMeta(petId === 'all' ? (petFollowers.followers[0]?.petRef || 'dog') : petId);
+    const petName = petId === 'all' ? 'Alle Tiere' : meta.name;
+    if (chatReplyLineEl) {
+      chatReplyLineEl.textContent = `🐾 Gib ${petName} eine Anweisung (z.B. Sitz, Bleib, Komm, Dreh dich)!`;
+    }
+  }
+
+  function commandEventPet(petId, cmdPayload) {
+    const firstPet = petFollowers.followers[0];
+    const meta = getPetMeta(petId === 'all' ? (firstPet?.petRef || 'dog') : (firstPet?.petRef || petId));
+    const parsed = cmdPayload.commandId
+      ? {
+          command: cmdPayload.commandId,
+          speech: cmdPayload.commandId === 'praise' ? `❤️ ${meta.say}` : `${cmdPayload.text} 🐾`,
+          reply: `${petId === 'all' ? 'Alle Tiere' : meta.name} führt „${cmdPayload.text}“ sofort aus!`
+        }
+      : parsePetCommand(cmdPayload.text, meta);
+
+    player.speechText = `${petId === 'all' ? 'Alle' : meta.name}: ${cmdPayload.text}`;
+    player.speechTimer = 135;
+    player.pose = 'pet';
+    player.poseTimer = 22;
+
+    petFollowers.issueCommand(petId, parsed.command, parsed.speech, { x: player.x, y: player.y });
+    if (chatReplyLineEl) {
+      chatReplyLineEl.textContent = `🐾 ${parsed.reply}`;
+    }
+    setStatus(parsed.reply);
+  }
+
   function renderFriendChatBar() {
+    const petTargets = getEventPetTargets();
+    const isPetTarget = typeof activeChatFriendId === 'string' && activeChatFriendId.startsWith('pet:');
+
     if (friendPillsEl) {
       friendPillsEl.innerHTML = '';
       eventFriends.forEach((f) => {
@@ -399,18 +506,50 @@ export function setupEventScreen(stateManager) {
         btn.addEventListener('click', () => selectFriendToTalk(f.id, true));
         friendPillsEl.appendChild(btn);
       });
+      petTargets.forEach((pt) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `event-friend-pill pet-cmd-pill${activeChatFriendId === pt.id ? ' active' : ''}`;
+        btn.textContent = `${pt.icon} ${pt.name}`;
+        btn.addEventListener('click', () => selectPetToTalk(pt.petId));
+        friendPillsEl.appendChild(btn);
+      });
     }
 
     if (quickChatRowEl) {
       quickChatRowEl.innerHTML = '';
-      QUICK_CHAT_LINES.forEach((line) => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'mail-phrase-btn';
-        btn.textContent = line;
-        btn.addEventListener('click', () => sayToFriend(line));
-        quickChatRowEl.appendChild(btn);
-      });
+      if (isPetTarget) {
+        const targetPetId = activeChatFriendId.slice(4);
+        const petObj = petTargets.find((p) => p.id === activeChatFriendId);
+        if (chatInputEl) chatInputEl.placeholder = `Anweisung für ${petObj ? petObj.name : 'dein Tier'} (Sitz, Bleib, Komm)...`;
+        if (chatSendBtn) chatSendBtn.textContent = '🐾 Befehl';
+
+        PET_COMMANDS.forEach((cmd) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'mail-phrase-btn pet-action-chip';
+          btn.textContent = `${cmd.icon} ${cmd.label}`;
+          btn.addEventListener('click', () => commandEventPet(targetPetId, { commandId: cmd.id, text: cmd.label }));
+          quickChatRowEl.appendChild(btn);
+        });
+        const praiseBtn = document.createElement('button');
+        praiseBtn.type = 'button';
+        praiseBtn.className = 'mail-phrase-btn';
+        praiseBtn.textContent = '❤️ Brav gemacht!';
+        praiseBtn.addEventListener('click', () => commandEventPet(targetPetId, { commandId: 'praise', text: 'Brav gemacht!' }));
+        quickChatRowEl.appendChild(praiseBtn);
+      } else {
+        if (chatInputEl) chatInputEl.placeholder = 'Schreib selbst etwas an deine Freunde...';
+        if (chatSendBtn) chatSendBtn.textContent = '💬 Sagen';
+        QUICK_CHAT_LINES.forEach((line) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'mail-phrase-btn';
+          btn.textContent = line;
+          btn.addEventListener('click', () => sayToFriend(line));
+          quickChatRowEl.appendChild(btn);
+        });
+      }
     }
   }
 
@@ -447,6 +586,12 @@ export function setupEventScreen(stateManager) {
   function sayToFriend(rawText) {
     const text = (rawText || '').trim();
     if (!text) return;
+
+    if (typeof activeChatFriendId === 'string' && activeChatFriendId.startsWith('pet:')) {
+      commandEventPet(activeChatFriendId.slice(4), { text });
+      return;
+    }
+
     const f = eventFriends.find((fr) => fr.id === activeChatFriendId) || eventFriends[0];
     if (!f) return;
 
@@ -456,9 +601,10 @@ export function setupEventScreen(stateManager) {
     player.pose = 'pet';
     player.poseTimer = 24;
 
-    const reply = f.replies[Math.floor(Math.random() * f.replies.length)];
+    const gen = generatePersonReply({ id: f.id, name: f.name, kind: 'friend' }, text, { scene: 'event' });
+    const reply = f.isNewPerson ? gen.reply : (Math.random() < 0.55 ? gen.reply : f.replies[Math.floor(Math.random() * f.replies.length)]);
     f.facing = player.x < f.x ? -1 : 1;
-    f.speechText = reply;
+    f.speechText = reply.length > 46 ? `${reply.slice(0, 43)}…` : reply;
     f.speechTimer = 210;
     f.waitTimer = 130;
     f.bounce = 20;
@@ -536,8 +682,9 @@ export function setupEventScreen(stateManager) {
     player.speechTimer = 0;
     petFollowers.reset(player.x, player.y + 4);
 
-    eventFriends = createEventFriends(currentEvent.kind);
-    activeChatFriendId = eventFriends[0].id;
+    eventFriends = createEventFriends(currentEvent.kind, currentEvent.senderName);
+    const senderMatch = eventFriends.find((f) => currentEvent.senderName && currentEvent.senderName.toLowerCase().includes(f.name.toLowerCase()));
+    activeChatFriendId = senderMatch ? senderMatch.id : eventFriends[0].id;
 
     if (titleEl) titleEl.textContent = `🎉 ${currentEvent.title}`;
 
@@ -1640,11 +1787,12 @@ export function setupEventScreen(stateManager) {
     const cx = (clientX - rect.left) * scaleX;
     const cy = (clientY - rect.top) * scaleY;
 
-    // 1. Companion pets can always be tapped & cuddled!
+    // 1. Companion pets can always be tapped, cuddled, & selected for commands!
     const tappedPet = petFollowers.handleTap(cx, cy);
     if (tappedPet.hit) {
       player.pose = 'pet';
       player.poseTimer = 20;
+      selectPetToTalk(tappedPet.petId);
       showToast(`❤️ ${tappedPet.meta.name} feiert fröhlich mit dir!`, 'success');
       return;
     }

@@ -3,6 +3,7 @@ import { HomeManager } from '../home/homeData.js';
 import {
   MailboxManager,
   MAIL_CONTACTS,
+  getAllMailContacts,
   INVITE_EVENT_TYPES,
   INVITE_TIMES,
   QUICK_PHRASES
@@ -326,7 +327,7 @@ export function setupMailboxUI(stateManager) {
     `;
 
     const recRow = document.getElementById('writeRecipientRow');
-    MAIL_CONTACTS.forEach((c) => {
+    getAllMailContacts().forEach((c) => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = `mail-pick-btn${writeRecipientId === c.id ? ' active' : ''}`;
@@ -408,7 +409,7 @@ export function setupMailboxUI(stateManager) {
 
     const recRow = document.getElementById('inviteRecipientRow');
     const allOption = { id: 'all', icon: '👥', name: 'Alle Freunde' };
-    [allOption, ...MAIL_CONTACTS].forEach((c) => {
+    [allOption, ...getAllMailContacts()].forEach((c) => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = `mail-pick-btn${inviteRecipientId === c.id ? ' active' : ''}`;

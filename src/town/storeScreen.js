@@ -4,6 +4,12 @@ import { MYSTERY_BOX_PRICE, SHOP_CATALOG, ShopManager } from '../editor/shopData
 import { HOME_CATALOG, HOME_MYSTERY_BOX_PRICE, HomeManager } from '../home/homeData.js';
 import { drawVectorPet, getPetMeta, PetFollowerController } from '../home/petCompanion.js';
 import { MailboxManager } from '../mailbox/mailboxData.js';
+import {
+  generatePersonReply,
+  parsePetCommand
+} from '../social/socialData.js';
+import { drawCanvasSpeechBubble } from '../social/canvasSpeech.js';
+import { mountTalkPanel } from '../social/talkPanel.js';
 
 const STORE_CONFIG = {
   supermarket: {
@@ -309,12 +315,19 @@ const STORE_CONFIG = {
 
 const STORE_SHOPPERS = [
   {
+    id: 'shopper_paula',
+    name: 'Paula',
+    icon: '🛍️',
+    role: 'Kundin im Laden',
     x: 250,
     y: 340,
     dir: 1,
     speed: 0.9,
     minX: 165,
     maxX: 540,
+    speechText: '',
+    speechTimer: 0,
+    pauseTimer: 0,
     say: ['Die Angebote heute sind super!', 'Schau mal das Regal dort!'],
     config: {
       body: { height: 1.0, width: 1.0, faceId: 'face_1', hairId: 'hair_3', hairColor: '#b45309' },
@@ -326,12 +339,19 @@ const STORE_SHOPPERS = [
     }
   },
   {
+    id: 'shopper_ben',
+    name: 'Ben',
+    icon: '🧺',
+    role: 'Kunde im Laden',
     x: 490,
     y: 382,
     dir: -1,
     speed: 0.75,
     minX: 210,
     maxX: 620,
+    speechText: '',
+    speechTimer: 0,
+    pauseTimer: 0,
     say: ['Ich lege gleich alles aufs Kassenband!', 'Hier riecht es richtig frisch!'],
     config: {
       body: { height: 1.0, width: 1.0, faceId: 'face_4', hairId: 'hair_afro', hairColor: '#1e1b4b' },
@@ -426,13 +446,105 @@ export function setupStoreScreen(stateManager) {
     targetY: null,
     pendingAction: null,
     pose: 'idle',
-    poseTimer: 0
+    poseTimer: 0,
+    speechText: '',
+    speechTimer: 0
   };
 
   const petFollowers = new PetFollowerController();
   const fxParticles = [];
   const keys = { left: false, right: false, up: false, down: false };
   const holdPad = { left: false, right: false, up: false, down: false };
+
+  const getStoreTalkTargets = () => {
+    const store = getStore();
+    const people = [
+      {
+        id: `cashier_${store.id}`,
+        name: store.cashierName,
+        icon: '💳',
+        role: 'Im Geschäft an der Kasse',
+        type: 'person',
+        kind: 'cashier'
+      },
+      ...STORE_SHOPPERS.map((s) => ({
+        id: s.id,
+        name: s.name,
+        icon: s.icon,
+        role: s.role,
+        type: 'person',
+        kind: 'shopper'
+      }))
+    ];
+    const companionIds = HomeManager.getCompanionPets();
+    const sitPets = HomeManager.getSittingCompanions();
+    const petTargets = [];
+    if (companionIds.length + sitPets.length > 0) {
+      petTargets.push({ id: 'all', type: 'pet', name: 'Alle Tiere', icon: '🐾' });
+      companionIds.forEach((id) => {
+        const meta = getPetMeta(id);
+        petTargets.push({ id, type: 'pet', name: meta.name, icon: meta.icon });
+      });
+      sitPets.forEach((sit) => {
+        const meta = getPetMeta(sit);
+        petTargets.push({ id: sit.id, type: 'pet', name: meta.name, icon: meta.icon });
+      });
+    }
+    return [...people, ...petTargets];
+  };
+
+  const talkPanel = mountTalkPanel({
+    mountEl: document.getElementById('storeTalkMount'),
+    getTargets: getStoreTalkTargets,
+    onTalkPerson: (target, phrase) => {
+      const doChat = () => {
+        player.speechText = phrase;
+        player.speechTimer = 135;
+        player.pose = 'pet';
+        player.poseTimer = 20;
+        const res = generatePersonReply(target, phrase, { scene: 'store', shopId: activeShopId });
+        if (target.kind === 'cashier') {
+          player.facing = 1;
+          cashierBubble = res.bubble;
+          cashierBubbleTimer = 175;
+        } else {
+          const shopper = STORE_SHOPPERS.find((s) => s.id === target.id);
+          if (shopper) {
+            player.facing = shopper.x >= player.x ? 1 : -1;
+            shopper.speechText = res.bubble;
+            shopper.speechTimer = 175;
+            shopper.pauseTimer = 140;
+          }
+        }
+        talkPanel.refresh(`${target.icon} ${target.name}: „${res.reply}“`);
+        if (statusEl) statusEl.textContent = `💬 ${target.name}: „${res.reply}“`;
+      };
+      if (target.kind === 'cashier' && player.x < 640) {
+        navigateInStore(700, 292, doChat);
+      } else {
+        doChat();
+      }
+    },
+    onCommandPet: (target, payload) => {
+      const firstPet = petFollowers.followers[0];
+      const meta = getPetMeta(target.id === 'all' ? (firstPet?.petRef || 'dog') : (firstPet?.petRef || target.id));
+      const parsed = payload.commandId
+        ? {
+            command: payload.commandId,
+            speech: payload.commandId === 'praise' ? `❤️ ${meta.say}` : `${payload.text} 🐾`,
+            reply: `${target.name} führt „${payload.text}“ im Laden aus!`
+          }
+        : parsePetCommand(payload.text, meta);
+
+      player.speechText = `${target.id === 'all' ? 'Alle' : target.name}: ${payload.text}`;
+      player.speechTimer = 115;
+      player.pose = 'pet';
+      player.poseTimer = 22;
+      petFollowers.issueCommand(target.id, parsed.command, parsed.speech, { x: player.x, y: player.y });
+      talkPanel.refresh(`🐾 ${parsed.reply}`);
+      if (statusEl) statusEl.textContent = parsed.reply;
+    }
+  });
 
   function showToast(msg, type = 'info') {
     if (!toastEl) return;
@@ -1103,8 +1215,28 @@ export function setupStoreScreen(stateManager) {
       if (petTap.hit) {
         player.pose = 'pet';
         player.poseTimer = 20;
+        talkPanel.selectTarget(petTap.petId, `🐾 ${petTap.meta.name} ausgewählt – sag etwas oder gib eine Anweisung!`);
         showToast(`❤️ ${petTap.meta.name} schnuppert neugierig im Laden!`, 'info');
         return;
+      }
+
+      // Tap on a Shopper NPC (Paula or Ben) to walk up & talk!
+      for (const npc of STORE_SHOPPERS) {
+        if (Math.hypot(cx - npc.x, cy - (npc.y - 36)) <= 38) {
+          const standX = npc.x + (player.x < npc.x ? -42 : 42);
+          navigateInStore(standX, npc.y, () => {
+            player.facing = npc.x >= player.x ? 1 : -1;
+            const greet = `Hallo ${npc.name}!`;
+            player.speechText = greet;
+            player.speechTimer = 120;
+            const res = generatePersonReply({ id: npc.id, name: npc.name, icon: npc.icon, kind: 'shopper' }, greet, { scene: 'store', shopId: activeShopId });
+            npc.speechText = res.bubble;
+            npc.speechTimer = 165;
+            npc.pauseTimer = 140;
+            talkPanel.selectTarget(npc.id, `${npc.icon} ${npc.name}: „${res.reply}“`);
+          });
+          return;
+        }
       }
 
       // Hidden Lucky Coupon inside store!
@@ -1125,15 +1257,17 @@ export function setupStoreScreen(stateManager) {
         return;
       }
 
-      // Checkout Counter (Right: Kasse)
+      // Checkout Counter (Right: Kasse) -> Pay if basket has items, OR talk with Cashier!
       if (cx >= 680 && cy >= 110 && cy <= 325) {
         navigateInStore(705, 290, () => {
+          talkPanel.selectTarget(`cashier_${store.id}`);
           if (basket.length > 0) {
             performCheckout();
           } else {
-            cashierBubble = 'Leg erst schöne Sachen in deinen Korb!';
-            cashierBubbleTimer = 95;
-            showToast(`💬 ${store.cashierName}: "Such dir zuerst etwas aus den Regalen aus!"`, 'info');
+            cashierBubble = 'Hallo! Leg erst schöne Sachen in deinen Korb!';
+            cashierBubbleTimer = 135;
+            showToast(`💬 ${store.cashierName}: "Hallo! Such dir gerne etwas aus den Regalen aus!"`, 'info');
+            talkPanel.setStatusLine(`💳 ${store.cashierName}: „Hallo! Such dir gerne etwas aus den Regalen aus!“`);
           }
         });
         return;
@@ -1337,8 +1471,13 @@ export function setupStoreScreen(stateManager) {
       showToast(`✨ Einkaufs-Gutschein gefunden! +${reward} 🪙 geschenkt!`, 'success');
     }
 
-    // Move animated NPC shoppers (turn neatly rather than walking straight into the player!)
+    // Move animated NPC shoppers (pause cleanly when chatting, turn neatly instead of bumping player!)
     STORE_SHOPPERS.forEach((npc) => {
+      if (npc.speechTimer > 0) npc.speechTimer--;
+      if (npc.pauseTimer > 0) {
+        npc.pauseTimer--;
+        return;
+      }
       const nextNpcX = npc.x + npc.speed * npc.dir;
       if (Math.hypot(player.x - nextNpcX, player.y - npc.y) < 34) {
         npc.dir *= -1;
@@ -1349,6 +1488,7 @@ export function setupStoreScreen(stateManager) {
       if (npc.x <= npc.minX) npc.dir = 1;
     });
 
+    if (player.speechTimer > 0) player.speechTimer--;
     if (scannerBeamTimer > 0) scannerBeamTimer--;
     if (receiptPopTimer > 0) receiptPopTimer--;
     if (cashierBubbleTimer > 0) cashierBubbleTimer--;
@@ -1995,10 +2135,17 @@ export function setupStoreScreen(stateManager) {
       ctx.scale(0.84, 0.84);
       renderCharacter(ctx, 0, 0, npc.config, {
         frame: animFrame,
-        pose: 'walk',
-        facing: npc.dir
+        pose: npc.pauseTimer > 0 ? 'idle' : 'walk',
+        facing: npc.pauseTimer > 0 ? (player.x >= npc.x ? 1 : -1) : npc.dir
       });
       ctx.restore();
+
+      if (npc.speechTimer > 0 && npc.speechText) {
+        drawCanvasSpeechBubble(ctx, npc.x, npc.y - 102, npc.speechText, {
+          accent: '#8b5cf6',
+          maxX: w - 10
+        });
+      }
     });
 
     // Companion Pets following you inside the store!
@@ -2026,6 +2173,13 @@ export function setupStoreScreen(stateManager) {
       facing: player.facing
     });
     ctx.restore();
+
+    if (player.speechTimer > 0 && player.speechText) {
+      drawCanvasSpeechBubble(ctx, player.x, player.y - 104, player.speechText, {
+        accent: '#ec4899',
+        maxX: w - 10
+      });
+    }
 
     drawShoppingCartBesidePlayer();
 
@@ -2093,6 +2247,7 @@ export function setupStoreScreen(stateManager) {
     player.targetX = null;
     player.targetY = null;
     player.pendingAction = null;
+    player.speechTimer = 0;
     petFollowers.reset(player.x, player.y + 4);
 
     if (titleEl) titleEl.textContent = store.title;
@@ -2104,6 +2259,7 @@ export function setupStoreScreen(stateManager) {
     renderBasketBar();
     renderAisleTabs();
     renderShelfInspector();
+    talkPanel.refresh();
   }
 
   function startLoop() {

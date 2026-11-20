@@ -4,6 +4,9 @@ import { ShopManager } from '../editor/shopData.js';
 import { HOME_CATALOG, HomeManager } from './homeData.js';
 import { MailboxManager } from '../mailbox/mailboxData.js';
 import { drawVectorPet, getPetMeta, PetFollowerController } from './petCompanion.js';
+import { PetCommandStore, parsePetCommand } from '../social/socialData.js';
+import { drawCanvasSpeechBubble } from '../social/canvasSpeech.js';
+import { mountTalkPanel } from '../social/talkPanel.js';
 
 const ROOMS = [
   { id: 'living_room', label: '🛋️ Wohnzimmer', alwaysUnlocked: true },
@@ -80,7 +83,9 @@ export function setupHomeScreen(stateManager) {
     targetX: null,
     targetZ: null,
     pose: 'idle',
-    poseTimer: 0
+    poseTimer: 0,
+    speechText: '',
+    speechTimer: 0
   };
 
   const keys = { left: false, right: false, up: false, down: false };
@@ -92,6 +97,7 @@ export function setupHomeScreen(stateManager) {
   let fridgeHotspot = null;
   let fridgeOpen = false;
   const petFollowers = new PetFollowerController();
+  const roamingPetFx = new Map(); // { speechText, speechTimer, trickTimer, tapBounce }
   const fxParticles = [];
   const waterDrops = [];
   const recentGroundProps = [];
@@ -99,6 +105,68 @@ export function setupHomeScreen(stateManager) {
   let nextFindTimer = 210;
   let gardenGateOpen = 0;
   let edgeCooldown = 0;
+
+  const getHomeTalkTargets = () => {
+    const ownedPets = HomeManager.getState().owned.pets || [];
+    const sitPets = HomeManager.getSittingCompanions();
+    const targets = [];
+    if (ownedPets.length + sitPets.length > 0) {
+      targets.push({ id: 'all', type: 'pet', name: 'Alle Tiere', icon: '🐾' });
+      ownedPets.forEach((id) => {
+        const meta = getPetMeta(id);
+        targets.push({ id, type: 'pet', name: meta.name, icon: meta.icon });
+      });
+      sitPets.forEach((sit) => {
+        const meta = getPetMeta(sit);
+        targets.push({ id: sit.id, type: 'pet', name: meta.name, icon: meta.icon });
+      });
+    }
+    return targets;
+  };
+
+  const talkPanel = mountTalkPanel({
+    mountEl: document.getElementById('homeTalkMount'),
+    getTargets: getHomeTalkTargets,
+    onCommandPet: (target, payload) => {
+      const ownedPets = HomeManager.getState().owned.pets || [];
+      const firstRef = target.id === 'all' ? (ownedPets[0] || 'dog') : target.id;
+      const meta = getPetMeta(firstRef);
+      const parsed = payload.commandId
+        ? {
+            command: payload.commandId,
+            speech: payload.commandId === 'praise' ? `❤️ ${meta.say}` : `${payload.text} 🐾`,
+            reply: `${target.name} führt „${payload.text}“ aus!`
+          }
+        : parsePetCommand(payload.text, meta);
+
+      player.speechText = `${target.id === 'all' ? 'Alle' : target.name}: ${payload.text}`;
+      player.speechTimer = 115;
+      player.pose = 'pet';
+      player.poseTimer = 22;
+
+      // Apply to companion followers
+      petFollowers.issueCommand(target.id, parsed.command, parsed.speech, { x: player.x, y: 336 });
+
+      // Also apply to roaming home pets (so pets staying in Tierzimmer or Wohnzimmer respond visibly!)
+      const applyIds = target.id === 'all' ? ownedPets : [target.id];
+      applyIds.forEach((pid) => {
+        if (!HomeManager.isCompanionPet(pid)) {
+          if (parsed.command !== 'spin' && parsed.command !== 'praise' && parsed.command !== 'fetch') {
+            PetCommandStore.setCommand(pid, parsed.command);
+          }
+          roamingPetFx.set(pid, {
+            speechText: parsed.speech,
+            speechTimer: 115,
+            trickTimer: parsed.command === 'spin' ? 28 : 0,
+            tapBounce: 24
+          });
+        }
+      });
+
+      talkPanel.refresh(`🐾 ${parsed.reply}`);
+      showToast(`🐾 ${parsed.reply}`, 'success');
+    }
+  });
 
   function spawnGardenWaterDrops(fromX, fromY, targetX, targetY) {
     for (let i = 0; i < 12; i++) {
@@ -645,6 +713,7 @@ export function setupHomeScreen(stateManager) {
             HomeManager.cuddleCompanionPet(ph.petId);
             player.pose = 'pet';
             player.poseTimer = 22;
+            talkPanel.selectTarget(ph.petId, `❤️ ${meta.name} ausgewählt – gib eine Anweisung!`);
             showToast(`❤️ ${meta.name} (Pflege-Tier) wedelt fröhlich & läuft überall mit dir mit!`, 'success');
             updateUI();
             return;
@@ -655,6 +724,7 @@ export function setupHomeScreen(stateManager) {
             const hasPetRoom = HomeManager.hasPetRoom();
             player.pose = 'pet';
             player.poseTimer = 22;
+            talkPanel.selectTarget(ph.petId, `🐾 ${meta.name} ausgewählt – sprich oder gib Anweisungen!`);
             if (res.active) {
               HomeManager.cuddleCompanionPet(ph.petId);
               showToast(
@@ -999,6 +1069,13 @@ export function setupHomeScreen(stateManager) {
       recentGroundProps[i].life--;
       if (recentGroundProps[i].life <= 0) recentGroundProps.splice(i, 1);
     }
+
+    if (player.speechTimer > 0) player.speechTimer--;
+    roamingPetFx.forEach((fx) => {
+      if (fx.speechTimer > 0) fx.speechTimer--;
+      if (fx.trickTimer > 0) fx.trickTimer--;
+      if (fx.tapBounce > 0) fx.tapBounce--;
+    });
   }
 
   // --- ROOM-BY-ROOM PAINTERLY SCENE RENDERER ---
@@ -1062,8 +1139,13 @@ export function setupHomeScreen(stateManager) {
     });
     ctx.restore();
 
-    // Thought prompt if hungry
-    if (state.needs.hunger < 40 && (!activeTask || activeTask.type !== 'cook')) {
+    // Thought prompt if hungry or active player speech bubble
+    if (player.speechTimer > 0 && player.speechText) {
+      drawCanvasSpeechBubble(ctx, player.x, drawY - 114, player.speechText, {
+        accent: '#ec4899',
+        maxX: w - 10
+      });
+    } else if (state.needs.hunger < 40 && (!activeTask || activeTask.type !== 'cook')) {
       drawFloatingHint(ctx, player.x, drawY - 134, 'Hunger!', '#f43f5e');
     }
 
@@ -2659,6 +2741,9 @@ export function setupHomeScreen(stateManager) {
         scale: 0.96,
         isWalking: f.isWalking,
         tapBounce: f.tapBounce,
+        command: f.fetchTimer > 0 ? 'follow' : f.command,
+        trickTimer: f.trickTimer,
+        speechText: f.speechTimer > 0 ? f.speechText : '',
         badgeText: f.isSitting
           ? `🐾 ${meta.name} (Sitten)`
           : activeRoom === 'pet_room'
@@ -2677,15 +2762,24 @@ export function setupHomeScreen(stateManager) {
         const basePos = activeRoom === 'pet_room'
           ? spots[idx % spots.length]
           : 180 + ((idx * 145) % 460);
-        const walkX = basePos + Math.sin(animFrame * 0.024 + idx * 2.1) * 32;
+        const cmdState = PetCommandStore.getCommand(petId).command;
+        const fx = roamingPetFx.get(petId);
+        const isStationary = cmdState === 'sit' || cmdState === 'stay' || cmdState === 'rest';
+        const walkX = isStationary ? basePos : basePos + Math.sin(animFrame * 0.024 + idx * 2.1) * 32;
         const walkY = floorY + 14 + (idx % 2 === 0 ? -4 : 6);
-        const dir = Math.cos(animFrame * 0.024 + idx * 2.1) >= 0 ? 1 : -1;
+        const dir = isStationary
+          ? (player.x >= walkX ? 1 : -1)
+          : (Math.cos(animFrame * 0.024 + idx * 2.1) >= 0 ? 1 : -1);
 
         drawVectorPet(ctx, petId, walkX, walkY, {
           frame: animFrame + idx * 23,
           facing: dir,
           scale: 1,
-          isWalking: true,
+          isWalking: !isStationary,
+          command: cmdState,
+          trickTimer: fx ? fx.trickTimer : 0,
+          tapBounce: fx ? fx.tapBounce : 0,
+          speechText: fx && fx.speechTimer > 0 ? fx.speechText : '',
           badgeText: hasPetRoom ? '👆 Abholen' : '👆 Mitnehmen',
           badgeColor: '#db2777'
         });
@@ -2762,6 +2856,7 @@ export function setupHomeScreen(stateManager) {
       }
       updateUI();
       renderRoomTabs();
+      talkPanel.refresh();
       startLoop();
       if (dailyBonus > 0) {
         spawnFX('coin', 380, 180, 10);

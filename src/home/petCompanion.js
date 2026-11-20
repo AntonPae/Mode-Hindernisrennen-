@@ -1,4 +1,5 @@
 import { HomeManager, HOME_CATALOG } from './homeData.js';
+import { PetCommandStore } from '../social/socialData.js';
 
 export const PET_PALETTES = {
   dog: { body: '#d97706', ear: '#92400e', accent: '#fef3c7', collar: '#ec4899', say: 'Wuff! ❤️' },
@@ -52,16 +53,27 @@ export function drawVectorPet(ctx, petRef, x, y, opts = {}) {
     tapBounce = 0,
     badgeText = '',
     badgeColor = '#ec4899',
-    speechText = ''
+    speechText = '',
+    command = 'follow',
+    trickTimer = 0
   } = opts;
 
   const meta = getPetMeta(petRef);
   const petId = meta.species || (typeof petRef === 'string' ? petRef : 'dog');
+  const isSitPose = command === 'sit' || command === 'stay';
+  const isRestPose = command === 'rest';
+  const spinHop = trickTimer > 0 ? Math.abs(Math.sin(trickTimer * 0.28)) * 12 : 0;
+
   const walkBob = isWalking
     ? Math.abs(Math.sin(frame * 0.28)) * 5.5
-    : Math.sin(frame * 0.08) * 1.8;
+    : isRestPose
+      ? Math.sin(frame * 0.05) * 0.6
+      : isSitPose
+        ? Math.sin(frame * 0.07) * 0.8
+        : Math.sin(frame * 0.08) * 1.8;
   const bounceY = tapBounce > 0 ? Math.abs(Math.sin(tapBounce * 0.35)) * 7 : 0;
-  const drawY = y - walkBob - bounceY;
+  const restOffset = isRestPose ? 4 : isSitPose ? 1.5 : 0;
+  const drawY = y - walkBob - bounceY - spinHop + restOffset;
 
   ctx.save();
   ctx.translate(x, drawY);
@@ -69,15 +81,22 @@ export function drawVectorPet(ctx, petRef, x, y, opts = {}) {
   // Soft ground shadow (stays near ground level)
   ctx.fillStyle = 'rgba(88, 28, 135, 0.2)';
   ctx.beginPath();
-  ctx.ellipse(0, 3 + walkBob + bounceY * 0.6, 15 * scale, 4.5 * scale, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 3 + walkBob + bounceY * 0.6 + spinHop * 0.8 - restOffset, 15 * scale, 4.5 * scale, 0, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.save();
   ctx.scale(facing * scale, scale);
+  if (trickTimer > 0) {
+    ctx.rotate((1 - trickTimer / 28) * Math.PI * 2);
+  } else if (isSitPose) {
+    ctx.rotate(-0.18);
+  } else if (isRestPose) {
+    ctx.scale(1.08, 0.78);
+  }
 
   // Species wings (parrot / dragon / phoenix)
   if (petId === 'parrot' || petId === 'dragon' || petId === 'phoenix') {
-    const flap = Math.sin(frame * 0.3) * 5;
+    const flap = isRestPose ? 0 : Math.sin(frame * 0.3) * 5;
     ctx.fillStyle = meta.accent;
     ctx.beginPath();
     ctx.ellipse(-2, -14 + flap * 0.35, 9, 5.5, -0.35, 0, Math.PI * 2);
@@ -85,13 +104,13 @@ export function drawVectorPet(ctx, petRef, x, y, opts = {}) {
   }
 
   // Tail (bushy for fox, cute curl otherwise; wags faster when petted)
-  const wagSpeed = tapBounce > 0 ? 0.55 : 0.24;
-  ctx.strokeStyle = petId === 'fox' ? meta.body : meta.body;
+  const wagSpeed = tapBounce > 0 || trickTimer > 0 ? 0.55 : isRestPose ? 0.08 : 0.24;
+  ctx.strokeStyle = meta.body;
   ctx.lineWidth = petId === 'fox' ? 6 : 4;
   ctx.lineCap = 'round';
   ctx.beginPath();
   ctx.moveTo(-12, -10);
-  ctx.quadraticCurveTo(-19, -18 + Math.sin(frame * wagSpeed) * 6, -16, -23);
+  ctx.quadraticCurveTo(-19, -18 + Math.sin(frame * wagSpeed) * (isRestPose ? 2 : 6), -16, -23);
   ctx.stroke();
   if (petId === 'fox') {
     ctx.fillStyle = '#ffffff';
@@ -121,13 +140,20 @@ export function drawVectorPet(ctx, petRef, x, y, opts = {}) {
   ctx.ellipse(0, -10, 13, 10, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Legs
-  const stride = isWalking ? Math.sin(frame * 0.35) * 3 : 0;
-  ctx.fillStyle = meta.body;
-  ctx.beginPath();
-  ctx.roundRect(-9 + stride, -5, 4.5, 7, [2]);
-  ctx.roundRect(5 - stride, -5, 4.5, 7, [2]);
-  ctx.fill();
+  // Legs (tucked when resting or sitting)
+  if (!isRestPose) {
+    const stride = isWalking ? Math.sin(frame * 0.35) * 3 : 0;
+    ctx.fillStyle = meta.body;
+    ctx.beginPath();
+    if (isSitPose) {
+      ctx.roundRect(-10, -4, 6, 5, [2]);
+      ctx.roundRect(5, -5, 4.5, 7, [2]);
+    } else {
+      ctx.roundRect(-9 + stride, -5, 4.5, 7, [2]);
+      ctx.roundRect(5 - stride, -5, 4.5, 7, [2]);
+    }
+    ctx.fill();
+  }
 
   // Collar
   ctx.strokeStyle = meta.collar;
@@ -138,16 +164,17 @@ export function drawVectorPet(ctx, petRef, x, y, opts = {}) {
   ctx.stroke();
 
   // Head
+  const headY = isRestPose ? -14 : -18;
   ctx.fillStyle = meta.body;
   ctx.beginPath();
-  ctx.arc(10, -18, 9, 0, Math.PI * 2);
+  ctx.arc(10, headY, 9, 0, Math.PI * 2);
   ctx.fill();
 
   // Panda eye patch
   if (petId === 'panda') {
     ctx.fillStyle = '#1e293b';
     ctx.beginPath();
-    ctx.ellipse(13.5, -19, 3.5, 3, 0, 0, Math.PI * 2);
+    ctx.ellipse(13.5, headY - 1, 3.5, 3, 0, 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -155,23 +182,23 @@ export function drawVectorPet(ctx, petRef, x, y, opts = {}) {
   ctx.fillStyle = meta.ear;
   if (petId === 'bunny') {
     ctx.beginPath();
-    ctx.ellipse(7.5, -32, 3, 9.5, -0.15, 0, Math.PI * 2);
-    ctx.ellipse(12.5, -31, 3, 8.5, 0.15, 0, Math.PI * 2);
+    ctx.ellipse(7.5, headY - 14, 3, 9.5, -0.15, 0, Math.PI * 2);
+    ctx.ellipse(12.5, headY - 13, 3, 8.5, 0.15, 0, Math.PI * 2);
     ctx.fill();
   } else if (petId === 'dog') {
     ctx.beginPath();
-    ctx.ellipse(5, -17, 3.8, 7.5, 0.25, 0, Math.PI * 2);
+    ctx.ellipse(5, headY + 1, 3.8, 7.5, 0.25, 0, Math.PI * 2);
     ctx.fill();
   } else if (petId === 'panda' || petId === 'hamster') {
     ctx.beginPath();
-    ctx.arc(5, -25, 4, 0, Math.PI * 2);
-    ctx.arc(13, -25, 4, 0, Math.PI * 2);
+    ctx.arc(5, headY - 7, 4, 0, Math.PI * 2);
+    ctx.arc(13, headY - 7, 4, 0, Math.PI * 2);
     ctx.fill();
   } else {
     ctx.beginPath();
-    ctx.moveTo(4.5, -24);
-    ctx.lineTo(7, -32);
-    ctx.lineTo(12.5, -25);
+    ctx.moveTo(4.5, headY - 6);
+    ctx.lineTo(7, headY - 14);
+    ctx.lineTo(12.5, headY - 7);
     ctx.closePath();
     ctx.fill();
   }
@@ -179,9 +206,9 @@ export function drawVectorPet(ctx, petRef, x, y, opts = {}) {
   if (petId === 'unicorn') {
     ctx.fillStyle = '#fde047';
     ctx.beginPath();
-    ctx.moveTo(12, -25);
-    ctx.lineTo(16, -37);
-    ctx.lineTo(17.5, -24);
+    ctx.moveTo(12, headY - 7);
+    ctx.lineTo(16, headY - 19);
+    ctx.lineTo(17.5, headY - 6);
     ctx.closePath();
     ctx.fill();
   }
@@ -189,49 +216,61 @@ export function drawVectorPet(ctx, petRef, x, y, opts = {}) {
   if (petId === 'parrot' || petId === 'phoenix') {
     ctx.fillStyle = '#fbbf24';
     ctx.beginPath();
-    ctx.moveTo(18, -19);
-    ctx.lineTo(24, -16);
-    ctx.lineTo(18, -14);
+    ctx.moveTo(18, headY - 1);
+    ctx.lineTo(24, headY + 2);
+    ctx.lineTo(18, headY + 4);
     ctx.closePath();
     ctx.fill();
   }
 
-  // Eye & Catchlight
-  ctx.fillStyle = petId === 'panda' ? '#ffffff' : '#1e1b4b';
-  ctx.beginPath();
-  ctx.arc(14, -19, 2.2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath();
-  ctx.arc(14.6, -19.7, 0.8, 0, Math.PI * 2);
-  ctx.fill();
+  // Eye (peaceful closed eyelid when resting, sparkling open eye otherwise)
+  if (isRestPose) {
+    ctx.strokeStyle = '#1e1b4b';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(14, headY - 1, 2.2, 0.1, Math.PI - 0.1);
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = petId === 'panda' ? '#ffffff' : '#1e1b4b';
+    ctx.beginPath();
+    ctx.arc(14, headY - 1, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(14.6, headY - 1.7, 0.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   ctx.restore();
 
-  // Optional tiny floating badge (e.g. "🎒 Mit" or "👆 Mitnehmen")
-  if (badgeText) {
+  // Command status pill or custom badge
+  const effectiveBadge = badgeText
+    || (command === 'stay' ? '🐾 Bleibt' : command === 'sit' ? '🪑 Sitz' : command === 'rest' ? '💤 Schlaf' : '');
+  const effectiveColor = badgeText ? badgeColor : '#0284c7';
+
+  if (effectiveBadge && !speechText) {
     ctx.save();
     ctx.font = '800 10px "Plus Jakarta Sans", sans-serif';
-    const tw = ctx.measureText(badgeText).width + 14;
+    const tw = ctx.measureText(effectiveBadge).width + 14;
     ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
-    ctx.strokeStyle = badgeColor;
+    ctx.strokeStyle = effectiveColor;
     ctx.lineWidth = 1.6;
     ctx.beginPath();
     ctx.roundRect(-tw / 2, -52 * scale, tw, 18, [9]);
     ctx.fill();
     ctx.stroke();
-    ctx.fillStyle = badgeColor;
+    ctx.fillStyle = effectiveColor;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(badgeText, 0, -43 * scale);
+    ctx.fillText(effectiveBadge, 0, -43 * scale);
     ctx.restore();
   }
 
-  // Optional happy speech reaction when tapped
+  // Happy speech / command reaction bubble
   if (speechText) {
     ctx.save();
     ctx.font = '800 11px "Plus Jakarta Sans", sans-serif';
-    const tw = Math.max(66, ctx.measureText(speechText).width + 16);
+    const tw = Math.max(72, ctx.measureText(speechText).width + 18);
     ctx.fillStyle = '#ffffff';
     ctx.strokeStyle = '#ec4899';
     ctx.lineWidth = 2;
@@ -272,10 +311,12 @@ export class PetFollowerController {
   }
 
   reset(anchorX, anchorY) {
+    PetCommandStore.clearStayPositions();
     const entries = this._getCompanionEntries();
     this.followers = entries.map((entry, idx) => {
       const row = Math.floor(idx / 2);
       const col = idx % 2;
+      const savedCmd = PetCommandStore.getCommand(entry.id);
       return {
         id: entry.id,
         petRef: entry.petRef,
@@ -285,9 +326,59 @@ export class PetFollowerController {
         facing: 1,
         isWalking: false,
         tapBounce: 0,
+        trickTimer: 0,
+        fetchTimer: 0,
         speechTimer: 0,
-        speechText: ''
+        speechText: '',
+        command: savedCmd.command || 'follow',
+        stayX: null,
+        stayY: null
       };
+    });
+  }
+
+  issueCommand(targetIdOrAll, commandId, speechText = '', anchorPos = null) {
+    const targets = targetIdOrAll === 'all'
+      ? this.followers
+      : this.followers.filter((f) => f.id === targetIdOrAll);
+
+    targets.forEach((f) => {
+      const meta = getPetMeta(f.petRef || f.id);
+      if (commandId === 'spin') {
+        f.trickTimer = 28;
+        f.tapBounce = 22;
+      } else if (commandId === 'fetch') {
+        f.fetchTimer = 76;
+        f.command = 'follow';
+        PetCommandStore.setCommand(f.id, 'follow');
+      } else if (commandId === 'praise') {
+        f.tapBounce = 26;
+      } else {
+        f.command = commandId;
+        if (commandId === 'stay') {
+          f.stayX = f.x || anchorPos?.x || 200;
+          f.stayY = f.y || anchorPos?.y || 260;
+          PetCommandStore.setCommand(f.id, 'stay', f.stayX, f.stayY);
+        } else {
+          f.stayX = null;
+          f.stayY = null;
+          PetCommandStore.setCommand(f.id, commandId);
+        }
+      }
+      f.speechText = speechText || meta.say;
+      f.speechTimer = 115;
+    });
+    return targets.length;
+  }
+
+  setSpeech(targetIdOrAll, speechText, duration = 115) {
+    const targets = targetIdOrAll === 'all'
+      ? this.followers
+      : this.followers.filter((f) => f.id === targetIdOrAll);
+    targets.forEach((f) => {
+      f.speechText = speechText;
+      f.speechTimer = duration;
+      f.tapBounce = 18;
     });
   }
 
@@ -301,8 +392,7 @@ export class PetFollowerController {
       const col = idx % 2;
       const slotOffset = 36 + row * 28;
       const spreadY = (col === 0 ? 1 : -1) * (10 + (row % 2) * 8);
-      const targetX = anchorX - facing * slotOffset;
-      const targetY = anchorY + spreadY;
+      const savedCmd = PetCommandStore.getCommand(entry.id);
 
       const f = prev
         ? { ...prev, petRef: entry.petRef, isSitting: entry.isSitting }
@@ -310,14 +400,37 @@ export class PetFollowerController {
             id: entry.id,
             petRef: entry.petRef,
             isSitting: entry.isSitting,
-            x: targetX,
-            y: targetY,
+            x: anchorX - facing * slotOffset,
+            y: anchorY + spreadY,
             facing,
             isWalking: false,
             tapBounce: 0,
+            trickTimer: 0,
+            fetchTimer: 0,
             speechTimer: 0,
-            speechText: ''
+            speechText: '',
+            command: savedCmd.command || 'follow',
+            stayX: savedCmd.stayX,
+            stayY: savedCmd.stayY
           };
+
+      let targetX = anchorX - facing * slotOffset;
+      let targetY = anchorY + spreadY;
+
+      if (f.fetchTimer > 0) {
+        f.fetchTimer--;
+        if (f.fetchTimer > 34) {
+          targetX = anchorX + facing * (72 + idx * 14);
+          targetY = anchorY + spreadY * 0.6;
+        }
+      } else if (f.command === 'stay') {
+        if (f.stayX === null || f.stayY === null) {
+          f.stayX = f.x;
+          f.stayY = f.y;
+        }
+        targetX = f.stayX;
+        targetY = f.stayY;
+      }
 
       const clampedTargetX = bounds
         ? Math.max(bounds.minX, Math.min(bounds.maxX, targetX))
@@ -330,9 +443,20 @@ export class PetFollowerController {
       const dy = clampedTargetY - f.y;
       const dist = Math.hypot(dx, dy);
 
-      if (dist > 4) {
-        f.x += dx * 0.14;
-        f.y += dy * 0.14;
+      if (f.command === 'stay') {
+        if (dist > 4) {
+          f.x += dx * 0.16;
+          f.y += dy * 0.16;
+        }
+        f.isWalking = false;
+        f.facing = anchorX >= f.x ? 1 : -1;
+      } else if ((f.command === 'sit' || f.command === 'rest') && dist <= 56 && f.fetchTimer <= 0) {
+        f.isWalking = false;
+        f.facing = anchorX >= f.x ? 1 : -1;
+      } else if (dist > 4) {
+        const moveRate = f.fetchTimer > 0 ? 0.22 : 0.14;
+        f.x += dx * moveRate;
+        f.y += dy * moveRate;
         f.isWalking = dist > 7;
         if (Math.abs(dx) > 1.5) f.facing = dx > 0 ? 1 : -1;
       } else {
@@ -341,6 +465,7 @@ export class PetFollowerController {
       }
 
       if (f.tapBounce > 0) f.tapBounce--;
+      if (f.trickTimer > 0) f.trickTimer--;
       if (f.speechTimer > 0) f.speechTimer--;
 
       return f;
@@ -360,7 +485,8 @@ export class PetFollowerController {
 
     this.followers.forEach((f, idx) => {
       const meta = getPetMeta(f.petRef);
-      if (showLeashes || f.isSitting) {
+      const stayingFar = f.command === 'stay' && Math.hypot(anchorX - f.x, anchorY - f.y) > 95;
+      if ((showLeashes || f.isSitting) && !stayingFar && f.fetchTimer <= 0) {
         ctx.save();
         ctx.strokeStyle = meta.collar;
         ctx.lineWidth = 2.4;
@@ -382,6 +508,8 @@ export class PetFollowerController {
         scale,
         isWalking: f.isWalking,
         tapBounce: f.tapBounce,
+        command: f.fetchTimer > 0 ? 'follow' : f.command,
+        trickTimer: f.trickTimer,
         badgeText: f.isSitting ? `🐾 ${meta.name}` : '',
         badgeColor: '#0284c7',
         speechText: f.speechTimer > 0 ? f.speechText : ''
@@ -424,3 +552,4 @@ export class PetFollowerController {
     return { hit: false };
   }
 }
+
