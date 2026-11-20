@@ -425,7 +425,8 @@ export function setupStoreScreen(stateManager) {
     targetX: null,
     targetY: null,
     pendingAction: null,
-    pose: 'idle'
+    pose: 'idle',
+    poseTimer: 0
   };
 
   const petFollowers = new PetFollowerController();
@@ -996,6 +997,15 @@ export function setupStoreScreen(stateManager) {
     });
   }
 
+  function hitsStoreObstacle(x, y) {
+    if (x >= 686 && y <= 278) return true;
+    for (let i = 0; i < STORE_SHOPPERS.length; i++) {
+      const npc = STORE_SHOPPERS[i];
+      if (Math.hypot(x - npc.x, y - npc.y) < 34) return true;
+    }
+    return false;
+  }
+
   function walkToAisle(aisle) {
     if (!aisle) return;
     player.targetX = aisle.x;
@@ -1006,8 +1016,13 @@ export function setupStoreScreen(stateManager) {
   }
 
   function navigateInStore(tx, ty, pendingAction = null) {
-    player.targetX = Math.max(54, Math.min(812, tx));
-    player.targetY = Math.max(242, Math.min(430, ty));
+    let gx = Math.max(54, Math.min(812, tx));
+    let gy = Math.max(252, Math.min(430, ty));
+    if (gx >= 686 && gy <= 278) {
+      gy = 288;
+    }
+    player.targetX = gx;
+    player.targetY = gy;
     player.pendingAction = pendingAction;
   }
 
@@ -1086,7 +1101,8 @@ export function setupStoreScreen(stateManager) {
       // Pet tap
       const petTap = petFollowers.handleTap(cx, cy);
       if (petTap.hit) {
-        spawnFX('#f43f5e', petTap.x, petTap.y - 14, 7);
+        player.pose = 'pet';
+        player.poseTimer = 20;
         showToast(`❤️ ${petTap.meta.name} schnuppert neugierig im Laden!`, 'info');
         return;
       }
@@ -1261,10 +1277,21 @@ export function setupStoreScreen(stateManager) {
     if (keys.down || holdPad.down) my += 1;
 
     const speed = 4.6;
+    const stepStoreWithCollision = (nxRaw, nyRaw) => {
+      const nx = Math.max(52, Math.min(812, nxRaw));
+      const ny = Math.max(252, Math.min(430, nyRaw));
+      if (!hitsStoreObstacle(nx, ny)) {
+        player.x = nx;
+        player.y = ny;
+      } else {
+        if (!hitsStoreObstacle(nx, player.y)) player.x = nx;
+        if (!hitsStoreObstacle(player.x, ny)) player.y = ny;
+      }
+    };
+
     if (mx !== 0 || my !== 0) {
       const len = Math.hypot(mx, my) || 1;
-      player.x = Math.max(52, Math.min(812, player.x + (mx / len) * speed));
-      player.y = Math.max(242, Math.min(430, player.y + (my / len) * speed));
+      stepStoreWithCollision(player.x + (mx / len) * speed, player.y + (my / len) * speed);
       if (mx !== 0) player.facing = Math.sign(mx);
       player.pose = 'walk';
     } else if (player.targetX !== null && player.targetY !== null) {
@@ -1272,8 +1299,7 @@ export function setupStoreScreen(stateManager) {
       const dy = player.targetY - player.y;
       const dist = Math.hypot(dx, dy);
       if (dist <= speed + 1) {
-        player.x = player.targetX;
-        player.y = player.targetY;
+        stepStoreWithCollision(player.targetX, player.targetY);
         player.targetX = null;
         player.targetY = null;
         const cb = player.pendingAction;
@@ -1281,10 +1307,12 @@ export function setupStoreScreen(stateManager) {
         if (cb) cb();
       } else {
         if (Math.abs(dx) > 1) player.facing = dx > 0 ? 1 : -1;
-        player.x += (dx / dist) * speed;
-        player.y += (dy / dist) * speed;
+        stepStoreWithCollision(player.x + (dx / dist) * speed, player.y + (dy / dist) * speed);
         player.pose = 'walk';
       }
+    } else if (player.poseTimer > 0) {
+      player.poseTimer--;
+      if (player.poseTimer <= 0) player.pose = 'idle';
     } else {
       player.pose = 'idle';
     }
@@ -1309,9 +1337,14 @@ export function setupStoreScreen(stateManager) {
       showToast(`✨ Einkaufs-Gutschein gefunden! +${reward} 🪙 geschenkt!`, 'success');
     }
 
-    // Move animated NPC shoppers
+    // Move animated NPC shoppers (turn neatly rather than walking straight into the player!)
     STORE_SHOPPERS.forEach((npc) => {
-      npc.x += npc.speed * npc.dir;
+      const nextNpcX = npc.x + npc.speed * npc.dir;
+      if (Math.hypot(player.x - nextNpcX, player.y - npc.y) < 34) {
+        npc.dir *= -1;
+      } else {
+        npc.x = nextNpcX;
+      }
       if (npc.x >= npc.maxX) npc.dir = -1;
       if (npc.x <= npc.minX) npc.dir = 1;
     });

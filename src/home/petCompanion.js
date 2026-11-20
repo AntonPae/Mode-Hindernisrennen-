@@ -60,7 +60,7 @@ export function drawVectorPet(ctx, petRef, x, y, opts = {}) {
   const walkBob = isWalking
     ? Math.abs(Math.sin(frame * 0.28)) * 5.5
     : Math.sin(frame * 0.08) * 1.8;
-  const bounceY = tapBounce > 0 ? Math.abs(Math.sin(tapBounce * 0.4)) * 14 : 0;
+  const bounceY = tapBounce > 0 ? Math.abs(Math.sin(tapBounce * 0.35)) * 7 : 0;
   const drawY = y - walkBob - bounceY;
 
   ctx.save();
@@ -84,13 +84,14 @@ export function drawVectorPet(ctx, petRef, x, y, opts = {}) {
     ctx.fill();
   }
 
-  // Tail (bushy for fox, cute curl otherwise)
+  // Tail (bushy for fox, cute curl otherwise; wags faster when petted)
+  const wagSpeed = tapBounce > 0 ? 0.55 : 0.24;
   ctx.strokeStyle = petId === 'fox' ? meta.body : meta.body;
   ctx.lineWidth = petId === 'fox' ? 6 : 4;
   ctx.lineCap = 'round';
   ctx.beginPath();
   ctx.moveTo(-12, -10);
-  ctx.quadraticCurveTo(-19, -18 + Math.sin(frame * 0.24) * 5, -16, -23);
+  ctx.quadraticCurveTo(-19, -18 + Math.sin(frame * wagSpeed) * 6, -16, -23);
   ctx.stroke();
   if (petId === 'fox') {
     ctx.fillStyle = '#ffffff';

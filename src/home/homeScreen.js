@@ -73,7 +73,7 @@ export function setupHomeScreen(stateManager) {
   // Player Movement & Interactive Task State inside Room
   const player = {
     x: 260,
-    z: 0, // subtle depth offset (-14..+26)
+    z: 6, // walkable floor lane (-6..+22)
     yOffset: 0, // vertical jump offset
     vy: 0,
     facing: 1,
@@ -93,10 +93,33 @@ export function setupHomeScreen(stateManager) {
   let fridgeOpen = false;
   const petFollowers = new PetFollowerController();
   const fxParticles = [];
+  const waterDrops = [];
+  const recentGroundProps = [];
   let activeFind = null;
   let nextFindTimer = 210;
   let gardenGateOpen = 0;
   let edgeCooldown = 0;
+
+  function spawnGardenWaterDrops(fromX, fromY, targetX, targetY) {
+    for (let i = 0; i < 12; i++) {
+      waterDrops.push({
+        x: fromX + (Math.random() - 0.5) * 4,
+        y: fromY - i * 1.4,
+        vx: (targetX - fromX) * 0.055 + (Math.random() - 0.5) * 0.45,
+        vy: 1.4 + Math.random() * 1.1,
+        targetY,
+        life: 34
+      });
+    }
+  }
+
+  function hitsGardenObstacle(x, z) {
+    if (activeRoom !== 'garden') return false;
+    if (HomeManager.hasItem('garden', 'fountain') && z >= 4 && Math.abs(x - 348) < 32) return true;
+    if (HomeManager.hasItem('expansions', 'pool_deck') && z >= 4 && Math.abs(x - 600) < 68) return true;
+    if (HomeManager.hasItem('petItems', 'pet_house') && z >= 2 && x >= 256 && x <= 310) return true;
+    return false;
+  }
 
   function showToast(msg, type = 'info') {
     if (!toastEl) return;
@@ -412,7 +435,6 @@ export function setupHomeScreen(stateManager) {
       if (res.ok) {
         player.pose = 'pet';
         player.poseTimer = 22;
-        spawnFX('heart', player.x, 220, 9);
         updateUI();
         showToast('🍓 Leckerer Snack aus dem Kühlschrank! +25% Sättigung!', 'success');
       } else {
@@ -467,9 +489,10 @@ export function setupHomeScreen(stateManager) {
         HomeManager.setAllCompanions(true);
       }
       const total = state.owned.pets.length + sitting.length;
+      player.pose = 'pet';
+      player.poseTimer = 22;
       updateUI();
       renderRoomTabs();
-      spawnFX('heart', player.x, 230, 12);
       showToast(`🐕 Alle ${total} Tiere gleichzeitig an der Leine! Sie laufen jetzt überall mit dir mit!`, 'success');
     });
   }
@@ -482,9 +505,10 @@ export function setupHomeScreen(stateManager) {
         return;
       }
       HomeManager.setAllCompanions(true);
+      player.pose = 'pet';
+      player.poseTimer = 22;
       updateUI();
       renderRoomTabs();
-      spawnFX('heart', player.x, 230, 12);
       showToast('🐾 Alle deine Tiere abgeholt! Sie begleiten dich jetzt überall hin!', 'success');
     });
   }
@@ -494,7 +518,6 @@ export function setupHomeScreen(stateManager) {
       HomeManager.setAllCompanions(false);
       updateUI();
       renderRoomTabs();
-      spawnFX('sparkle', player.x, 240, 10);
       showToast('🏠 Deine Tiere bleiben jetzt gemütlich im Tierzimmer!', 'info');
     });
   }
@@ -620,7 +643,8 @@ export function setupHomeScreen(stateManager) {
           if (ph.isSitting) {
             const meta = getPetMeta(ph.petRef || ph.petId);
             HomeManager.cuddleCompanionPet(ph.petId);
-            spawnFX('heart', ph.x, ph.y - 16, 9);
+            player.pose = 'pet';
+            player.poseTimer = 22;
             showToast(`❤️ ${meta.name} (Pflege-Tier) wedelt fröhlich & läuft überall mit dir mit!`, 'success');
             updateUI();
             return;
@@ -629,9 +653,10 @@ export function setupHomeScreen(stateManager) {
           if (res.ok) {
             const meta = getPetMeta(ph.petId);
             const hasPetRoom = HomeManager.hasPetRoom();
+            player.pose = 'pet';
+            player.poseTimer = 22;
             if (res.active) {
               HomeManager.cuddleCompanionPet(ph.petId);
-              spawnFX('heart', ph.x, ph.y - 16, 9);
               showToast(
                 hasPetRoom
                   ? `🐾 ${meta.name} im Tierzimmer abgeholt! Es kommt jetzt überall mit!`
@@ -639,7 +664,6 @@ export function setupHomeScreen(stateManager) {
                 'success'
               );
             } else {
-              spawnFX('sparkle', ph.x, ph.y - 14, 6);
               showToast(
                 hasPetRoom
                   ? `🐾 ${meta.name} bleibt jetzt gemütlich im Tierzimmer!`
@@ -674,13 +698,16 @@ export function setupHomeScreen(stateManager) {
         }
       }
 
-      // 4. Otherwise walk character to clicked floor spot!
+      // 4. Otherwise walk character strictly on walkable floor / garden path!
       const clampedX = Math.max(55, Math.min(canvas.width - 55, cx));
       const floorBaseY = canvas.height - 62;
-      let clampedZ = Math.max(-14, Math.min(26, cy - floorBaseY));
-      // If crossing the garden picket fence at x = 246, aim through the Gartentor height (z = 6)
+      let clampedZ = Math.max(-6, Math.min(22, cy - floorBaseY));
+      if (hitsGardenObstacle(clampedX, clampedZ)) {
+        clampedZ = 0;
+      }
+      // If crossing the garden picket fence at x = 246, aim through the Gartentor height (z = 4)
       if (activeRoom === 'garden' && ((player.x < 246 && clampedX >= 246) || (player.x >= 246 && clampedX < 246))) {
-        clampedZ = 6;
+        clampedZ = 4;
       }
       player.targetX = clampedX;
       player.targetZ = clampedZ;
@@ -749,17 +776,26 @@ export function setupHomeScreen(stateManager) {
     }
 
     let nextX = Math.max(46, Math.min(w - 46, player.x + vx));
-    let nextZ = Math.max(-14, Math.min(26, player.z + vz));
+    let nextZ = Math.max(-6, Math.min(22, player.z + vz));
 
-    // In the Garden, you MUST go through the Gartentor (x = 246, z = -4..16)!
+    // In the Garden, you MUST go through the Gartentor (x = 246, z = -4..14) and avoid pool/fountain/pet_house!
     if (activeRoom === 'garden') {
       const gateX = 246;
       const crossingGate = (player.x < gateX && nextX >= gateX) || (player.x >= gateX && nextX < gateX);
-      if (crossingGate && (nextZ < -4 || nextZ > 16)) {
-        // Gently guide character into the Gartentor path!
+      if (crossingGate && (nextZ < -4 || nextZ > 14)) {
         nextZ += nextZ < -4 ? 1.8 : -1.8;
-        if (nextZ < -6 || nextZ > 18) {
+        if (nextZ < -6 || nextZ > 16) {
           nextX = player.x;
+        }
+      }
+      if (hitsGardenObstacle(nextX, nextZ)) {
+        if (!hitsGardenObstacle(nextX, player.z)) {
+          nextZ = player.z;
+        } else if (!hitsGardenObstacle(player.x, nextZ)) {
+          nextX = player.x;
+        } else {
+          nextX = player.x;
+          nextZ = Math.max(-6, player.z - 1.6);
         }
       }
       const nearGate = Math.abs(nextX - gateX) < 55;
@@ -872,13 +908,18 @@ export function setupHomeScreen(stateManager) {
         }
       } else if (activeTask.type === 'garden') {
         let tended = false;
+        const floorY = canvas.height - 66;
         activeTask.targets.forEach((t) => {
           if (!t.collected && Math.abs(player.x - t.x) < 42) {
             t.collected = true;
             tended = true;
-            player.pose = 'water';
-            player.poseTimer = 26;
-            spawnFX(activeTask.mode === 'harvest' ? 'coin' : 'water', t.x, 285, 8);
+            player.facing = t.x >= player.x ? 1 : -1;
+            player.pose = activeTask.mode === 'harvest' ? 'pet' : 'water';
+            player.poseTimer = 28;
+            if (activeTask.mode !== 'harvest') {
+              spawnGardenWaterDrops(player.x + player.facing * 20, floorY - 32, t.x, floorY + 6);
+              recentGroundProps.push({ kind: 'wet_soil', x: t.x, y: floorY + 4, life: 160 });
+            }
           }
         });
         if (tended) {
@@ -888,7 +929,6 @@ export function setupHomeScreen(stateManager) {
             activeTask = null;
             if (res.ok && res.action === 'harvest') {
               setTaskBanner('🍎 Garten abgeerntet! Schau dir deine Blüten & Bäume an!', false);
-              spawnFX('coin', player.x, 200, 10);
               showToast(`🌾 Reiche Garten-Ernte! +${res.bonusCoins} 🪙 verdient!`, 'success');
             } else {
               setTaskBanner('🚿 Garten komplett gegossen! Alles blüht auf!', false);
@@ -907,13 +947,18 @@ export function setupHomeScreen(stateManager) {
         }
       } else if (activeTask.type === 'feed_pets' || activeTask.type === 'pet_pets') {
         let cared = false;
+        const floorY = canvas.height - 66;
         activeTask.targets.forEach((t) => {
           if (!t.collected && Math.abs(player.x - t.x) < 45) {
             t.collected = true;
             cared = true;
             player.pose = 'pet';
             player.poseTimer = 24;
-            spawnFX('heart', t.x, 285, 7);
+            if (activeTask.type === 'feed_pets') {
+              recentGroundProps.push({ kind: 'food_bowl', x: t.x, y: floorY + 12, life: 180 });
+            } else {
+              HomeManager.cuddleCompanionPet(t.id);
+            }
           }
         });
         if (cared) {
@@ -927,7 +972,6 @@ export function setupHomeScreen(stateManager) {
               updateUI();
               notifyMoneyOrMissionChange();
               if (isFeed) {
-                spawnFX('coin', player.x, 210, 8);
                 showToast(`🦴 Alle Tiere gefüttert! +${res.bonusCoins} 🪙 Tierfreund-Bonus!`, 'success');
               } else {
                 showToast('🤗 Deine Tiere schnurren & freuen sich riesig!', 'success');
@@ -938,6 +982,22 @@ export function setupHomeScreen(stateManager) {
           }
         }
       }
+    }
+
+    for (let i = waterDrops.length - 1; i >= 0; i--) {
+      const d = waterDrops[i];
+      d.x += d.vx;
+      d.y += d.vy;
+      d.vy += 0.24;
+      d.life--;
+      if (d.y >= d.targetY || d.life <= 0) {
+        waterDrops.splice(i, 1);
+      }
+    }
+
+    for (let i = recentGroundProps.length - 1; i >= 0; i--) {
+      recentGroundProps[i].life--;
+      if (recentGroundProps[i].life <= 0) recentGroundProps.splice(i, 1);
     }
   }
 
@@ -1007,7 +1067,7 @@ export function setupHomeScreen(stateManager) {
       drawFloatingHint(ctx, player.x, drawY - 134, 'Hunger!', '#f43f5e');
     }
 
-    // Sparkling Lucky Find
+    // Ground-level Lucky Coin Find (never floating mid-air)
     if (!activeFind) {
       nextFindTimer--;
       if (nextFindTimer <= 0) {
@@ -1019,37 +1079,40 @@ export function setupHomeScreen(stateManager) {
         const pick = finds[Math.floor(Math.random() * finds.length)];
         activeFind = {
           ...pick,
-          x: 110 + Math.random() * (w - 220),
-          y: floorY - 35 - Math.random() * 90
+          x: 120 + Math.random() * (w - 240),
+          y: floorY + 6 + Math.random() * 14
         };
       }
     } else {
-      const bob = Math.sin(animFrame * 0.1) * 5;
       ctx.save();
-      const glow = ctx.createRadialGradient(activeFind.x, activeFind.y + bob, 4, activeFind.x, activeFind.y + bob, 26);
-      glow.addColorStop(0, 'rgba(254, 240, 138, 0.85)');
-      glow.addColorStop(1, 'rgba(251, 191, 36, 0)');
-      ctx.fillStyle = glow;
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.14)';
       ctx.beginPath();
-      ctx.arc(activeFind.x, activeFind.y + bob, 26, 0, Math.PI * 2);
+      ctx.ellipse(activeFind.x, activeFind.y + 11, 12, 4, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Faceted Gold Star Coin
       ctx.fillStyle = '#fbbf24';
       ctx.beginPath();
-      ctx.arc(activeFind.x, activeFind.y + bob, 14, 0, Math.PI * 2);
+      ctx.arc(activeFind.x, activeFind.y, 12, 0, Math.PI * 2);
       ctx.fill();
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
       ctx.fillStyle = '#fef9c3';
       ctx.beginPath();
-      ctx.arc(activeFind.x - 4, activeFind.y + bob - 4, 5, 0, Math.PI * 2);
+      ctx.arc(activeFind.x - 3, activeFind.y - 3, 4, 0, Math.PI * 2);
       ctx.fill();
-
-      ctx.font = '700 11px "Plus Jakarta Sans", sans-serif';
-      ctx.fillStyle = '#78350f';
-      ctx.textAlign = 'center';
-      ctx.fillText('Klick!', activeFind.x, activeFind.y + bob - 20);
       ctx.restore();
     }
+
+    // Realistic downward water stream droplets onto soil patches
+    waterDrops.forEach((d) => {
+      ctx.save();
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.ellipse(d.x, d.y, 2.2, 4.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
 
     // Painterly Particle FX
     for (let i = fxParticles.length - 1; i >= 0; i--) {
@@ -2239,11 +2302,15 @@ export function setupHomeScreen(stateManager) {
     ctx.fillStyle = '#a7f3d0';
     ctx.fillRect(0, floorY, w, 6);
 
-    // Stone Terrace under the House (x: 0..246)
+    // Stone Terrace under the House (x: 0..246) + Crisp Garden Stepping Stone Path (x: 246..720)
     ctx.fillStyle = '#fef3c7';
     ctx.fillRect(0, floorY, 246, h - floorY);
     ctx.fillStyle = '#fde68a';
     ctx.fillRect(0, floorY, 246, 6);
+    ctx.fillStyle = 'rgba(254, 243, 199, 0.92)';
+    ctx.fillRect(246, floorY, w - 280, 26);
+    ctx.fillStyle = 'rgba(217, 119, 6, 0.16)';
+    ctx.fillRect(246, floorY + 24, w - 280, 2);
 
     // GARDEN FENCE + SWINGING GARTENTOR at x = 246!
     ctx.save();
@@ -2435,6 +2502,40 @@ export function setupHomeScreen(stateManager) {
   }
 
   function drawActiveTaskTargets(ctx, floorY) {
+    // Grounded props that linger realistically after watering or feeding
+    recentGroundProps.forEach((gp) => {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, gp.life / 30);
+      if (gp.kind === 'food_bowl') {
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.16)';
+        ctx.beginPath();
+        ctx.ellipse(gp.x, gp.y + 3, 15, 4.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#f59e0b';
+        ctx.beginPath();
+        ctx.ellipse(gp.x, gp.y, 14, 6.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#78350f';
+        ctx.beginPath();
+        ctx.ellipse(gp.x, gp.y - 1.5, 11, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#b45309';
+        [-4, 0, 4, -2, 3].forEach((kx, idx) => {
+          ctx.beginPath();
+          ctx.arc(gp.x + kx, gp.y - 2 + (idx % 2), 2, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      } else if (gp.kind === 'wet_soil') {
+        ctx.fillStyle = '#451a03';
+        ctx.beginPath();
+        ctx.ellipse(gp.x, gp.y, 18, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#10b981';
+        ctx.fillRect(gp.x - 1.5, gp.y - 12, 3, 12);
+      }
+      ctx.restore();
+    });
+
     if (!activeTask) return;
 
     // Cooking Phase 1: Highlight the Kühlschrank itself (NO food floating in the room!)
@@ -2465,18 +2566,8 @@ export function setupHomeScreen(stateManager) {
 
     if (!activeTask.targets) return;
 
-    activeTask.targets.forEach((t, idx) => {
+    activeTask.targets.forEach((t) => {
       if (t.collected) return;
-      const bob = Math.sin(animFrame * 0.1 + idx) * 5;
-      const ty = floorY - 26 + bob;
-
-      const halo = ctx.createRadialGradient(t.x, ty, 3, t.x, ty, 28);
-      halo.addColorStop(0, 'rgba(254, 240, 138, 0.88)');
-      halo.addColorStop(1, 'rgba(251, 191, 36, 0)');
-      ctx.fillStyle = halo;
-      ctx.beginPath();
-      ctx.arc(t.x, ty, 28, 0, Math.PI * 2);
-      ctx.fill();
 
       if (activeTask.type === 'clean') {
         ctx.fillStyle = 'rgba(148, 163, 184, 0.72)';
@@ -2486,17 +2577,54 @@ export function setupHomeScreen(stateManager) {
         ctx.arc(t.x, floorY + 2, 11, 0, Math.PI * 2);
         ctx.fill();
       } else if (activeTask.type === 'garden') {
-        ctx.fillStyle = activeTask.mode === 'harvest' ? '#f43f5e' : '#38bdf8';
+        if (activeTask.mode === 'harvest') {
+          // Grounded ripe apples/produce sitting naturally on the soil bed
+          ctx.fillStyle = '#78350f';
+          ctx.beginPath();
+          ctx.ellipse(t.x, floorY + 4, 16, 5.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#f43f5e';
+          ctx.beginPath();
+          ctx.arc(t.x - 5, floorY - 3, 5.5, 0, Math.PI * 2);
+          ctx.arc(t.x + 5, floorY - 2, 5, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          // Realistic dry earth patch waiting to be watered
+          ctx.fillStyle = '#b45309';
+          ctx.beginPath();
+          ctx.ellipse(t.x, floorY + 4, 18, 6, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#fef3c7';
+          ctx.lineWidth = 1.6;
+          ctx.stroke();
+          ctx.fillStyle = '#65a30d';
+          ctx.fillRect(t.x - 1.5, floorY - 7, 3, 10);
+        }
+      } else if (activeTask.type === 'feed_pets') {
+        // Real ceramic food bowl sitting flush on the floor waiting for food
+        ctx.save();
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.16)';
         ctx.beginPath();
-        ctx.arc(t.x, ty, 11, 0, Math.PI * 2);
+        ctx.ellipse(t.x, floorY + 15, 16, 4.5, 0, 0, Math.PI * 2);
         ctx.fill();
-      } else if (activeTask.type === 'feed_pets' || activeTask.type === 'pet_pets') {
-        ctx.fillStyle = '#f43f5e';
+        ctx.fillStyle = '#f59e0b';
         ctx.beginPath();
-        ctx.moveTo(t.x, ty + 8);
-        ctx.bezierCurveTo(t.x - 13, ty - 1, t.x - 8, ty - 11, t.x, ty - 4);
-        ctx.bezierCurveTo(t.x + 8, ty - 11, t.x + 13, ty - 1, t.x, ty + 8);
+        ctx.ellipse(t.x, floorY + 12, 14, 6.2, 0, 0, Math.PI * 2);
         ctx.fill();
+        ctx.fillStyle = '#fef3c7';
+        ctx.beginPath();
+        ctx.ellipse(t.x, floorY + 10.5, 10.5, 3.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      } else if (activeTask.type === 'pet_pets') {
+        // Subtle floor contact ring (zero floating hearts in mid-air!)
+        ctx.save();
+        ctx.strokeStyle = '#f472b6';
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.ellipse(t.x, floorY + 14, 18, 6, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
       }
     });
   }

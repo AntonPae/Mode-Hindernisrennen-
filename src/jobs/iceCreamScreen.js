@@ -333,19 +333,39 @@ export function setupIceCreamScreen(stateManager) {
     });
   }
 
-  // Pathfinding around the counter (`COUNTER_LEFT..COUNTER_RIGHT`, `y: 178..224`)
+  function insideIceObstacle(x, y) {
+    if (x > COUNTER_LEFT - 18 && x < COUNTER_RIGHT + 18 && y > COUNTER_TOP_Y + 8 && y < COUNTER_BOTTOM_Y + 26) {
+      return true;
+    }
+    for (let i = 0; i < TABLE_POS.length; i++) {
+      const tb = TABLE_POS[i];
+      if (x > tb.guestX - 24 && x < tb.x + 28 && y > tb.y - 26 && y < tb.y + 24) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Pathfinding around the counter (`COUNTER_LEFT..COUNTER_RIGHT`, `y: 178..224`) and dining tables
   function navigateToPoint(tx, ty, pendingAction = null) {
-    const clampedX = Math.max(46, Math.min(814, tx));
-    const clampedY = Math.max(158, Math.min(445, ty));
+    let clampedX = Math.max(46, Math.min(814, tx));
+    let clampedY = Math.max(158, Math.min(445, ty));
+    if (insideIceObstacle(clampedX, clampedY)) {
+      if (clampedY >= 340) {
+        clampedY = 348;
+      } else {
+        clampedY = COUNTER_BOTTOM_Y + 32;
+      }
+    }
     const behindY = AISLE_Y;
     const frontY = 262;
+    const diningLaneY = 326;
 
     const startBehind = player.y < 205;
     const endBehind = clampedY < 205;
     const waypoints = [];
 
     if (startBehind && !endBehind) {
-      // Need to walk around counter via left or right pass-through
       const viaLeft = Math.abs(player.x - 54) + Math.abs(clampedX - 54);
       const viaRight = Math.abs(player.x - 804) + Math.abs(clampedX - 804);
       const sideX = viaLeft <= viaRight ? 54 : 804;
@@ -357,6 +377,12 @@ export function setupIceCreamScreen(stateManager) {
       const sideX = viaLeft <= viaRight ? 54 : 804;
       waypoints.push({ x: sideX, y: frontY });
       waypoints.push({ x: sideX, y: behindY });
+    }
+
+    // If walking horizontally across the dining table row, step up into the dining lane first
+    if (!startBehind && !endBehind && player.y >= 362 && clampedY >= 362 && Math.abs(clampedX - player.x) > 70) {
+      waypoints.push({ x: player.x, y: diningLaneY });
+      waypoints.push({ x: clampedX, y: diningLaneY });
     }
 
     waypoints.push({ x: clampedX, y: clampedY });
@@ -486,7 +512,8 @@ export function setupIceCreamScreen(stateManager) {
     // 0. Tap on a companion pet walking with you!
     const petTap = petFollowers.handleTap(cx, cy);
     if (petTap.hit) {
-      spawnFX('heart', petTap.x, petTap.y - 12, 7);
+      player.pose = 'pet';
+      player.poseTimer = 20;
       setStatus(`❤️ ${petTap.meta.name} wedelt fröhlich neben dir!`);
       showToast(`❤️ ${petTap.meta.name} gestreichelt!`, 'success');
       return;
@@ -638,11 +665,8 @@ export function setupIceCreamScreen(stateManager) {
     const nextX = Math.max(40, Math.min(820, player.x + dx));
     const nextY = Math.max(158, Math.min(448, player.y + dy));
 
-    const insideCounter = (x, y) =>
-      x > COUNTER_LEFT - 18 && x < COUNTER_RIGHT + 18 && y > COUNTER_TOP_Y + 8 && y < COUNTER_BOTTOM_Y + 26;
-
-    if (!insideCounter(nextX, player.y)) player.x = nextX;
-    if (!insideCounter(player.x, nextY)) player.y = nextY;
+    if (!insideIceObstacle(nextX, player.y)) player.x = nextX;
+    if (!insideIceObstacle(player.x, nextY)) player.y = nextY;
   }
 
   function updateSimulation() {
@@ -665,8 +689,10 @@ export function setupIceCreamScreen(stateManager) {
       const dy = wp.y - player.y;
       const dist = Math.hypot(dx, dy);
       if (dist <= speed + 1) {
-        player.x = wp.x;
-        player.y = wp.y;
+        if (!insideIceObstacle(wp.x, wp.y)) {
+          player.x = wp.x;
+          player.y = wp.y;
+        }
         player.waypoints.shift();
         if (player.waypoints.length === 0 && player.pendingAction) {
           const act = player.pendingAction;
@@ -678,8 +704,7 @@ export function setupIceCreamScreen(stateManager) {
         }
       } else {
         if (Math.abs(dx) > 1) player.facing = dx > 0 ? 1 : -1;
-        player.x += (dx / dist) * speed;
-        player.y += (dy / dist) * speed;
+        movePlayerWithCounterCollision((dx / dist) * speed, (dy / dist) * speed);
         player.pose = 'walk';
       }
     } else if (player.poseTimer > 0) {

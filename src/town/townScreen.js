@@ -12,6 +12,20 @@ const LEFT_GATE_X = 280;
 const RIGHT_GATE_X = 560;
 const STREET_START_X = 1170;
 
+const SIDEWALK_MIN_Y = 256;
+const SIDEWALK_MAX_Y = 286;
+const LOWER_WALK_MIN_Y = 400;
+const LOWER_WALK_MAX_Y = 434;
+const GARDEN_PATH_MIN_Y = 286;
+const GARDEN_PATH_MAX_Y = 376;
+const CROSSWALK_XS = [1350, 1665, 1980, 2295, 2610, 2925];
+const CROSSWALK_HALF_W = 26;
+const RESIDENTIAL_NEIGHBORS = [
+  { x: 700, y: 222, shirt: '#0284c7', icon: '🐕' },
+  { x: 885, y: 222, shirt: '#a855f7', icon: '🐱' },
+  { x: 1070, y: 222, shirt: '#10b981', icon: '🐶' }
+];
+
 export const TOWN_PLACES = [
   {
     id: 'home',
@@ -145,11 +159,11 @@ export function setupTownScreen(stateManager) {
     facing: 1,
     waypoints: [],
     pendingPlace: null,
-    pose: 'idle'
+    pose: 'idle',
+    poseTimer: 0
   };
 
   const petFollowers = new PetFollowerController();
-  const fxParticles = [];
 
   const streetCars = [
     { x: 1320, speed: 1.5, color: '#f43f5e', roof: '#ffe4e6', dir: 1 },
@@ -193,26 +207,107 @@ export function setupTownScreen(stateManager) {
     }
   }
 
+  function getNearestCrosswalkX(x) {
+    let best = CROSSWALK_XS[0];
+    let bestD = Infinity;
+    for (const cx of CROSSWALK_XS) {
+      const d = Math.abs(x - cx);
+      if (d < bestD) {
+        bestD = d;
+        best = cx;
+      }
+    }
+    return best;
+  }
+
+  function isPointOnCrosswalk(x) {
+    return CROSSWALK_XS.some((cx) => Math.abs(x - cx) <= CROSSWALK_HALF_W);
+  }
+
+  function snapToTownPath(tx, ty) {
+    let x = Math.max(48, Math.min(WORLD_WIDTH - 48, tx));
+    let y = Math.max(SIDEWALK_MIN_Y, Math.min(LOWER_WALK_MAX_Y, ty));
+
+    if (x > GARDEN_LEFT_X + 8 && x < GARDEN_RIGHT_X - 8) {
+      // Garden area: allow upper sidewalk OR garden stone path
+      if (ty <= SIDEWALK_MAX_Y + 6) {
+        y = Math.max(SIDEWALK_MIN_Y, Math.min(SIDEWALK_MAX_Y, ty));
+      } else {
+        y = Math.max(GARDEN_PATH_MIN_Y, Math.min(GARDEN_PATH_MAX_Y, ty));
+        // Avoid stepping inside garden flowerbed (x: 318..402, y: 328..366) or apple tree (x: 454..494, y: 300..366)
+        if (x >= 316 && x <= 404 && y >= 326 && y <= 368) {
+          y = 314;
+        }
+        if (HomeManager.hasItem('garden', 'apple_tree') && x >= 452 && x <= 496 && y >= 300 && y <= 368) {
+          y = 296;
+        }
+      }
+      return { x, y };
+    }
+
+    if (x >= STREET_START_X) {
+      // Shopping street: upper sidewalk, crosswalks, or lower promenade
+      if (y > SIDEWALK_MAX_Y && y < LOWER_WALK_MIN_Y) {
+        if (isPointOnCrosswalk(x)) {
+          return { x, y };
+        }
+        // Snap onto upper sidewalk or lower promenade depending on which is closer
+        y = y < 342 ? SIDEWALK_MAX_Y - 10 : LOWER_WALK_MIN_Y + 12;
+      } else if (y >= LOWER_WALK_MIN_Y) {
+        y = Math.max(LOWER_WALK_MIN_Y, Math.min(LOWER_WALK_MAX_Y, y));
+      } else {
+        y = Math.max(SIDEWALK_MIN_Y, Math.min(SIDEWALK_MAX_Y, y));
+      }
+      return { x, y };
+    }
+
+    // Residential sidewalk outside garden: strictly keep on the sidewalk
+    y = Math.max(SIDEWALK_MIN_Y, Math.min(SIDEWALK_MAX_Y, y));
+    return { x, y };
+  }
+
   function navigateInTown(tx, ty, pendingPlace = null) {
-    const clampedX = Math.max(48, Math.min(WORLD_WIDTH - 48, tx));
-    const clampedY = Math.max(242, Math.min(434, ty));
-    const startInGarden = player.x > GARDEN_LEFT_X + 6 && player.x < GARDEN_RIGHT_X - 6;
-    const endInGarden = clampedX > GARDEN_LEFT_X + 6 && clampedX < GARDEN_RIGHT_X - 6;
+    const dest = snapToTownPath(tx, ty);
+    const clampedX = dest.x;
+    const clampedY = dest.y;
+    const startInGarden = player.x > GARDEN_LEFT_X + 6 && player.x < GARDEN_RIGHT_X - 6 && player.y > SIDEWALK_MAX_Y;
+    const endInGarden = clampedX > GARDEN_LEFT_X + 6 && clampedX < GARDEN_RIGHT_X - 6 && clampedY > SIDEWALK_MAX_Y;
     const waypoints = [];
 
     const gateY = 304;
-    if (!startInGarden && endInGarden) {
+    // Handle lower promenade <-> upper sidewalk via nearest Zebrastreifen!
+    const startOnLower = player.x >= STREET_START_X && player.y >= LOWER_WALK_MIN_Y - 4;
+    const endOnLower = clampedX >= STREET_START_X && clampedY >= LOWER_WALK_MIN_Y - 4;
+    const startOnCross = player.x >= STREET_START_X && player.y > SIDEWALK_MAX_Y && player.y < LOWER_WALK_MIN_Y;
+
+    if (startOnLower && !endOnLower) {
+      const cwX = getNearestCrosswalkX(player.x);
+      waypoints.push({ x: cwX, y: LOWER_WALK_MIN_Y + 10 });
+      waypoints.push({ x: cwX, y: 270 });
+    } else if (!startOnLower && endOnLower) {
+      if (startInGarden) {
+        const gateX = RIGHT_GATE_X;
+        waypoints.push({ x: gateX - 24, y: gateY });
+        waypoints.push({ x: gateX + 28, y: 270 });
+      }
+      const cwX = getNearestCrosswalkX(clampedX);
+      waypoints.push({ x: cwX, y: 270 });
+      waypoints.push({ x: cwX, y: LOWER_WALK_MIN_Y + 10 });
+    } else if (startOnCross) {
+      const cwX = getNearestCrosswalkX(player.x);
+      waypoints.push({ x: cwX, y: clampedY >= 342 ? LOWER_WALK_MIN_Y + 10 : 270 });
+    } else if (!startInGarden && endInGarden) {
       const gateX = player.x <= LEFT_GATE_X + 120 ? LEFT_GATE_X : RIGHT_GATE_X;
       waypoints.push({ x: gateX + (gateX === LEFT_GATE_X ? -24 : 24), y: gateY });
       waypoints.push({ x: gateX + (gateX === LEFT_GATE_X ? 28 : -28), y: gateY });
     } else if (startInGarden && !endInGarden) {
       const gateX = clampedX <= LEFT_GATE_X ? LEFT_GATE_X : RIGHT_GATE_X;
       waypoints.push({ x: gateX + (gateX === LEFT_GATE_X ? 26 : -26), y: gateY });
-      waypoints.push({ x: gateX + (gateX === LEFT_GATE_X ? -28 : 28), y: gateY });
+      waypoints.push({ x: gateX + (gateX === LEFT_GATE_X ? -28 : 28), y: 270 });
     } else if (player.x <= LEFT_GATE_X && clampedX >= RIGHT_GATE_X) {
-      waypoints.push({ x: clampedX, y: Math.min(266, clampedY) });
+      waypoints.push({ x: clampedX, y: Math.max(SIDEWALK_MIN_Y, Math.min(SIDEWALK_MAX_Y, clampedY)) });
     } else if (player.x >= RIGHT_GATE_X && clampedX <= LEFT_GATE_X) {
-      waypoints.push({ x: clampedX, y: Math.min(266, clampedY) });
+      waypoints.push({ x: clampedX, y: Math.max(SIDEWALK_MIN_Y, Math.min(SIDEWALK_MAX_Y, clampedY)) });
     }
 
     waypoints.push({ x: clampedX, y: clampedY });
@@ -264,16 +359,9 @@ export function setupTownScreen(stateManager) {
 
       const petTap = petFollowers.handleTap(worldX, worldY);
       if (petTap.hit) {
-        for (let i = 0; i < 6; i++) {
-          fxParticles.push({
-            x: petTap.x + (Math.random() - 0.5) * 32,
-            y: petTap.y - 12,
-            vx: (Math.random() - 0.5) * 1.8,
-            vy: -1.1 - Math.random() * 1.4,
-            life: 40
-          });
-        }
-        if (statusEl) statusEl.textContent = `❤️ ${petTap.meta.name} freut sich über deine Streicheleinheit!`;
+        player.pose = 'pet';
+        player.poseTimer = 22;
+        if (statusEl) statusEl.textContent = `❤️ ${petTap.meta.name} wedelt fröhlich neben dir auf dem Weg!`;
         return;
       }
 
@@ -353,13 +441,42 @@ export function setupTownScreen(stateManager) {
   if (toHomeBtn) toHomeBtn.addEventListener('click', () => stateManager.setState('HOME', { room: 'living_room' }));
   if (toEditorBtn) toEditorBtn.addEventListener('click', () => stateManager.setState('EDITOR'));
 
-  function moveWithGardenFence(dx, dy) {
-    const nextX = Math.max(42, Math.min(WORLD_WIDTH - 42, player.x + dx));
-    const nextY = Math.max(242, Math.min(434, player.y + dy));
+  function isTownWalkable(x, y) {
+    if (x < 42 || x > WORLD_WIDTH - 42) return false;
+    // Upper sidewalk everywhere along residential & shopping street
+    if (y >= SIDEWALK_MIN_Y && y <= SIDEWALK_MAX_Y) {
+      return true;
+    }
+    // Inside fenced garden stone path (between fences 280..560)
+    if (x > GARDEN_LEFT_X + 2 && x < GARDEN_RIGHT_X - 2 && y >= GARDEN_PATH_MIN_Y && y <= GARDEN_PATH_MAX_Y) {
+      // Avoid flowerbed & apple tree trunk
+      if (x >= 318 && x <= 402 && y >= 328 && y <= 366) return false;
+      if (HomeManager.hasItem('garden', 'apple_tree') && x >= 454 && x <= 494 && y >= 302 && y <= 364) return false;
+      return true;
+    }
+    // Outside garden on left residential side: allow stepping smoothly into gate entrance y: 286..330 near gates
+    if ((Math.abs(x - LEFT_GATE_X) < 34 || Math.abs(x - RIGHT_GATE_X) < 34) && y >= SIDEWALK_MIN_Y && y <= 332) {
+      return true;
+    }
+    // Shopping street lower promenade & crosswalks ONLY
+    if (x >= STREET_START_X) {
+      if (y >= LOWER_WALK_MIN_Y && y <= LOWER_WALK_MAX_Y) return true;
+      if (y > SIDEWALK_MAX_Y && y < LOWER_WALK_MIN_Y && isPointOnCrosswalk(x)) return true;
+    }
+    return false;
+  }
 
-    const atGatePassage = (y) => y >= 282 && y <= 336;
+  function hitsTownPerson(x, y) {
+    return RESIDENTIAL_NEIGHBORS.some((n) => Math.hypot(x - n.x, y - n.y) < 36);
+  }
+
+  function moveWithGardenFence(dx, dy) {
+    const rawNextX = Math.max(42, Math.min(WORLD_WIDTH - 42, player.x + dx));
+    const rawNextY = Math.max(SIDEWALK_MIN_Y, Math.min(LOWER_WALK_MAX_Y, player.y + dy));
+
+    const atGatePassage = (y) => y >= 286 && y <= 336;
     const isFenceBlocked = (oldX, newX, y) => {
-      if (y < 276) return false;
+      if (y <= SIDEWALK_MAX_Y) return false;
       if ((oldX <= LEFT_GATE_X && newX > LEFT_GATE_X) || (oldX >= LEFT_GATE_X && newX < LEFT_GATE_X)) {
         if (!atGatePassage(y)) return true;
       }
@@ -369,10 +486,12 @@ export function setupTownScreen(stateManager) {
       return false;
     };
 
-    if (!isFenceBlocked(player.x, nextX, player.y)) {
-      player.x = nextX;
+    if (!isFenceBlocked(player.x, rawNextX, player.y) && isTownWalkable(rawNextX, player.y) && !hitsTownPerson(rawNextX, player.y)) {
+      player.x = rawNextX;
     }
-    player.y = nextY;
+    if (isTownWalkable(player.x, rawNextY) && !hitsTownPerson(player.x, rawNextY)) {
+      player.y = rawNextY;
+    }
   }
 
   function updateSimulation() {
@@ -389,6 +508,7 @@ export function setupTownScreen(stateManager) {
       moveWithGardenFence((moveX / len) * speed, (moveY / len) * speed);
       if (moveX !== 0) player.facing = Math.sign(moveX);
       player.pose = 'walk';
+      player.poseTimer = 0;
     } else if (player.waypoints.length > 0) {
       const wp = player.waypoints[0];
       const dx = wp.x - player.x;
@@ -409,6 +529,9 @@ export function setupTownScreen(stateManager) {
         player.y += (dy / dist) * speed;
         player.pose = 'walk';
       }
+    } else if (player.poseTimer > 0) {
+      player.poseTimer--;
+      if (player.poseTimer <= 0) player.pose = 'idle';
     } else {
       player.pose = 'idle';
     }
@@ -633,26 +756,26 @@ export function setupTownScreen(stateManager) {
     ctx.fillStyle = '#cbd5e1';
     ctx.fillRect(STREET_START_X, 392, WORLD_WIDTH - STREET_START_X, 5);
 
-    // Warm Streetlamps & Green Flower Planters along Shopping Street
+    // Warm Streetlamps & Green Flower Planters neatly beside store edges (clear of walking sidewalk!)
     for (let lx = STREET_START_X + 35; lx < WORLD_WIDTH - 40; lx += 155) {
-      // Planter box
+      // Planter box along building curb (y: 222..238)
       ctx.fillStyle = '#b45309';
       ctx.beginPath();
-      ctx.roundRect(lx - 18, 266, 36, 16, [5]);
+      ctx.roundRect(lx - 18, 224, 36, 14, [5]);
       ctx.fill();
       ctx.fillStyle = '#10b981';
       ctx.beginPath();
-      ctx.arc(lx, 262, 13, 0, Math.PI * 2);
+      ctx.arc(lx, 220, 12, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = '#f472b6';
       ctx.beginPath();
-      ctx.arc(lx - 5, 259, 4, 0, Math.PI * 2);
-      ctx.arc(lx + 5, 261, 4, 0, Math.PI * 2);
+      ctx.arc(lx - 5, 217, 4, 0, Math.PI * 2);
+      ctx.arc(lx + 5, 219, 4, 0, Math.PI * 2);
       ctx.fill();
 
       // Streetlamp pole & warm lantern
       ctx.fillStyle = '#1e293b';
-      ctx.fillRect(lx + 42, 128, 5, 140);
+      ctx.fillRect(lx + 42, 128, 5, 114);
       ctx.fillStyle = '#fef08a';
       ctx.beginPath();
       ctx.arc(lx + 44.5, 126, 9, 0, Math.PI * 2);
@@ -748,15 +871,19 @@ export function setupTownScreen(stateManager) {
     ctx.fillStyle = grass;
     ctx.fillRect(0, 215, STREET_START_X, h - 215);
 
-    // Residential Promenade Sidewalk leading into the Shopping Street
+    // Residential Promenade Sidewalk leading into the Shopping Street + Door Stepping Paths
     const walkGrad = ctx.createLinearGradient(0, 232, 0, 290);
     walkGrad.addColorStop(0, '#fef3c7');
     walkGrad.addColorStop(1, '#fde68a');
     ctx.fillStyle = walkGrad;
-    ctx.fillRect(0, 234, STREET_START_X, 54);
+    ctx.fillRect(0, 238, STREET_START_X, 50);
     ctx.fillStyle = 'rgba(217, 119, 6, 0.16)';
-    ctx.fillRect(0, 234, STREET_START_X, 4);
+    ctx.fillRect(0, 238, STREET_START_X, 4);
     ctx.fillRect(0, 284, STREET_START_X, 4);
+    [155, 700, 885, 1070].forEach((hx) => {
+      ctx.fillStyle = '#fef3c7';
+      ctx.fillRect(hx - 22, 222, 44, 20);
+    });
 
     // --- ZONE 1: DEIN TRAUMHAUS ---
     const hasUpper = HomeManager.hasItem('expansions', 'bedroom');
@@ -806,10 +933,21 @@ export function setupTownScreen(stateManager) {
       ctx.restore();
     }
 
-    // --- ZONE 2: EINGEZÄUNTER GARTEN MIT GARTENTOR ---
+    // --- ZONE 2: EINGEZÄUNTER GARTEN MIT GARTENTOR & STEINWEG ---
     ctx.fillStyle = '#22c55e';
     ctx.beginPath();
     ctx.roundRect(GARDEN_LEFT_X, 272, GARDEN_RIGHT_X - GARDEN_LEFT_X, 148, [12]);
+    ctx.fill();
+
+    // Stone walkway path inside garden connecting Left & Right Gartentor
+    ctx.fillStyle = '#fef3c7';
+    ctx.beginPath();
+    ctx.roundRect(GARDEN_LEFT_X + 4, 288, GARDEN_RIGHT_X - GARDEN_LEFT_X - 8, 36, [8]);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.roundRect(GARDEN_LEFT_X + 18, 320, 32, 58, [8]);
+    ctx.roundRect(GARDEN_RIGHT_X - 50, 320, 32, 58, [8]);
+    ctx.roundRect(GARDEN_LEFT_X + 18, 358, GARDEN_RIGHT_X - GARDEN_LEFT_X - 36, 22, [8]);
     ctx.fill();
 
     [330, 360, 390].forEach((fx, i) => {
@@ -884,23 +1022,19 @@ export function setupTownScreen(stateManager) {
     drawTownHouseBuilding(885, 74, 152, 148, '#f59e0b', '#fef3c7', '🏡 Oma Frieda', true);
     drawTownHouseBuilding(1070, 74, 152, 148, '#0284c7', '#e0f2fe', '🏘️ Frau Kaya', true);
 
-    [
-      { x: 700, shirt: '#0284c7', icon: '🐕' },
-      { x: 885, shirt: '#a855f7', icon: '🐱' },
-      { x: 1070, shirt: '#10b981', icon: '🐶' }
-    ].forEach((n, i) => {
+    RESIDENTIAL_NEIGHBORS.forEach((n, i) => {
       const bob = Math.sin(animFrame * 0.1 + i) * 2;
       ctx.fillStyle = n.shirt;
       ctx.beginPath();
-      ctx.roundRect(n.x - 10, 212 + bob, 20, 24, [7]);
+      ctx.roundRect(n.x - 10, n.y - 12 + bob, 20, 24, [7]);
       ctx.fill();
       ctx.fillStyle = '#ffdecb';
       ctx.beginPath();
-      ctx.arc(n.x, 202 + bob, 10, 0, Math.PI * 2);
+      ctx.arc(n.x, n.y - 22 + bob, 10, 0, Math.PI * 2);
       ctx.fill();
       ctx.font = '18px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(n.icon, n.x + 28, 224);
+      ctx.fillText(n.icon, n.x + 28, n.y);
     });
 
     // --- ZONE 4: REAL CITY SHOPPING STREET ("Einkaufsstraße") WITH STORES! ---
@@ -1034,12 +1168,18 @@ export function setupTownScreen(stateManager) {
     // Animated city cars on the road (drawn behind player when player is in foreground, or nicely along lane)
     drawStreetCars();
 
-    // Companion Pets following player!
+    // Companion Pets following player along the walkable paths!
+    const petMinY = player.y >= LOWER_WALK_MIN_Y ? LOWER_WALK_MIN_Y : SIDEWALK_MIN_Y;
+    const petMaxY = player.y >= LOWER_WALK_MIN_Y
+      ? LOWER_WALK_MAX_Y
+      : (player.x > GARDEN_LEFT_X && player.x < GARDEN_RIGHT_X && player.y > SIDEWALK_MAX_Y)
+        ? GARDEN_PATH_MAX_Y
+        : (isPointOnCrosswalk(player.x) && player.y > SIDEWALK_MAX_Y ? LOWER_WALK_MAX_Y : SIDEWALK_MAX_Y);
     petFollowers.update(player.x, player.y + 4, player.facing, {
-      minX: 30,
-      maxX: WORLD_WIDTH - 30,
-      minY: 238,
-      maxY: 438
+      minX: 44,
+      maxX: WORLD_WIDTH - 44,
+      minY: petMinY,
+      maxY: petMaxY
     });
     petFollowers.draw(ctx, animFrame, {
       scale: 0.92,
@@ -1059,21 +1199,6 @@ export function setupTownScreen(stateManager) {
       facing: player.facing
     });
     ctx.restore();
-
-    for (let i = fxParticles.length - 1; i >= 0; i--) {
-      const p = fxParticles[i];
-      p.x += p.vx;
-      p.y += p.vy;
-      p.life--;
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, p.life / 40);
-      ctx.fillStyle = '#f43f5e';
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-      if (p.life <= 0) fxParticles.splice(i, 1);
-    }
 
     ctx.restore();
 

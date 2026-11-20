@@ -19,8 +19,16 @@ const MY_HOME_PORTAL = {
   x: 82,
   y: 196,
   standX: 82,
-  standY: 256
+  standY: 266
 };
+
+const SIDEWALK_MIN_Y = 256;
+const SIDEWALK_MAX_Y = 288;
+const LOWER_PARK_MIN_Y = 394;
+const LOWER_PARK_MAX_Y = 430;
+const CONNECTOR_XS = [82, 300, 530, 752];
+const CONNECTOR_HALF_W = 24;
+const NEIGHBOR_STAND_Y = 224;
 
 export const NEIGHBOR_HOUSES = [
   {
@@ -160,6 +168,7 @@ export function setupPetSittingScreen(stateManager) {
   let quietPauseTimer = 0;
   let visitsSinceBreak = 0;
   const fxParticles = [];
+  const waterDrops = [];
   let ballFx = null;
   const petFollowers = new PetFollowerController({ includeSitting: false });
 
@@ -177,27 +186,79 @@ export function setupPetSittingScreen(stateManager) {
     if (statusTextEl) statusTextEl.textContent = msg;
   }
 
-  function spawnFX(kind, x, y, count = 8) {
-    const colors = kind === 'heart'
-      ? ['#f43f5e', '#fb7185', '#fbcfe8']
-      : kind === 'water'
-        ? ['#38bdf8', '#7dd3fc', '#e0f2fe']
-        : kind === 'coin'
-          ? ['#fde047', '#fbbf24', '#f59e0b']
-          : ['#a78bfa', '#f472b6', '#fde047', '#ffffff'];
-
-    for (let i = 0; i < count; i++) {
-      fxParticles.push({
-        kind,
-        color: colors[i % colors.length],
-        x: x + (Math.random() - 0.5) * 44,
-        y: y + (Math.random() - 0.5) * 20,
-        vx: (Math.random() - 0.5) * 2.2,
-        vy: -1.3 - Math.random() * 1.9,
-        size: 4 + Math.random() * 4,
-        life: 52
+  function spawnRealisticWaterStream(fromX, fromY, toX, toY) {
+    for (let i = 0; i < 12; i++) {
+      waterDrops.push({
+        x: fromX + (Math.random() - 0.5) * 4,
+        y: fromY - i * 1.5,
+        vx: (toX - fromX) * 0.055 + (Math.random() - 0.5) * 0.4,
+        vy: 1.5 + Math.random() * 1.1,
+        targetY: toY,
+        life: 32
       });
     }
+  }
+
+  function isOnNeighborhoodPath(x, y) {
+    if (x >= 28 && x <= 832 && y >= SIDEWALK_MIN_Y && y <= SIDEWALK_MAX_Y) return true;
+    if (x >= 40 && x <= 820 && y >= LOWER_PARK_MIN_Y && y <= LOWER_PARK_MAX_Y) return true;
+    if (Math.abs(x - MY_HOME_PORTAL.x) <= 20 && y >= 204 && y <= SIDEWALK_MAX_Y) return true;
+    for (let i = 0; i < CONNECTOR_XS.length; i++) {
+      if (Math.abs(x - CONNECTOR_XS[i]) <= CONNECTOR_HALF_W && y >= SIDEWALK_MIN_Y && y <= LOWER_PARK_MAX_Y) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function hitsNeighborhoodObstacle(x, y) {
+    for (let i = 0; i < NEIGHBOR_HOUSES.length; i++) {
+      const h = NEIGHBOR_HOUSES[i];
+      if (Math.hypot(x - h.neighborX, y - NEIGHBOR_STAND_Y) < 33) return true;
+      const v = houseSlots[i];
+      if (v && v.state !== 'happy_leaving' && !v.onLeash) {
+        if (Math.hypot(x - v.x, y - v.y) < 23) return true;
+      }
+    }
+    return false;
+  }
+
+  function snapToNeighborhoodPath(tx, ty) {
+    const x = Math.max(28, Math.min(832, tx));
+    const y = Math.max(204, Math.min(LOWER_PARK_MAX_Y, ty));
+
+    const candidates = [
+      { x, y: Math.max(SIDEWALK_MIN_Y, Math.min(SIDEWALK_MAX_Y, y)) },
+      { x: Math.max(40, Math.min(820, x)), y: Math.max(LOWER_PARK_MIN_Y, Math.min(LOWER_PARK_MAX_Y, y)) }
+    ];
+    if (y < SIDEWALK_MIN_Y && Math.abs(x - MY_HOME_PORTAL.x) < 90) {
+      candidates.push({
+        x: Math.max(MY_HOME_PORTAL.x - 16, Math.min(MY_HOME_PORTAL.x + 16, x)),
+        y: Math.max(204, Math.min(SIDEWALK_MAX_Y, y))
+      });
+    }
+    CONNECTOR_XS.forEach((cx) => {
+      candidates.push({
+        x: Math.max(cx - (CONNECTOR_HALF_W - 2), Math.min(cx + (CONNECTOR_HALF_W - 2), x)),
+        y: Math.max(SIDEWALK_MIN_Y, Math.min(LOWER_PARK_MAX_Y, y))
+      });
+    });
+
+    let best = candidates[0];
+    let bestD = Infinity;
+    candidates.forEach((c) => {
+      if (hitsNeighborhoodObstacle(c.x, c.y)) return;
+      const d = Math.hypot(c.x - x, c.y - y);
+      if (d < bestD) {
+        bestD = d;
+        best = c;
+      }
+    });
+
+    if (hitsNeighborhoodObstacle(best.x, best.y)) {
+      best.y = Math.max(SIDEWALK_MIN_Y + 6, Math.min(SIDEWALK_MAX_Y, best.y));
+    }
+    return best;
   }
 
   function pickNextNeed(petInfo, previousNeed = null) {
@@ -215,8 +276,8 @@ export function setupPetSittingScreen(stateManager) {
     return {
       houseIdx,
       info: base,
-      x: house.x + 22,
-      y: 234,
+      x: house.x - 14,
+      y: 232,
       need: firstNeed,
       happiness: 0,
       tasksGoal: 2,
@@ -225,7 +286,10 @@ export function setupPetSittingScreen(stateManager) {
       leashDistance: 0,
       walkReady: false,
       happyTimer: 0,
-      patience: 100
+      patience: 100,
+      bowlTimer: 0,
+      bowlType: null,
+      cuddleTimer: 0
     };
   }
 
@@ -382,9 +446,9 @@ export function setupPetSittingScreen(stateManager) {
           const house = NEIGHBOR_HOUSES[idx];
           const visit = houseSlots[idx];
           if (visit && visit.state === 'offering') {
-            navigateToPoint(house.neighborX, 256, { type: 'accept', houseIdx: idx });
+            navigateToPoint(house.neighborX + 14, 266, { type: 'accept', houseIdx: idx });
           } else {
-            navigateToPoint(house.yardX + 24, house.yardY - 8, null);
+            navigateToPoint(house.yardX + 8, house.yardY - 8, null);
           }
         }
         renderHouseTabs();
@@ -420,7 +484,6 @@ export function setupPetSittingScreen(stateManager) {
     houseCooldowns[emptyIdx] = 0;
     selectedHouseIdx = emptyIdx;
     const h = NEIGHBOR_HOUSES[emptyIdx];
-    spawnFX('sparkle', h.neighborX, 210, 8);
     syncSittingSlots();
     updateHUD();
     showToast(`👋 ${h.neighborName} kommt mit ${houseSlots[emptyIdx].info.name} vor die Tür!`, 'success');
@@ -439,8 +502,8 @@ export function setupPetSittingScreen(stateManager) {
         v.onLeash = false;
         v.leashDistance = 0;
         v.walkReady = false;
-        v.x = house.yardX - 34;
-        v.y = house.yardY + 8;
+        v.x = house.yardX - 30;
+        v.y = house.yardY - 8;
       });
       syncSittingSlots();
       updateHUD();
@@ -457,8 +520,8 @@ export function setupPetSittingScreen(stateManager) {
       v.onLeash = false;
       v.leashDistance = 0;
       v.walkReady = false;
-      v.x = house.yardX - 34;
-      v.y = house.yardY + 8;
+      v.x = house.yardX - 30;
+      v.y = house.yardY - 8;
 
       if (wasWalkReady) {
         if (v.need === 'walk') {
@@ -471,7 +534,7 @@ export function setupPetSittingScreen(stateManager) {
           ShopManager.addCoins(bonus);
           ShopManager.recordProgress(0, bonus);
           EarnMoneyManager.recordEvent({ care: 1 });
-          spawnFX('heart', v.x, v.y - 24, 6);
+          v.cuddleTimer = 45;
         }
       }
     });
@@ -508,20 +571,19 @@ export function setupPetSittingScreen(stateManager) {
         v.onLeash = true;
         v.leashDistance = 0;
         v.walkReady = false;
-        v.x = house.yardX - 34;
-        v.y = house.yardY + 8;
+        v.x = house.yardX - 30;
+        v.y = house.yardY - 8;
 
         upfrontCoins += upfront;
         newlyAccepted++;
         newlyLeashed++;
-        spawnFX('coin', house.neighborX, 200, 7);
-        spawnFX('heart', v.x, v.y - 20, 5);
+        v.cuddleTimer = 35;
       } else if (v && v.state === 'caring' && !v.onLeash) {
         v.onLeash = true;
         v.leashDistance = 0;
         v.walkReady = false;
         newlyLeashed++;
-        spawnFX('heart', v.x, v.y - 20, 5);
+        v.cuddleTimer = 35;
       }
     });
 
@@ -588,7 +650,7 @@ export function setupPetSittingScreen(stateManager) {
       selectedHouseIdx = targetIdx;
       updateHUD();
       if (visit && visit.state === 'offering') {
-        navigateToPoint(house.neighborX + 8, 258, { type: 'accept', houseIdx: targetIdx });
+        navigateToPoint(house.neighborX + 14, 266, { type: 'accept', houseIdx: targetIdx });
       } else {
         showToast(`Du passt schon auf ${visit ? visit.info.name : 'das Tier'} auf – erfülle jetzt seine Wünsche!`, 'info');
       }
@@ -631,7 +693,7 @@ export function setupPetSittingScreen(stateManager) {
           const visit = houseSlots[targetIdx];
           const house = NEIGHBOR_HOUSES[targetIdx];
           if (visit && visit.state === 'offering') {
-            navigateToPoint(house.neighborX + 8, 258, { type: 'accept_and_leash', houseIdx: targetIdx });
+            navigateToPoint(house.neighborX + 14, 266, { type: 'accept_and_leash', houseIdx: targetIdx });
             return;
           }
           if (visit && visit.state === 'caring') {
@@ -639,7 +701,7 @@ export function setupPetSittingScreen(stateManager) {
               visit.onLeash = true;
               visit.leashDistance = 0;
               visit.walkReady = false;
-              spawnFX('heart', visit.x, visit.y - 20, 6);
+              visit.cuddleTimer = 35;
               updateHUD();
               showToast(`🐕 ${visit.info.name} ist an der Leine! Nimm gerne noch mehr Tiere dazu & lauf überall herum!`, 'success');
             } else {
@@ -667,19 +729,99 @@ export function setupPetSittingScreen(stateManager) {
           return;
         }
         if (visit.state === 'offering') {
-          navigateToPoint(house.neighborX + 8, 258, { type: 'accept', houseIdx: targetIdx });
+          navigateToPoint(house.neighborX + 14, 266, { type: 'accept', houseIdx: targetIdx });
           return;
         }
-        navigateToPoint(house.yardX + 16, house.yardY - 6, { type: 'care', houseIdx: targetIdx, actionId: act.id });
+        const standTarget = visit.onLeash ? { x: player.x, y: player.y } : { x: house.yardX + 8, y: house.yardY - 8 };
+        navigateToPoint(standTarget.x, standTarget.y, { type: 'care', houseIdx: targetIdx, actionId: act.id });
       });
       careBarEl.appendChild(btn);
     });
   }
 
   function navigateToPoint(tx, ty, pendingAction = null) {
-    const clampedX = Math.max(28, Math.min(832, tx));
-    const clampedY = Math.max(145, Math.min(454, ty));
-    player.waypoints = [{ x: clampedX, y: clampedY }];
+    const dest = snapToNeighborhoodPath(tx, ty);
+    const wps = [];
+    const curX = player.x;
+    const curY = player.y;
+
+    const addWp = (x, y) => {
+      const last = wps.length > 0 ? wps[wps.length - 1] : { x: curX, y: curY };
+      if (Math.hypot(last.x - x, last.y - y) > 6) {
+        wps.push({ x, y });
+      }
+    };
+
+    const getConnX = (px) => {
+      let best = CONNECTOR_XS[0];
+      let bd = Infinity;
+      CONNECTOR_XS.forEach((cx) => {
+        const d = Math.abs(cx - px);
+        if (d < bd) { bd = d; best = cx; }
+      });
+      return best;
+    };
+
+    const inDoorPath = curY < SIDEWALK_MIN_Y;
+    const destInDoorPath = dest.y < SIDEWALK_MIN_Y;
+
+    let effY = curY;
+    let effX = curX;
+    if (inDoorPath && !destInDoorPath) {
+      addWp(MY_HOME_PORTAL.x, 270);
+      effX = MY_HOME_PORTAL.x;
+      effY = 270;
+    }
+
+    const curOnSidewalk = effY >= SIDEWALK_MIN_Y && effY <= SIDEWALK_MAX_Y;
+    const curOnLower = effY >= LOWER_PARK_MIN_Y && effY <= LOWER_PARK_MAX_Y;
+    const destOnSidewalk = dest.y >= SIDEWALK_MIN_Y && dest.y <= SIDEWALK_MAX_Y;
+    const destOnLower = dest.y >= LOWER_PARK_MIN_Y && dest.y <= LOWER_PARK_MAX_Y;
+
+    if ((curOnSidewalk && destOnSidewalk) || (curOnLower && destOnLower)) {
+      addWp(dest.x, dest.y);
+    } else if (curOnSidewalk && destInDoorPath) {
+      addWp(MY_HOME_PORTAL.x, 270);
+      addWp(dest.x, dest.y);
+    } else {
+      // Vertical transition or switching connectors: stay strictly on paved stones
+      let exitConn = getConnX(effX);
+      if (!curOnSidewalk && !curOnLower) {
+        // Inside a vertical connector
+        if (Math.abs(exitConn - dest.x) <= CONNECTOR_HALF_W && dest.y >= SIDEWALK_MIN_Y && dest.y <= LOWER_PARK_MAX_Y) {
+          addWp(dest.x, dest.y);
+          player.waypoints = wps;
+          player.pendingAction = pendingAction;
+          return;
+        }
+        const hubY = destOnLower ? 412 : 270;
+        addWp(exitConn, hubY);
+        effX = exitConn;
+        effY = hubY;
+      }
+
+      if (destOnSidewalk && Math.abs(effY - 270) <= 22) {
+        addWp(dest.x, dest.y);
+      } else if (destOnLower && Math.abs(effY - 412) <= 22) {
+        addWp(dest.x, dest.y);
+      } else {
+        const entryConn = getConnX(dest.x);
+        const curHubY = effY <= SIDEWALK_MAX_Y ? 270 : 412;
+        addWp(entryConn, curHubY);
+        if (destInDoorPath) {
+          addWp(MY_HOME_PORTAL.x, 270);
+        } else if (dest.y > SIDEWALK_MAX_Y && dest.y < LOWER_PARK_MIN_Y) {
+          addWp(entryConn, dest.y);
+        } else {
+          const destHubY = dest.y <= SIDEWALK_MAX_Y ? 270 : 412;
+          addWp(entryConn, destHubY);
+        }
+        addWp(dest.x, dest.y);
+      }
+    }
+
+    if (wps.length === 0) addWp(dest.x, dest.y);
+    player.waypoints = wps;
     player.pendingAction = pendingAction;
   }
 
@@ -693,8 +835,8 @@ export function setupPetSittingScreen(stateManager) {
     visit.onLeash = autoLeash;
     visit.leashDistance = 0;
     visit.walkReady = false;
-    visit.x = house.yardX - 34;
-    visit.y = house.yardY + 8;
+    visit.x = house.yardX - 30;
+    visit.y = house.yardY - 8;
 
     shiftCoins += upfront;
     ShopManager.addCoins(upfront);
@@ -703,8 +845,7 @@ export function setupPetSittingScreen(stateManager) {
 
     player.pose = 'pet';
     player.poseTimer = 24;
-    spawnFX('coin', house.neighborX, 200, 10);
-    spawnFX('heart', visit.x, visit.y - 24, 6);
+    visit.cuddleTimer = 45;
     syncSittingSlots();
     updateHUD();
 
@@ -750,9 +891,17 @@ export function setupPetSittingScreen(stateManager) {
     ShopManager.recordProgress(0, totalEarned);
     window.dispatchEvent(new CustomEvent('runner:coins-updated'));
 
-    spawnFX(actionId === 'water' ? 'water' : 'heart', visit.x, visit.y - 26, 9);
-    spawnFX('coin', house.neighborX, 204, 7);
-    if (actionId === 'play') {
+    if (actionId === 'feed') {
+      visit.bowlType = 'food';
+      visit.bowlTimer = 160;
+    } else if (actionId === 'water') {
+      visit.bowlType = 'water';
+      visit.bowlTimer = 160;
+      const facingDir = visit.x < player.x ? -1 : 1;
+      spawnRealisticWaterStream(player.x + facingDir * 22, player.y - 38, visit.x + 24, visit.y + 4);
+    } else if (actionId === 'brush') {
+      visit.cuddleTimer = 55;
+    } else if (actionId === 'play') {
       ballFx = { x: player.x, y: player.y - 30, vx: -player.facing * 4.5, vy: -5.2, life: 44 };
     }
 
@@ -770,7 +919,6 @@ export function setupPetSittingScreen(stateManager) {
 
   function performCareAtHouse(houseIdx, requestedActionId = null) {
     const visit = houseSlots[houseIdx];
-    const house = NEIGHBOR_HOUSES[houseIdx];
     if (!visit || visit.state === 'happy_leaving') {
       showToast('Hier wartet gerade kein Tier auf Betreuung!', 'info');
       return;
@@ -792,7 +940,7 @@ export function setupPetSittingScreen(stateManager) {
         visit.onLeash = true;
         visit.leashDistance = 0;
         visit.walkReady = false;
-        spawnFX('heart', visit.x, visit.y - 20, 6);
+        visit.cuddleTimer = 35;
         syncSittingSlots();
         updateHUD();
         showToast(`🐕 ${visit.info.name} ist an der Leine & kommt überall mit!`, 'success');
@@ -810,8 +958,8 @@ export function setupPetSittingScreen(stateManager) {
     }
 
     player.facing = visit.x < player.x ? -1 : 1;
-    player.pose = actionId === 'brush' ? 'pet' : actionId === 'play' ? 'jump' : 'cook';
-    player.poseTimer = 28;
+    player.pose = actionId === 'water' ? 'water' : actionId === 'play' ? 'jump' : 'pet';
+    player.poseTimer = actionId === 'water' ? 34 : 28;
     awardCareSuccess(houseIdx, actionId);
   }
 
@@ -826,14 +974,15 @@ export function setupPetSittingScreen(stateManager) {
     // 0. Tapping one of your own companion pets cuddles them right here!
     const tappedPet = petFollowers.handleTap(cx, cy);
     if (tappedPet.hit) {
-      spawnFX('heart', tappedPet.x, tappedPet.y - 20, 8);
+      player.pose = 'pet';
+      player.poseTimer = 22;
       showToast(`❤️ ${tappedPet.meta.name} wedelt fröhlich und freut sich!`, 'success');
       return;
     }
 
     // 1. Clicked on "🏡 Dein Haus" door on the far left?
     if (cx >= 52 && cx <= 114 && cy >= 136 && cy <= 212) {
-      navigateToPoint(MY_HOME_PORTAL.standX, MY_HOME_PORTAL.standY, { type: 'go_home' });
+      navigateToPoint(MY_HOME_PORTAL.x, 212, { type: 'go_home' });
       return;
     }
 
@@ -843,17 +992,17 @@ export function setupPetSittingScreen(stateManager) {
       const visit = houseSlots[i];
       if (!visit || visit.state === 'happy_leaving') continue;
 
-      const hitNeighbor = Math.hypot(cx - h.neighborX, cy - 205) <= 44;
+      const hitNeighbor = Math.hypot(cx - h.neighborX, cy - (NEIGHBOR_STAND_Y - 36)) <= 44;
       const hitPet = Math.hypot(cx - visit.x, cy - (visit.y - 16)) <= 46;
       const hitBubble = visit.state === 'offering'
-        ? (Math.abs(cx - (h.neighborX + 12)) <= 80 && cy >= 92 && cy <= 165)
+        ? (Math.abs(cx - (h.neighborX + 12)) <= 80 && cy >= 80 && cy <= 165)
         : (visit.state === 'caring' && Math.abs(cx - (visit.x + 8)) <= 84 && cy >= visit.y - 122 && cy <= visit.y - 45);
 
       if (hitNeighbor || hitPet || hitBubble) {
         selectedHouseIdx = i;
         updateHUD();
         if (visit.state === 'offering') {
-          navigateToPoint(h.neighborX + 8, 258, { type: 'accept', houseIdx: i });
+          navigateToPoint(h.neighborX + 14, 266, { type: 'accept', houseIdx: i });
           return;
         }
         if (visit.state === 'caring') {
@@ -865,18 +1014,20 @@ export function setupPetSittingScreen(stateManager) {
             performCareAtHouse(i, 'walk');
             return;
           }
-          navigateToPoint(Math.min(832, Math.max(28, visit.x + 18)), Math.min(454, Math.max(145, visit.y + 4)), { type: 'smart_care', houseIdx: i });
+          const targetX = visit.onLeash ? player.x : h.yardX + 8;
+          const targetY = visit.onLeash ? player.y : h.yardY - 8;
+          navigateToPoint(targetX, targetY, { type: 'smart_care', houseIdx: i });
           return;
         }
       }
     }
 
-    // 3. Otherwise walk freely ANYWHERE on the entire neighborhood & park canvas!
+    // 3. Otherwise walk strictly along paved neighborhood & park paths!
     navigateToPoint(cx, cy, null);
   }
 
   function triggerNearbyAction() {
-    if (Math.hypot(player.x - MY_HOME_PORTAL.standX, player.y - MY_HOME_PORTAL.standY) < 46) {
+    if (Math.hypot(player.x - MY_HOME_PORTAL.x, player.y - 216) < 42) {
       stateManager.setState('HOME');
       return;
     }
@@ -975,10 +1126,30 @@ export function setupPetSittingScreen(stateManager) {
     if (keys.down || holdPad.down) moveY += 1;
 
     const speed = 4.6;
+    const canStepTo = (tx, ty) => isOnNeighborhoodPath(tx, ty) && !hitsNeighborhoodObstacle(tx, ty);
+
     if (moveX !== 0 || moveY !== 0) {
       const len = Math.hypot(moveX, moveY) || 1;
-      player.x = Math.max(28, Math.min(832, player.x + (moveX / len) * speed));
-      player.y = Math.max(145, Math.min(454, player.y + (moveY / len) * speed));
+      const stepX = (moveX / len) * speed;
+      const stepY = (moveY / len) * speed;
+      const nx = Math.max(28, Math.min(832, player.x + stepX));
+      const ny = Math.max(204, Math.min(LOWER_PARK_MAX_Y, player.y + stepY));
+
+      if (canStepTo(nx, ny)) {
+        player.x = nx;
+        player.y = ny;
+      } else if (moveX !== 0 && canStepTo(nx, player.y)) {
+        player.x = nx;
+      } else if (moveY !== 0 && canStepTo(player.x, ny)) {
+        player.y = ny;
+      } else if (moveY !== 0 && isOnNeighborhoodPath(player.x, player.y)) {
+        // Gentle pull onto nearest connector center if arrowing down/up near path edge
+        const nearestConn = CONNECTOR_XS.reduce((a, b) => (Math.abs(b - player.x) < Math.abs(a - player.x) ? b : a), CONNECTOR_XS[0]);
+        if (Math.abs(nearestConn - player.x) <= 46) {
+          const nudge = player.x + Math.sign(nearestConn - player.x) * Math.min(speed, Math.abs(nearestConn - player.x));
+          if (canStepTo(nudge, player.y)) player.x = nudge;
+        }
+      }
       if (moveX !== 0) player.facing = Math.sign(moveX);
       player.pose = 'walk';
     } else if (player.waypoints.length > 0) {
@@ -987,8 +1158,10 @@ export function setupPetSittingScreen(stateManager) {
       const dy = wp.y - player.y;
       const dist = Math.hypot(dx, dy);
       if (dist <= speed + 1) {
-        player.x = wp.x;
-        player.y = wp.y;
+        if (canStepTo(wp.x, wp.y)) {
+          player.x = wp.x;
+          player.y = wp.y;
+        }
         player.waypoints.shift();
         if (player.waypoints.length === 0 && player.pendingAction) {
           const act = player.pendingAction;
@@ -1001,8 +1174,16 @@ export function setupPetSittingScreen(stateManager) {
         }
       } else {
         if (Math.abs(dx) > 1) player.facing = dx > 0 ? 1 : -1;
-        player.x += (dx / dist) * speed;
-        player.y += (dy / dist) * speed;
+        const nx = player.x + (dx / dist) * speed;
+        const ny = player.y + (dy / dist) * speed;
+        if (canStepTo(nx, ny)) {
+          player.x = nx;
+          player.y = ny;
+        } else {
+          const snapped = snapToNeighborhoodPath(nx, ny);
+          player.x = snapped.x;
+          player.y = snapped.y;
+        }
         player.pose = 'walk';
       }
     } else if (player.poseTimer > 0) {
@@ -1015,10 +1196,10 @@ export function setupPetSittingScreen(stateManager) {
     const movedStep = Math.hypot(player.x - prevX, player.y - prevY);
 
     petFollowers.update(player.x, player.y + 6, player.facing, {
-      minX: 24,
-      maxX: 836,
-      minY: 145,
-      maxY: 458
+      minX: 28,
+      maxX: 832,
+      minY: SIDEWALK_MIN_Y,
+      maxY: LOWER_PARK_MAX_Y
     });
 
     const nearIdx = getNearestHouseIdx(player.x, player.y);
@@ -1034,11 +1215,12 @@ export function setupPetSittingScreen(stateManager) {
       const row = Math.floor(idx / 2);
       const col = idx % 2;
       const slotDist = 36 + row * 28;
-      const sideOffset = (col === 0 ? 1 : -1) * (12 + (row % 2) * 8);
-      const targetPetX = Math.max(24, Math.min(836, player.x - player.facing * slotDist));
-      const targetPetY = Math.max(145, Math.min(454, player.y + sideOffset));
-      p.x += (targetPetX - p.x) * 0.16;
-      p.y += (targetPetY - p.y) * 0.16;
+      const sideOffset = (col === 0 ? 1 : -1) * (10 + (row % 2) * 6);
+      const rawX = Math.max(28, Math.min(832, player.x - player.facing * slotDist));
+      const rawY = Math.max(SIDEWALK_MIN_Y, Math.min(LOWER_PARK_MAX_Y, player.y + sideOffset));
+      const snappedPet = isOnNeighborhoodPath(rawX, rawY) ? { x: rawX, y: rawY } : { x: player.x - player.facing * 24, y: player.y + 4 };
+      p.x += (snappedPet.x - p.x) * 0.16;
+      p.y += (snappedPet.y - p.y) * 0.16;
 
       if (movedStep > 0.4) {
         const beforeReady = p.walkReady;
@@ -1046,7 +1228,6 @@ export function setupPetSittingScreen(stateManager) {
         if (p.leashDistance >= WALK_GOAL_DISTANCE) {
           p.walkReady = true;
           if (!beforeReady) {
-            spawnFX('sparkle', p.x, p.y - 24, 7);
             showToast(`✨ ${p.info.name} hat genug Auslauf gehabt! Tippe auf „✅ Gassi fertig!“ wann immer du magst.`, 'success');
             syncSittingSlots();
             hudDirty = true;
@@ -1057,12 +1238,19 @@ export function setupPetSittingScreen(stateManager) {
     });
     if (hudDirty) updateHUD();
 
+    // Update bowl & cuddle timers cleanly on ground
+    houseSlots.forEach((v) => {
+      if (!v) return;
+      if (v.bowlTimer > 0) v.bowlTimer--;
+      if (v.cuddleTimer > 0) v.cuddleTimer--;
+    });
+
     // Calm neighbor pacing & occasional quiet break so neighbors aren't nonstop waiting
     const activeCount = houseSlots.filter((v) => v !== null).length;
     if (activeCount === 0 && visitsSinceBreak >= 3 && quietPauseTimer === 0) {
       quietPauseTimer = 250 + Math.floor(Math.random() * 170);
       visitsSinceBreak = 0;
-      setStatus('🌿 Kurze ruhige Pause in der Nachbarschaft – lauf überall herum oder tippe „🔔 Nachbar rufen“!');
+      setStatus('🌿 Kurze ruhige Pause in der Nachbarschaft – lauf auf den Wegen herum oder tippe „🔔 Nachbar rufen“!');
       updateHUD();
     }
 
@@ -1107,6 +1295,17 @@ export function setupPetSittingScreen(stateManager) {
       }
       ballFx.life--;
       if (ballFx.life <= 0) ballFx = null;
+    }
+
+    for (let i = waterDrops.length - 1; i >= 0; i--) {
+      const d = waterDrops[i];
+      d.x += d.vx;
+      d.y += d.vy;
+      d.vy += 0.24;
+      d.life--;
+      if (d.y >= d.targetY || d.life <= 0) {
+        waterDrops.splice(i, 1);
+      }
     }
 
     for (let i = fxParticles.length - 1; i >= 0; i--) {
@@ -1232,8 +1431,8 @@ export function setupPetSittingScreen(stateManager) {
     const isOffering = visit && visit.state === 'offering';
     const isHappy = visit && visit.state === 'happy_leaving';
     const nx = h.neighborX;
-    const ny = 244;
-    const bob = isOffering || isHappy ? Math.abs(Math.sin(animFrame * 0.12 + h.id)) * 5 : 0;
+    const ny = NEIGHBOR_STAND_Y;
+    const bob = isOffering || isHappy ? Math.abs(Math.sin(animFrame * 0.12 + h.id)) * 3 : 0;
 
     const matchedCfg = {
       ...h.charConfig,
@@ -1319,11 +1518,41 @@ export function setupPetSittingScreen(stateManager) {
 
   function drawNeighborPet(p) {
     const bob = p.onLeash
-      ? Math.abs(Math.sin(animFrame * 0.28 + p.houseIdx)) * 5
-      : Math.sin(animFrame * 0.1 + p.houseIdx) * 2.5;
+      ? Math.abs(Math.sin(animFrame * 0.28 + p.houseIdx)) * 4
+      : p.cuddleTimer > 0
+        ? Math.abs(Math.sin(animFrame * 0.35 + p.houseIdx)) * 5
+        : Math.sin(animFrame * 0.1 + p.houseIdx) * 1.5;
     const px = p.x;
     const py = p.y - bob;
     const info = p.info;
+
+    // Grounded realistic food or water bowl right beside pet!
+    if (p.bowlTimer > 0 && p.bowlType) {
+      const bx = p.x + 24;
+      const by = p.y + 4;
+      ctx.save();
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.16)';
+      ctx.beginPath();
+      ctx.ellipse(bx, by + 3, 14, 4.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = p.bowlType === 'water' ? '#0284c7' : '#d97706';
+      ctx.beginPath();
+      ctx.ellipse(bx, by, 13, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = p.bowlType === 'water' ? '#7dd3fc' : '#78350f';
+      ctx.beginPath();
+      ctx.ellipse(bx, by - 1.5, 10, 3.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      if (p.bowlType === 'food') {
+        ctx.fillStyle = '#b45309';
+        [-4, 0, 4, -2, 3].forEach((kx, idx) => {
+          ctx.beginPath();
+          ctx.arc(bx + kx, by - 2 + (idx % 2), 2, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+      ctx.restore();
+    }
 
     ctx.save();
     ctx.translate(px, py);
@@ -1518,7 +1747,7 @@ export function setupPetSittingScreen(stateManager) {
     ctx.textBaseline = 'middle';
     ctx.fillText('DEIN HAUS ➔ NACHBARSCHAFT · HUNDESITTING', w / 2, 21);
 
-    // 2. Lawns, Garden Paths Between Houses, Street & Lower Park Meadow (walkable EVERYWHERE!)
+    // 2. Lawns + Paved Neighborhood Sidewalk, Door Paths, Yard Connectors & Lower Park Walk
     const lawn = ctx.createLinearGradient(0, 140, 0, h);
     lawn.addColorStop(0, '#86efac');
     lawn.addColorStop(0.35, '#4ade80');
@@ -1526,33 +1755,52 @@ export function setupPetSittingScreen(stateManager) {
     ctx.fillStyle = lawn;
     ctx.fillRect(0, 140, w, h - 140);
 
-    // Stepping stone paths behind/between houses
-    ctx.fillStyle = 'rgba(254, 243, 199, 0.72)';
-    [164, 392, 622].forEach((gx) => {
+    // Door walkway from "Dein Haus" to sidewalk + Neighbor porches
+    ctx.fillStyle = '#fde68a';
+    ctx.beginPath();
+    ctx.roundRect(MY_HOME_PORTAL.x - 18, 200, 36, 58, [8]);
+    ctx.fill();
+    NEIGHBOR_HOUSES.forEach((nh) => {
+      ctx.fillStyle = 'rgba(254, 243, 199, 0.9)';
       ctx.beginPath();
-      ctx.roundRect(gx - 18, 146, 36, 94, [14]);
+      ctx.roundRect(nh.neighborX - 24, 200, 48, 56, [10]);
       ctx.fill();
     });
 
-    const pathGrad = ctx.createLinearGradient(0, 232, 0, 286);
+    // Paved stone connector paths down to the lower park loop
+    CONNECTOR_XS.forEach((cx) => {
+      ctx.fillStyle = '#fef3c7';
+      ctx.fillRect(cx - CONNECTOR_HALF_W, SIDEWALK_MIN_Y + 4, CONNECTOR_HALF_W * 2, LOWER_PARK_MAX_Y - SIDEWALK_MIN_Y - 12);
+      ctx.fillStyle = 'rgba(217, 119, 6, 0.14)';
+      for (let sy = SIDEWALK_MAX_Y + 10; sy < LOWER_PARK_MIN_Y; sy += 24) {
+        ctx.fillRect(cx - CONNECTOR_HALF_W + 4, sy, CONNECTOR_HALF_W * 2 - 8, 2);
+      }
+    });
+
+    // Main horizontal sidewalk along all houses
+    const pathGrad = ctx.createLinearGradient(0, SIDEWALK_MIN_Y - 4, 0, SIDEWALK_MAX_Y + 2);
     pathGrad.addColorStop(0, '#fef3c7');
     pathGrad.addColorStop(1, '#fde68a');
     ctx.fillStyle = pathGrad;
-    ctx.fillRect(0, 234, w, 52);
-    ctx.fillStyle = 'rgba(217, 119, 6, 0.16)';
-    ctx.fillRect(0, 234, w, 4);
-    ctx.fillRect(0, 282, w, 4);
+    ctx.fillRect(0, SIDEWALK_MIN_Y - 2, w, SIDEWALK_MAX_Y - SIDEWALK_MIN_Y + 4);
+    ctx.fillStyle = 'rgba(217, 119, 6, 0.22)';
+    ctx.fillRect(0, SIDEWALK_MIN_Y - 2, w, 3);
+    ctx.fillRect(0, SIDEWALK_MAX_Y - 1, w, 3);
 
-    // Scenic park meadow path & wildflowers in lower area
-    ctx.fillStyle = 'rgba(254, 249, 195, 0.52)';
+    // Crisp lower park promenade path
+    ctx.fillStyle = '#fef3c7';
     ctx.beginPath();
-    ctx.roundRect(40, 396, w - 80, 38, [19]);
+    ctx.roundRect(36, LOWER_PARK_MIN_Y - 2, w - 72, LOWER_PARK_MAX_Y - LOWER_PARK_MIN_Y + 4, [18]);
     ctx.fill();
+    ctx.strokeStyle = 'rgba(217, 119, 6, 0.22)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
     ['#f472b6', '#fde047', '#ffffff', '#c084fc'].forEach((col, i) => {
       ctx.fillStyle = col;
-      [90, 230, 420, 610, 770].forEach((fx, j) => {
+      [145, 220, 415, 625, 795].forEach((fx, j) => {
         ctx.beginPath();
-        ctx.arc(fx + (i % 2) * 18, 330 + ((i + j) % 3) * 38, 4.5, 0, Math.PI * 2);
+        ctx.arc(fx + (i % 2) * 18, 326 + ((i + j) % 2) * 32, 4.5, 0, Math.PI * 2);
         ctx.fill();
       });
     });
@@ -1641,23 +1889,13 @@ export function setupPetSittingScreen(stateManager) {
       ctx.restore();
     }
 
-    fxParticles.forEach((p) => {
+    // Realistic downward water stream droplets into ground bowl
+    waterDrops.forEach((d) => {
       ctx.save();
-      ctx.globalAlpha = Math.max(0, p.life / 52);
-      ctx.fillStyle = p.color;
-      if (p.kind === 'heart') {
-        ctx.beginPath();
-        ctx.arc(p.x - 2, p.y, p.size * 0.5, 0, Math.PI * 2);
-        ctx.arc(p.x + 2, p.y, p.size * 0.5, 0, Math.PI * 2);
-        ctx.moveTo(p.x - p.size * 0.85, p.y + 1);
-        ctx.lineTo(p.x, p.y + p.size * 1.1);
-        ctx.lineTo(p.x + p.size * 0.85, p.y + 1);
-        ctx.fill();
-      } else {
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size * 0.55, 0, Math.PI * 2);
-        ctx.fill();
-      }
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.ellipse(d.x, d.y, 2.2, 4.2, 0, 0, Math.PI * 2);
+      ctx.fill();
       ctx.restore();
     });
 

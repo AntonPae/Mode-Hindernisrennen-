@@ -267,6 +267,7 @@ export function setupEventScreen(stateManager) {
 
   const petFollowers = new PetFollowerController();
   const particles = [];
+  const waterDrops = [];
 
   let partyState = null;
   let tripState = null;
@@ -521,6 +522,7 @@ export function setupEventScreen(stateManager) {
     rewardSummaryText = '';
     score = 0;
     particles.length = 0;
+    waterDrops.length = 0;
     chattedFriendIds.clear();
 
     player.x = 430;
@@ -1157,11 +1159,45 @@ export function setupEventScreen(stateManager) {
     }
   }
 
+  function spawnGardenWaterDrops(fromX, fromY, targetX, targetY) {
+    for (let i = 0; i < 12; i++) {
+      waterDrops.push({
+        x: fromX + (Math.random() - 0.5) * 4,
+        y: fromY - i * 1.4,
+        vx: (targetX - fromX) * 0.055 + (Math.random() - 0.5) * 0.4,
+        vy: 1.4 + Math.random() * 1.1,
+        targetY,
+        life: 34
+      });
+    }
+  }
+
+  function hitsEventProp(x, y) {
+    if (partyState && x >= 340 && x <= 520 && y >= 190 && y <= 228) return true;
+    if (bakeState) {
+      if (x >= 210 && x <= 400 && y >= 250 && y <= 324) return true;
+      if (x >= 468 && x <= 612 && y >= 198 && y <= 318) return true;
+    }
+    if (cafeState && x >= 115 && x <= 745 && y >= 220 && y <= 284) return true;
+    return false;
+  }
+
+  function hitsEventFriend(x, y) {
+    if (currentEvent?.kind === 'race') return false;
+    for (let i = 0; i < eventFriends.length; i++) {
+      const f = eventFriends[i];
+      if (!f.hiddenInSpot && Math.hypot(x - f.x, y - f.y) < 32) return true;
+    }
+    return false;
+  }
+
   function navigateToPoint(tx, ty, cb = null) {
-    player.waypoints = [{
-      x: Math.max(40, Math.min(820, tx)),
-      y: Math.max(200, Math.min(445, ty))
-    }];
+    let gx = Math.max(40, Math.min(820, tx));
+    let gy = Math.max(200, Math.min(445, ty));
+    if (hitsEventProp(gx, gy)) {
+      gy = bakeState ? 342 : cafeState ? 302 : 242;
+    }
+    player.waypoints = [{ x: gx, y: gy }];
     player.pendingCallback = cb;
   }
 
@@ -1300,10 +1336,10 @@ export function setupEventScreen(stateManager) {
     if (!gardenState || bed.stage >= 1 || eventCompleted) return;
     bed.stage = 1;
     score += 1;
-    player.pose = 'cook';
-    player.poseTimer = 24;
-    spawnFX('water', bed.x, bed.y - 16, 10);
-    spawnFX('heart', bed.x, bed.y - 26, 6);
+    player.facing = bed.x >= player.x ? 1 : -1;
+    player.pose = 'water';
+    player.poseTimer = 28;
+    spawnGardenWaterDrops(player.x + player.facing * 20, player.y - 36, bed.x, bed.y + 4);
     eventFriends.forEach((f, idx) => { if (idx % 2 === score % 2) f.bounce = 14; });
     showToast(`${bed.flower} Wundervoll! Das Blumenbeet blüht! (${score}/${goal})`, 'success');
     refreshHeaderStats();
@@ -1607,7 +1643,8 @@ export function setupEventScreen(stateManager) {
     // 1. Companion pets can always be tapped & cuddled!
     const tappedPet = petFollowers.handleTap(cx, cy);
     if (tappedPet.hit) {
-      spawnFX('heart', tappedPet.x, tappedPet.y - 22, 8);
+      player.pose = 'pet';
+      player.poseTimer = 20;
       showToast(`❤️ ${tappedPet.meta.name} feiert fröhlich mit dir!`, 'success');
       return;
     }
@@ -1928,10 +1965,17 @@ export function setupEventScreen(stateManager) {
 
       if (dist > 3.5) {
         const moveSpeed = 1.65;
-        f.x += (dx / dist) * moveSpeed;
-        f.y += (dy / dist) * moveSpeed;
-        if (Math.abs(dx) > 1) f.facing = dx > 0 ? 1 : -1;
-        f.pose = 'walk';
+        const nfx = f.x + (dx / dist) * moveSpeed;
+        const nfy = f.y + (dy / dist) * moveSpeed;
+        if (!hitsEventProp(nfx, nfy) && Math.hypot(nfx - player.x, nfy - player.y) >= 32) {
+          f.x = nfx;
+          f.y = nfy;
+          if (Math.abs(dx) > 1) f.facing = dx > 0 ? 1 : -1;
+          f.pose = 'walk';
+        } else {
+          f.pose = 'idle';
+          f.waitTimer = Math.min(f.waitTimer, 20);
+        }
       } else {
         f.pose = eventCompleted ? 'jump' : 'idle';
         f.waitTimer--;
@@ -1979,10 +2023,23 @@ export function setupEventScreen(stateManager) {
       if (keys.up || holdPad.up) my -= 1;
       if (keys.down || holdPad.down) my += 1;
       const speed = 4.6;
+      const stepEventWithCollision = (nxRaw, nyRaw) => {
+        const nx = Math.max(40, Math.min(820, nxRaw));
+        const ny = Math.max(200, Math.min(445, nyRaw));
+        const blocked = (cx, cy) => hitsEventProp(cx, cy) || hitsEventFriend(cx, cy);
+        if (!blocked(nx, ny)) {
+          player.x = nx;
+          player.y = ny;
+        } else if (!blocked(nx, player.y)) {
+          player.x = nx;
+        } else if (!blocked(player.x, ny)) {
+          player.y = ny;
+        }
+      };
+
       if (mx !== 0 || my !== 0) {
         const len = Math.hypot(mx, my) || 1;
-        player.x = Math.max(40, Math.min(820, player.x + (mx / len) * speed));
-        player.y = Math.max(200, Math.min(445, player.y + (my / len) * speed));
+        stepEventWithCollision(player.x + (mx / len) * speed, player.y + (my / len) * speed);
         if (mx !== 0) player.facing = Math.sign(mx);
         player.pose = 'walk';
       } else if (player.waypoints.length > 0) {
@@ -1991,8 +2048,10 @@ export function setupEventScreen(stateManager) {
         const dy = wp.y - player.y;
         const dist = Math.hypot(dx, dy);
         if (dist <= speed + 1) {
-          player.x = wp.x;
-          player.y = wp.y;
+          if (!hitsEventProp(wp.x, wp.y)) {
+            player.x = wp.x;
+            player.y = wp.y;
+          }
           player.waypoints.shift();
           if (player.waypoints.length === 0 && player.pendingCallback) {
             const cb = player.pendingCallback;
@@ -2001,8 +2060,7 @@ export function setupEventScreen(stateManager) {
           }
         } else {
           if (Math.abs(dx) > 1) player.facing = dx > 0 ? 1 : -1;
-          player.x += (dx / dist) * speed;
-          player.y += (dy / dist) * speed;
+          stepEventWithCollision(player.x + (dx / dist) * speed, player.y + (dy / dist) * speed);
           player.pose = 'walk';
         }
       } else if (player.poseTimer > 0) {
@@ -2011,6 +2069,15 @@ export function setupEventScreen(stateManager) {
       } else {
         player.pose = 'idle';
       }
+    }
+
+    for (let i = waterDrops.length - 1; i >= 0; i--) {
+      const d = waterDrops[i];
+      d.x += d.vx;
+      d.y += d.vy;
+      d.vy += 0.24;
+      d.life--;
+      if (d.y >= d.targetY || d.life <= 0) waterDrops.splice(i, 1);
     }
 
     updateFriendsMovement();
@@ -2667,6 +2734,16 @@ export function setupEventScreen(stateManager) {
         ctx.restore();
       });
     }
+
+    // Realistic downward water stream droplets onto flowerbeds
+    waterDrops.forEach((d) => {
+      ctx.save();
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.ellipse(d.x, d.y, 2.2, 4.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
 
     // Particles
     particles.forEach((p) => {
