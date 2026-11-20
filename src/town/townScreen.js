@@ -5,7 +5,7 @@ import { HomeManager } from '../home/homeData.js';
 import { MailboxManager } from '../mailbox/mailboxData.js';
 import { PetFollowerController } from '../home/petCompanion.js';
 
-const WORLD_WIDTH = 3100;
+const WORLD_WIDTH = 3420;
 const GARDEN_LEFT_X = 280;
 const GARDEN_RIGHT_X = 560;
 const LEFT_GATE_X = 280;
@@ -54,19 +54,29 @@ export const TOWN_PLACES = [
     desc: 'Frisches Essen & Zutaten für deinen Kühlschrank'
   },
   {
+    id: 'salon',
+    label: '💇 Friseurladen',
+    x: 1665,
+    y: 266,
+    shopId: 'salon',
+    badge: 'Frisur & Farbe',
+    color: '#9333ea',
+    desc: 'Neue Frisuren, Haar-Schmuck & bunte Haarfarben'
+  },
+  {
     id: 'boutique',
     label: '👗 Mode-Boutique',
-    x: 1665,
+    x: 1980,
     y: 266,
     shopId: 'boutique',
     badge: 'Kleidung kaufen',
     color: '#db2777',
-    desc: 'Outfits, Schuhe, Frisuren, Gesichter & Fähigkeiten'
+    desc: 'Outfits, Schuhe, Gesichter, Kräfte & Reise-Welten'
   },
   {
     id: 'furniture',
     label: '🛋️ Möbel & Bau',
-    x: 1980,
+    x: 2295,
     y: 266,
     shopId: 'furniture',
     badge: 'Möbel & Zimmer',
@@ -76,7 +86,7 @@ export const TOWN_PLACES = [
   {
     id: 'petshop',
     label: '🐾 Tierhandlung',
-    x: 2295,
+    x: 2610,
     y: 266,
     shopId: 'petshop',
     badge: 'Tiere & Futter',
@@ -86,7 +96,7 @@ export const TOWN_PLACES = [
   {
     id: 'cafe',
     label: '🍦 Café & Eisdiele',
-    x: 2610,
+    x: 2925,
     y: 266,
     targetState: 'ICECREAM',
     badge: 'Arbeiten',
@@ -96,7 +106,7 @@ export const TOWN_PLACES = [
   {
     id: 'stadium',
     label: '🏃 Renn-Stadion',
-    x: 2925,
+    x: 3240,
     y: 266,
     targetState: 'BACKGROUND_SELECT',
     badge: 'Rennen starten',
@@ -610,7 +620,7 @@ export function setupTownScreen(stateManager) {
     }
 
     // Crisp Crosswalks ("Zebrastreifen") in front of shops!
-    [1350, 1665, 1980, 2295, 2610].forEach((cx) => {
+    [1350, 1665, 1980, 2295, 2610, 2925].forEach((cx) => {
       ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
       for (let sy = 296; sy <= 376; sy += 16) {
         ctx.fillRect(cx - 28, sy, 56, 8);
@@ -908,21 +918,63 @@ export function setupTownScreen(stateManager) {
       windowItems: ['🍎', '🧀', '🥛']
     });
 
-    // 2. Mode- & Style-Boutique (Outfits & Styles!)
+    // 2. Friseurladen (Haircuts, Headwear & Hair Coloring!)
     drawShoppingStreetStore({
       x: 1665,
+      wall: '#faf5ff',
+      trim: '#9333ea',
+      awningA: '#a855f7',
+      awningB: '#ffffff',
+      signText: '💇 FRISEURLADEN',
+      signColor: '#7e22ce',
+      windowItems: ['💇', '✂️', '🎨']
+    });
+    // Animated spinning red-white-blue barber pole beside the Friseurladen door!
+    ctx.save();
+    const poleX = 1665 + 104;
+    const poleY = 148;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.roundRect(poleX - 7, poleY, 14, 56, [7]);
+    ctx.fill();
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(poleX - 6, poleY + 6, 12, 44, [4]);
+    ctx.clip();
+    const stripeShift = (animFrame * 0.8) % 24;
+    for (let sy = poleY - 24; sy < poleY + 64; sy += 12) {
+      ctx.fillStyle = ((sy / 12) % 2 === 0) ? '#ef4444' : '#3b82f6';
+      ctx.beginPath();
+      ctx.moveTo(poleX - 8, sy + stripeShift);
+      ctx.lineTo(poleX + 8, sy + stripeShift - 8);
+      ctx.lineTo(poleX + 8, sy + stripeShift - 2);
+      ctx.lineTo(poleX - 8, sy + stripeShift + 6);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.strokeStyle = '#9333ea';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(poleX - 7, poleY, 14, 56, [7]);
+    ctx.stroke();
+    ctx.restore();
+
+    // 3. Mode- & Style-Boutique (Outfits, Shoes, Faces!)
+    drawShoppingStreetStore({
+      x: 1980,
       wall: '#fdf2f8',
       trim: '#db2777',
       awningA: '#ec4899',
       awningB: '#ffffff',
       signText: '👗 MODE-BOUTIQUE',
       signColor: '#be185d',
-      windowItems: ['👗', '👟', '👑']
+      windowItems: ['👗', '👟', '😎']
     });
 
-    // 3. Möbel- & Bau-Kaufhaus (Rooms, Furniture, Garden!)
+    // 4. Möbel- & Bau-Kaufhaus (Rooms, Furniture, Garden!)
     drawShoppingStreetStore({
-      x: 1980,
+      x: 2295,
       wall: '#fffbeb',
       trim: '#d97706',
       awningA: '#f59e0b',
@@ -932,9 +984,9 @@ export function setupTownScreen(stateManager) {
       windowItems: ['🛋️', '📺', '🪴']
     });
 
-    // 4. Tierhandlung (Pets & Pet Items!)
+    // 5. Tierhandlung (Pets & Pet Items!)
     drawShoppingStreetStore({
-      x: 2295,
+      x: 2610,
       wall: '#f0f9ff',
       trim: '#0284c7',
       awningA: '#0ea5e9',
@@ -944,9 +996,9 @@ export function setupTownScreen(stateManager) {
       windowItems: ['🐶', '🐱', '🦴']
     });
 
-    // 5. Traum-Café & Eisdiele
+    // 6. Traum-Café & Eisdiele
     drawShoppingStreetStore({
-      x: 2610,
+      x: 2925,
       wall: '#fff1f2',
       trim: '#e11d48',
       awningA: '#f43f5e',
@@ -956,27 +1008,27 @@ export function setupTownScreen(stateManager) {
       windowItems: ['🍦', '🧇', '🥤']
     });
 
-    // 6. Renn-Stadion Arch at end of Street
+    // 7. Renn-Stadion Arch at end of Street
     ctx.save();
     ctx.strokeStyle = '#f43f8e';
     ctx.lineWidth = 14;
     ctx.beginPath();
-    ctx.arc(2925, 222, 86, Math.PI, 0);
+    ctx.arc(3240, 222, 86, Math.PI, 0);
     ctx.stroke();
     ctx.strokeStyle = '#fbbf24';
     ctx.lineWidth = 6;
     ctx.beginPath();
-    ctx.arc(2925, 222, 76, Math.PI, 0);
+    ctx.arc(3240, 222, 76, Math.PI, 0);
     ctx.stroke();
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.roundRect(2835, 208, 180, 26, [13]);
+    ctx.roundRect(3150, 208, 180, 26, [13]);
     ctx.fill();
     ctx.font = '800 12px "Plus Jakarta Sans", sans-serif';
     ctx.fillStyle = '#be185d';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('🏃 Renn-Stadion (Start!)', 2925, 221);
+    ctx.fillText('🏃 Renn-Stadion (Start!)', 3240, 221);
     ctx.restore();
 
     // Animated city cars on the road (drawn behind player when player is in foreground, or nicely along lane)
@@ -1079,10 +1131,10 @@ export function setupTownScreen(stateManager) {
         player.x = 880;
         player.y = 274;
       } else if (payload && payload.from === 'ICECREAM') {
-        player.x = 2610;
+        player.x = 2925;
         player.y = 266;
       } else if (payload && payload.from === 'EDITOR') {
-        player.x = 1665;
+        player.x = 1980;
         player.y = 266;
       } else {
         // Default landing right on the Shopping Street so the user immediately sees the street & stores!

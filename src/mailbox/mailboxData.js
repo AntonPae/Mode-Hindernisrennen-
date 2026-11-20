@@ -12,6 +12,11 @@ export const MAIL_CONTACTS = [
 ];
 
 export const INVITE_EVENT_TYPES = [
+  { id: 'treasure_hunt', icon: '🗺️', label: 'Schatzsuche am Meer', defaultMsg: 'Ich habe eine geheimnisvolle Schatzkarte gefunden! Lass uns zusammen echte Schätze ausgraben!', activity: { kind: 'treasure_hunt', theme: 'treasure_island', title: 'Schatzsuche auf der Insel', reward: 34 } },
+  { id: 'band_jam', icon: '🎶', label: 'Musik- & Band-Konzert', defaultMsg: 'Wir gründen heute eine Band auf der Bühne! Schnapp dir ein Instrument und spiel mit!', activity: { kind: 'band_jam', theme: 'stage', title: 'Traumstadt-Band-Konzert', reward: 34 } },
+  { id: 'hide_and_seek', icon: '🙈', label: 'Versteckspiel im Zauberwald', defaultMsg: 'Komm in den Zauberwald — wir spielen Verstecken zwischen Büschen, Zelten & Baumhäusern!', activity: { kind: 'hide_and_seek', theme: 'forest_hide', title: 'Versteckspiel im Zauberwald', reward: 32 } },
+  { id: 'baking_fest', icon: '🧁', label: 'Back- & Pizza-Fest', defaultMsg: 'Heute wird der große Steinofen angeheizt! Wir kneten Teig, backen Pizza & verzieren Torten!', activity: { kind: 'baking_fest', theme: 'bakery', title: 'Großes Back- & Pizza-Fest', reward: 32 } },
+  { id: 'stargazing', icon: '🌠', label: 'Sternschnuppen-Nacht', defaultMsg: 'Heute Nacht fallen Sternschnuppen und wir lassen bunte Himmels-Laternen steigen!', activity: { kind: 'stargazing', theme: 'night_sky', title: 'Sternschnuppen- & Lampion-Nacht', reward: 35 } },
   { id: 'party', icon: '🥳', label: 'Party bei mir zu Hause', defaultMsg: 'Ich feiere eine fröhliche Party bei mir im Haus! Es gibt Musik und Snacks.', activity: { kind: 'party', theme: 'home_party', title: 'Party bei mir zu Hause', reward: 26 } },
   { id: 'cafe', icon: '🍰', label: 'Eis & Waffeln im Café', defaultMsg: 'Lass uns gemeinsam leckeres Eis und warme Waffeln im Traum-Café essen!', activity: { kind: 'cafe_contest', theme: 'cafe', title: 'Eis- & Waffel-Treffen', reward: 26 } },
   { id: 'garden', icon: '🌳', label: 'Garten-Picknick', defaultMsg: 'Komm durchs Gartentor zu meinem Picknick im Garten – wir können auch spielen!', activity: { kind: 'trip', theme: 'garden', title: 'Garten-Picknick', reward: 24 } },
@@ -35,6 +40,63 @@ export const QUICK_PHRASES = [
 ];
 
 const LETTER_TEMPLATES = [
+  // Brandneue Abenteuer- & Erlebnis-Einladungen
+  {
+    category: 'adventure',
+    categoryLabel: '🗺️ Schatzsuche',
+    senderId: 'leo',
+    title: 'Geheime Piraten-Schatzsuche an der Bucht!',
+    body: 'Ich habe am Strand eine echte Schatzkarte gefunden! Mit dem Schatz-Radar graben wir nach Diamanten & Goldkronen. Bist du dabei?',
+    eventTime: 'Heute Nachmittag an der Bucht',
+    isInvitation: true,
+    rewardCoins: 34,
+    activity: { kind: 'treasure_hunt', theme: 'treasure_island', title: 'Geheime Piraten-Schatzsuche', reward: 34 }
+  },
+  {
+    category: 'concert',
+    categoryLabel: '🎶 Konzert',
+    senderId: 'mia',
+    title: 'Großes Traumstadt-Band-Konzert auf der Bühne!',
+    body: 'Wir spielen heute alle zusammen Gitarre, Klavier, Schlagzeug & Mikrofon! Schnapp dir die bunten Musik-Noten im Takt!',
+    eventTime: 'Heute um 18:30 Uhr',
+    isInvitation: true,
+    rewardCoins: 34,
+    activity: { kind: 'band_jam', theme: 'stage', title: 'Traumstadt-Band-Konzert', reward: 34 }
+  },
+  {
+    category: 'game',
+    categoryLabel: '🙈 Spiel-Treffen',
+    senderId: 'kaya',
+    title: 'Großes Versteckspiel im Zauberwald!',
+    body: 'Oma Frieda, Herr Weber, Mia, Leo und ich verstecken uns im Wald! Kannst du alle 5 Freunde in ihren Verstecken finden?',
+    eventTime: 'Jetzt im Zauberwald',
+    isInvitation: true,
+    rewardCoins: 32,
+    activity: { kind: 'hide_and_seek', theme: 'forest_hide', title: 'Versteckspiel im Zauberwald', reward: 32 }
+  },
+  {
+    category: 'bakery',
+    categoryLabel: '🧁 Back-Fest',
+    senderId: 'frieda',
+    title: 'Oma Friedas Back- & Pizza-Fest am Steinofen!',
+    body: 'Komm zum gemeinsamen Backen! Wir rühren Teig, achten genau auf die Ofen-Temperatur und verzieren leckere Torten & Pizzen!',
+    eventTime: 'Heute um 15:00 Uhr',
+    isInvitation: true,
+    rewardCoins: 32,
+    activity: { kind: 'baking_fest', theme: 'bakery', title: 'Oma Friedas Back- & Pizza-Fest', reward: 32 }
+  },
+  {
+    category: 'night',
+    categoryLabel: '🌠 Sternennacht',
+    senderId: 'weber',
+    title: 'Sternschnuppen- & Lampion-Nacht auf der Wiese!',
+    body: 'Heute Nacht schicken wir leuchtende Himmels-Laternen in den Nachthimmel und fangen funkelnde Sternschnuppen für geheime Wünsche!',
+    eventTime: 'Heute Abend unterm Sternenhimmel',
+    isInvitation: true,
+    rewardCoins: 35,
+    activity: { kind: 'stargazing', theme: 'night_sky', title: 'Sternschnuppen- & Lampion-Nacht', reward: 35 }
+  },
+
   // Wettbewerbe
   {
     category: 'competition',
@@ -213,7 +275,8 @@ function getDefaultMailboxState() {
     completedEvents: [],
     lastDeliveryDate: '',
     deliveredToday: 0,
-    nextTemplateIdx: 0
+    nextTemplateIdx: 0,
+    newVarietyV2Seeded: false
   };
 }
 
@@ -255,7 +318,8 @@ export const MailboxManager = {
         completedEvents: Array.isArray(parsed.completedEvents) ? parsed.completedEvents : [],
         lastDeliveryDate: parsed.lastDeliveryDate || '',
         deliveredToday: parsed.deliveredToday || 0,
-        nextTemplateIdx: parsed.nextTemplateIdx || 0
+        nextTemplateIdx: parsed.nextTemplateIdx || 0,
+        newVarietyV2Seeded: Boolean(parsed.newVarietyV2Seeded)
       };
     } catch {
       return getDefaultMailboxState();
@@ -279,23 +343,43 @@ export const MailboxManager = {
     const state = this.getState();
     const todayKey = getTodayKey();
     const delivered = [];
+    let dirty = false;
+
+    if (!state.newVarietyV2Seeded) {
+      state.newVarietyV2Seeded = true;
+      dirty = true;
+      // Guarantee immediate arrival of brand-new invitation types
+      [LETTER_TEMPLATES[0], LETTER_TEMPLATES[1], LETTER_TEMPLATES[2]].forEach((tpl, idx) => {
+        if (!state.inbox.some((m) => m.title === tpl.title && m.rsvpStatus === 'pending')) {
+          const mail = createMailFromTemplate(tpl, todayKey);
+          mail.timestamp = Date.now() + idx;
+          state.inbox.unshift(mail);
+          delivered.push(mail);
+        }
+      });
+    }
 
     if (state.lastDeliveryDate !== todayKey) {
       state.lastDeliveryDate = todayKey;
       state.deliveredToday = 0;
+      dirty = true;
 
-      // Deliver 1 or 2 fresh letters per day (always 2 on very first mailbox setup!)
-      const dailyCount = state.inbox.length === 0 ? 2 : (Math.random() < 0.72 ? 2 : 1);
+      // Deliver 1 or 2 fresh letters per day
+      const dailyCount = state.inbox.length <= 3 ? 1 : (Math.random() < 0.72 ? 2 : 1);
       for (let i = 0; i < dailyCount; i++) {
-        // Pick varied templates so user gets invitations AND letters
-        const tplIdx = (state.nextTemplateIdx + i * 4) % LETTER_TEMPLATES.length;
+        const tplIdx = (state.nextTemplateIdx + i * 3) % LETTER_TEMPLATES.length;
         const tpl = LETTER_TEMPLATES[tplIdx];
-        const mail = createMailFromTemplate(tpl, todayKey);
-        state.inbox.unshift(mail);
-        delivered.push(mail);
-        state.deliveredToday += 1;
+        if (!state.inbox.some((m) => m.title === tpl.title && m.rsvpStatus === 'pending')) {
+          const mail = createMailFromTemplate(tpl, todayKey);
+          state.inbox.unshift(mail);
+          delivered.push(mail);
+          state.deliveredToday += 1;
+        }
       }
-      state.nextTemplateIdx = (state.nextTemplateIdx + dailyCount * 5 + 1) % LETTER_TEMPLATES.length;
+      state.nextTemplateIdx = (state.nextTemplateIdx + dailyCount * 3 + 1) % LETTER_TEMPLATES.length;
+    }
+
+    if (dirty) {
       if (state.inbox.length > 40) {
         state.inbox = state.inbox.slice(0, 40);
       }
@@ -303,6 +387,25 @@ export const MailboxManager = {
     }
 
     return { delivered, state };
+  },
+
+  deliverExtraPost() {
+    if (!this.hasMailbox()) return { ok: false };
+    const state = this.getState();
+    const todayKey = getTodayKey();
+    const pendingTitles = new Set(state.inbox.filter((m) => m.rsvpStatus === 'pending').map((m) => m.title));
+
+    // Prefer varied invitations not currently pending in inbox
+    const candidates = LETTER_TEMPLATES.filter((t) => t.isInvitation && !pendingTitles.has(t.title));
+    const pool = candidates.length > 0 ? candidates : LETTER_TEMPLATES.filter((t) => t.isInvitation);
+    const picked = pool[state.nextTemplateIdx % pool.length] || LETTER_TEMPLATES[0];
+
+    const mail = createMailFromTemplate(picked, todayKey);
+    state.inbox.unshift(mail);
+    state.nextTemplateIdx = (state.nextTemplateIdx + 1) % LETTER_TEMPLATES.length;
+    if (state.inbox.length > 40) state.inbox = state.inbox.slice(0, 40);
+    this.saveState(state);
+    return { ok: true, mail };
   },
 
   getUnreadCount() {
@@ -526,6 +629,11 @@ export const MailboxManager = {
     const invMatch = INVITE_EVENT_TYPES.find((e) => title.includes(e.label));
     if (invMatch) return invMatch.activity;
 
+    if (entry.category === 'adventure') return { kind: 'treasure_hunt', theme: 'treasure_island', title: title || 'Schatzsuche', reward: 34 };
+    if (entry.category === 'concert') return { kind: 'band_jam', theme: 'stage', title: title || 'Band-Konzert', reward: 34 };
+    if (entry.category === 'game') return { kind: 'hide_and_seek', theme: 'forest_hide', title: title || 'Versteckspiel', reward: 32 };
+    if (entry.category === 'bakery') return { kind: 'baking_fest', theme: 'bakery', title: title || 'Back-Fest', reward: 32 };
+    if (entry.category === 'night') return { kind: 'stargazing', theme: 'night_sky', title: title || 'Sternschnuppen-Nacht', reward: 35 };
     if (entry.category === 'party') return { kind: 'party', theme: 'garden_party', title: title || 'Party mit Freunden', reward: 26 };
     if (entry.category === 'trip') return { kind: 'trip', theme: 'forest', title: title || 'Gemeinsamer Ausflug', reward: 26 };
     if (entry.category === 'competition') return { kind: 'race', theme: 'stadium', title: title || 'Freundschafts-Wettbewerb', reward: 30 };

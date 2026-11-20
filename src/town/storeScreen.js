@@ -58,6 +58,72 @@ const STORE_CONFIG = {
       }
     ]
   },
+  salon: {
+    id: 'salon',
+    title: '💇 Friseurladen „Glanz & Schnitt“',
+    subtitle: 'Probiere Frisuren vor dem Salon-Spiegel an, färbe deine Haare & bezahle an der Kasse!',
+    floorA: '#faf5ff',
+    floorB: '#f3e8ff',
+    wallA: '#fdf4ff',
+    wallB: '#e9d5ff',
+    accent: '#9333ea',
+    cashierName: 'Friseurin Bella',
+    cashierConfig: {
+      body: { height: 1.0, width: 1.0, faceId: 'face_8', hairId: 'hair_3', hairColor: '#a855f7' },
+      clothes: {
+        top: { style: 'sparkle_top', color: '#9333ea', stickers: [{ type: 'star', x: 0, y: 0.45, scale: 1 }] },
+        pants: { style: 'star_jeans', color: '#1e1b4b' },
+        shoes: { style: 'glitter_boots', color: '#ec4899' }
+      }
+    },
+    freeSample: {
+      x: 608,
+      y: 235,
+      icon: '💆',
+      label: 'Gratis Haar-Spa',
+      rewardText: '💆 Frische Glanz-Kur im Friseurladen! Deine Haare strahlen & +8 🪙 Styling-Glück!'
+    },
+    aisles: [
+      {
+        id: 'hairstyles',
+        label: '✂️ Frisuren-Stuhl',
+        x: 185,
+        color: '#9333ea',
+        hint: 'Kurz, Lang, Irokese oder Afro — vor dem Salon-Spiegel anprobieren & in den Korb legen!',
+        sources: [
+          {
+            kind: 'shop',
+            category: 'hair',
+            tabLabel: '✂️ Haarschnitte',
+            filter: (i) => ['hair_1', 'hair_none', 'hair_3', 'hair_2', 'hair_afro'].includes(i.id)
+          }
+        ]
+      },
+      {
+        id: 'hair_accessories',
+        label: '👑 Haar-Schmuck',
+        x: 345,
+        color: '#ec4899',
+        hint: 'Hasenohren, Katzenohren, Blumenkranz, Kronen & Zauberhut!',
+        sources: [
+          {
+            kind: 'shop',
+            category: 'hair',
+            tabLabel: '👑 Reife & Hüte',
+            filter: (i) => !['hair_1', 'hair_none', 'hair_3', 'hair_2', 'hair_afro'].includes(i.id)
+          }
+        ]
+      },
+      {
+        id: 'haircolor',
+        label: '🎨 Haarfarben-Bar',
+        x: 500,
+        color: '#0ea5e9',
+        hint: 'Wähle eine strahlende Haarfarbe aus den Farbflaschen — kostenloses Styling im Friseursalon!',
+        sources: [{ kind: 'salon_color', tabLabel: '🎨 Haarfarben' }]
+      }
+    ]
+  },
   boutique: {
     id: 'boutique',
     title: '👗 Mode- & Style-Boutique',
@@ -104,12 +170,11 @@ const STORE_CONFIG = {
       },
       {
         id: 'beauty',
-        label: '💇 Styling-Spiegel',
+        label: '😀 Gesichter-Spiegel',
         x: 440,
         color: '#f43f5e',
-        hint: 'Frisuren, Kronen, Hasenohren & neue Gesichter vor dem Spiegel!',
+        hint: 'Neue Gesichter, Sternen-Augen & coole Visiere vor dem Boutique-Spiegel! (Frisuren gibt es im 💇 Friseurladen!)',
         sources: [
-          { kind: 'shop', category: 'hair', tabLabel: '💇 Frisuren' },
           { kind: 'shop', category: 'face', tabLabel: '😀 Gesichter' }
         ]
       },
@@ -400,6 +465,7 @@ export function setupStoreScreen(stateManager) {
     if (!savedConfigBeforeTryOn) return;
     PlayerConfig.body.faceId = savedConfigBeforeTryOn.body.faceId;
     PlayerConfig.body.hairId = savedConfigBeforeTryOn.body.hairId;
+    PlayerConfig.body.hairColor = savedConfigBeforeTryOn.body.hairColor;
     PlayerConfig.clothes.top.style = savedConfigBeforeTryOn.clothes.top.style;
     PlayerConfig.clothes.pants.style = savedConfigBeforeTryOn.clothes.pants.style;
     PlayerConfig.clothes.shoes.style = savedConfigBeforeTryOn.clothes.shoes.style;
@@ -654,8 +720,83 @@ export function setupStoreScreen(stateManager) {
     const source = aisle.sources[activeSourceIdx] || aisle.sources[0];
     const coins = ShopManager.getCoins();
 
+    if (source.kind === 'salon_color') {
+      const salonDyes = [
+        { name: 'Schoko-Braun', hex: '#4a2e00' },
+        { name: 'Gold-Blond', hex: '#facc15' },
+        { name: 'Kastanien-Rot', hex: '#9a3412' },
+        { name: 'Mitternacht', hex: '#1e1b4b' },
+        { name: 'Erdbeer-Rosa', hex: '#ec4899' },
+        { name: 'Lavendel', hex: '#a855f7' },
+        { name: 'Himmel-Blau', hex: '#0ea5e9' },
+        { name: 'Minz-Grün', hex: '#10b981' },
+        { name: 'Feuer-Rot', hex: '#ef4444' },
+        { name: 'Schnee-Weiß', hex: '#f1f5f9' }
+      ];
+
+      const infoCard = document.createElement('div');
+      infoCard.className = 'store-shelf-item';
+      infoCard.innerHTML = `
+        <div class="store-shelf-item-head">
+          <span class="store-shelf-item-icon">🎨</span>
+          <div class="store-shelf-item-meta">
+            <strong>Friseur-Farben &amp; Eigener Ton</strong>
+            <p>Tippe auf eine Farbflasche, um deine Haare sofort im Salon zu färben!</p>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap;">
+          <label style="font-weight:700;font-size:0.86rem;display:flex;align-items:center;gap:8px;">
+            Eigene Farbe:
+            <input type="color" id="salonCustomHairColor" value="${PlayerConfig.body.hairColor || '#4a2e00'}" style="width:44px;height:34px;border-radius:8px;border:2px solid #9333ea;cursor:pointer;" />
+          </label>
+        </div>
+      `;
+      shelfItemsEl.appendChild(infoCard);
+
+      const customInput = infoCard.querySelector('#salonCustomHairColor');
+      if (customInput) {
+        customInput.addEventListener('input', (e) => {
+          PlayerConfig.body.hairColor = e.target.value;
+          if (savedConfigBeforeTryOn) savedConfigBeforeTryOn.body.hairColor = e.target.value;
+          ShopManager.savePlayerConfig(PlayerConfig);
+          spawnFX('#9333ea', player.x, player.y - 54, 4);
+        });
+      }
+
+      salonDyes.forEach((dye) => {
+        const isCurrent = (PlayerConfig.body.hairColor || '').toLowerCase() === dye.hex.toLowerCase();
+        const card = document.createElement('div');
+        card.className = `store-shelf-item${isCurrent ? ' owned' : ''}`;
+        card.innerHTML = `
+          <div class="store-shelf-item-head">
+            <span class="store-shelf-item-icon" style="background:${dye.hex};border:2px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.18);width:36px;height:36px;border-radius:50%;display:inline-flex;"></span>
+            <div class="store-shelf-item-meta">
+              <strong>${dye.name}</strong>
+              <p>${isCurrent ? 'Deine aktuelle Haarfarbe' : 'Im Salon kostenlos färben'}</p>
+            </div>
+          </div>
+          <div class="store-shelf-item-actions">
+            <button type="button" class="btn btn-small ${isCurrent ? 'btn-home' : 'btn-primary'} salon-dye-btn">
+              ${isCurrent ? '✓ Gefärbt' : '🎨 Färben'}
+            </button>
+          </div>
+        `;
+        card.querySelector('.salon-dye-btn').addEventListener('click', () => {
+          PlayerConfig.body.hairColor = dye.hex;
+          if (savedConfigBeforeTryOn) savedConfigBeforeTryOn.body.hairColor = dye.hex;
+          ShopManager.savePlayerConfig(PlayerConfig);
+          spawnFX(dye.hex, player.x, player.y - 60, 12);
+          showToast(`💇✨ Deine Haare wurden wunderschön in „${dye.name}“ gefärbt!`, 'success');
+          renderShelfInspector();
+        });
+        shelfItemsEl.appendChild(card);
+      });
+      return;
+    }
+
     if (source.kind === 'shop') {
-      const items = SHOP_CATALOG[source.category] || [];
+      const rawShopItems = SHOP_CATALOG[source.category] || [];
+      const items = source.filter ? rawShopItems.filter(source.filter) : rawShopItems;
       const currentId = getEquippedId(source.category);
 
       items.forEach((item) => {
@@ -911,6 +1052,9 @@ export function setupStoreScreen(stateManager) {
       HomeManager.addSupply('fridgeSnacks', 1);
     } else if (activeShopId === 'petshop') {
       HomeManager.addSupply('petFood', 1);
+    } else if (activeShopId === 'salon') {
+      ShopManager.addCoins(8);
+      updateHeaderStats();
     }
     spawnFX('#fbbf24', store.freeSample.x, store.freeSample.y - 20, 12);
     window.dispatchEvent(new CustomEvent('runner:coins-updated'));
@@ -1393,7 +1537,7 @@ export function setupStoreScreen(stateManager) {
       ctx.fillRect(x - 50, 198, 100, 36);
       ctx.font = '20px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('💇 👑 🐰', x, 152);
+      ctx.fillText('😀 😎 🦋', x, 152);
     } else {
       // Power & World Travel Ticket Counter
       ctx.fillStyle = '#e0f2fe';
@@ -1502,6 +1646,87 @@ export function setupStoreScreen(stateManager) {
       ctx.textAlign = 'center';
       ctx.fillText('🦴  🐾  🦴', x, 140);
       ctx.fillText('🥫  🦴  🍖', x, 194);
+    }
+
+    drawAisleSign(aisle, x, 58, isActive);
+    ctx.restore();
+  }
+
+  function drawSalonShelf(aisle, idx) {
+    const x = aisle.x;
+    const isActive = aisle.id === activeAisleId;
+    ctx.save();
+
+    if (idx === 0) {
+      // Illuminated Round Salon Mirror + Swivel Haircut Chair!
+      ctx.fillStyle = '#e0f2fe';
+      ctx.beginPath();
+      ctx.arc(x, 138, 42, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = isActive ? '#9333ea' : '#fbbf24';
+      ctx.lineWidth = 5;
+      ctx.stroke();
+
+      // Salon lights around mirror
+      for (let a = 0; a < 8; a++) {
+        const ang = (a / 8) * Math.PI * 2;
+        ctx.fillStyle = '#fef08a';
+        ctx.beginPath();
+        ctx.arc(x + Math.cos(ang) * 42, 138 + Math.sin(ang) * 42, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Swivel styling chair
+      ctx.fillStyle = '#a855f7';
+      ctx.beginPath();
+      ctx.roundRect(x - 24, 190, 48, 30, [10]);
+      ctx.fill();
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillRect(x - 4, 220, 8, 14);
+      ctx.fillRect(x - 20, 232, 40, 4);
+
+      ctx.font = '22px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('💇 ✂️ 🪮', x, 144);
+    } else if (idx === 1) {
+      // Velvet Crown & Headwear Display Case
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.roundRect(x - 52, 94, 104, 140, [12]);
+      ctx.fill();
+      ctx.strokeStyle = isActive ? '#ec4899' : '#f9a8d4';
+      ctx.lineWidth = isActive ? 4 : 2;
+      ctx.stroke();
+      [148, 198].forEach((sy) => {
+        ctx.fillStyle = '#fce7f3';
+        ctx.fillRect(x - 44, sy, 88, 6);
+      });
+      ctx.font = '22px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('👑  🐰  🐱', x, 136);
+      ctx.fillText('🌸  🦄  🧙', x, 186);
+    } else {
+      // Colorful Salon Hair-Dye Bottle Bar!
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.roundRect(x - 54, 94, 108, 140, [12]);
+      ctx.fill();
+      ctx.strokeStyle = isActive ? '#0ea5e9' : '#bae6fd';
+      ctx.lineWidth = isActive ? 4 : 2;
+      ctx.stroke();
+      const bottleColors = ['#facc15', '#ec4899', '#a855f7', '#0ea5e9', '#10b981', '#ef4444'];
+      bottleColors.forEach((col, bi) => {
+        const bx = x - 38 + (bi % 3) * 30;
+        const by = bi < 3 ? 114 : 168;
+        ctx.fillStyle = col;
+        ctx.beginPath();
+        ctx.roundRect(bx, by, 16, 26, [5]);
+        ctx.fill();
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(bx + 4, by - 6, 8, 6);
+      });
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🎨', x, 222);
     }
 
     drawAisleSign(aisle, x, 58, isActive);
@@ -1700,6 +1925,7 @@ export function setupStoreScreen(stateManager) {
     // Store Aisles / Shelves
     store.aisles.forEach((aisle, idx) => {
       if (activeShopId === 'supermarket') drawSupermarketShelf(aisle, idx);
+      else if (activeShopId === 'salon') drawSalonShelf(aisle, idx);
       else if (activeShopId === 'boutique') drawBoutiqueShelf(aisle, idx);
       else if (activeShopId === 'furniture') drawFurnitureShelf(aisle, idx);
       else drawPetshopShelf(aisle, idx);

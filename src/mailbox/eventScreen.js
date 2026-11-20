@@ -23,7 +23,12 @@ const FRIEND_TEMPLATES = [
       race: 'Du läufst so schnell – ich drücke dir ganz fest die Daumen!',
       pet_show: 'Bello und deine Tierchen sind heute einfach zauberhaft!',
       garden_contest: 'Deine Blumen duften bis zu meinem Haus herüber!',
-      cafe_contest: 'Mmmh, diese Eis-Kreationen sehen zum Anbeißen aus!'
+      cafe_contest: 'Mmmh, diese Eis-Kreationen sehen zum Anbeißen aus!',
+      treasure_hunt: 'Schau gut auf dein Schatz-Radar — ich glaube rechts liegt Gold!',
+      band_jam: 'Was für ein tolles Konzert! Spiel uns einen fetzigen Rhythmus!',
+      hide_and_seek: 'Pssst! Hast du mich echt schon in meinem Versteck entdeckt?!',
+      baking_fest: 'Mmmh, der frische Teig riecht wie in meiner Backstube!',
+      stargazing: 'Wie wunderschön die leuchtenden Laternen in den Nachthimmel steigen!'
     },
     replies: [
       'Oh, das hast du so lieb gesagt! ❤️',
@@ -49,7 +54,12 @@ const FRIEND_TEMPLATES = [
       race: 'Weiter so! Gleich bist du vorne an der Spitze!',
       pet_show: 'Bello hat fleißig geübt – zeig uns euren besten Trick!',
       garden_contest: 'Hier fühlen sich sogar meine Hunde pudelwohl!',
-      cafe_contest: 'Nachher nehme ich auch eine große Portion Waffeln!'
+      cafe_contest: 'Nachher nehme ich auch eine große Portion Waffeln!',
+      treasure_hunt: 'Bello wittert schon die vergrabenen Goldtruhen im Sand!',
+      band_jam: 'Ich klatsch schon im Takt mit! Gib Vollgas an den Instrumenten!',
+      hide_and_seek: 'Hihi, im Busch hättest du mich fast übersehen!',
+      baking_fest: 'Auf die heiße Steinofen-Pizza freu ich mich ganz besonders!',
+      stargazing: 'Schau durchs Teleskop — gleich fliegt noch eine Sternschnuppe!'
     },
     replies: [
       'Haha, genau das hab ich auch gedacht! 😄',
@@ -75,7 +85,12 @@ const FRIEND_TEMPLATES = [
       race: 'Hoppla, hol dir unbedingt die goldenen Boost-Sterne!',
       pet_show: 'Von mir bekommt ihr jetzt schon 10 von 10 Sternen!',
       garden_contest: 'Jedes gegossene Beet bringt noch mehr Schmetterlinge her!',
-      cafe_contest: 'Du kombinierst die Zutaten wie ein echter Profi!'
+      cafe_contest: 'Du kombinierst die Zutaten wie ein echter Profi!',
+      treasure_hunt: 'Wenn der Kreis um dich herum rot glüht, bist du ganz heiß dran!',
+      band_jam: 'Unsere Traumstadt-Band klingt heute wie echte Superstars!',
+      hide_and_seek: 'Du hast wirklich Adleraugen beim Suchen im Zauberwald!',
+      baking_fest: 'Beim Backen genau auf den grünen Ofen-Bereich achten!',
+      stargazing: 'Fang die fallenden Sternschnuppen und wünsch dir etwas Schönes!'
     },
     replies: [
       'Wie schön! Das macht mich richtig glücklich! ✨',
@@ -101,7 +116,12 @@ const FRIEND_TEMPLATES = [
       race: 'Ich geb alles auf meiner Bahn – viel Glück dir!',
       pet_show: 'Eure Show-Tricks sind der absolute Hammer!',
       garden_contest: 'So viele bunte Blumen – perfekt fürs Café-Schaufenster!',
-      cafe_contest: 'Zeig der Jury, wie schnell du die Desserts zauberst!'
+      cafe_contest: 'Zeig der Jury, wie schnell du die Desserts zauberst!',
+      treasure_hunt: 'Jeder gefundene Schatz bringt uns näher an die Piraten-Krone!',
+      band_jam: 'Drück genau auf das Instrument, wenn der Stern in den Kreis fällt!',
+      hide_and_seek: 'Kicher! Mal sehen, ob du uns alle im Wald findest!',
+      baking_fest: 'Erst rühren, dann goldbraun backen und süß verzieren!',
+      stargazing: 'Jede leuchtende Lampion-Laterne macht die Nacht noch magischer!'
     },
     replies: [
       'Mega cool! Lass uns gleich weiterfeiern! 🎉',
@@ -127,7 +147,12 @@ const FRIEND_TEMPLATES = [
       race: 'Auf die Plätze, fertig – gib ordentlich Gas!',
       pet_show: 'Wow, was für ein Sprung! Das gibt Bestnoten!',
       garden_contest: 'Sogar ich als Läufer bleibe hier zum Staunen stehen!',
-      cafe_contest: 'Ich bestelle nachher gleich zweimal Waffeln!'
+      cafe_contest: 'Ich bestelle nachher gleich zweimal Waffeln!',
+      treasure_hunt: 'Ahoi! Die X-Markierungen im Sand verraten geheime Kisten!',
+      band_jam: 'Yeah! Treff die Noten auf unserer Konzertbühne!',
+      hide_and_seek: 'Nächstes Mal verstecke ich mich noch schlauer, versprochen!',
+      baking_fest: 'Mit Extra-Belag schmeckt unser Steinofen-Gebäck doppelt gut!',
+      stargazing: 'Schnell, da hinten saust eine Sternschnuppe vorbei!'
     },
     replies: [
       'Stark! Mit dir im Team macht alles doppelt Spaß! ⚡',
@@ -165,6 +190,19 @@ const CAFE_INGREDIENTS = [
   { id: 'vanilla', icon: '🍦', label: 'Vanille-Eis', color: '#eab308', light: '#fef9c3' },
   { id: 'cherry', icon: '🍒', label: 'Kirsch-Topping', color: '#db2777', light: '#fce7f3' },
   { id: 'limo', icon: '🍋', label: 'Zitronen-Limo', color: '#0ea5e9', light: '#e0f2fe' }
+];
+
+const BAND_INSTRUMENTS = [
+  { id: 'guitar', icon: '🎸', label: 'Gitarre', color: '#ec4899', light: '#fce7f3', laneX: 195 },
+  { id: 'piano', icon: '🎹', label: 'Klavier', color: '#8b5cf6', light: '#ede9fe', laneX: 350 },
+  { id: 'drums', icon: '🥁', label: 'Schlagzeug', color: '#f59e0b', light: '#fef3c7', laneX: 510 },
+  { id: 'mic', icon: '🎤', label: 'Gesang', color: '#0ea5e9', light: '#e0f2fe', laneX: 665 }
+];
+
+const BAKE_RECIPES = [
+  { id: 'cake', icon: '🍓', resultIcon: '🎂', label: 'Erdbeer-Torte', color: '#f43f5e', light: '#ffe4e6' },
+  { id: 'pizza', icon: '🍅', resultIcon: '🍕', label: 'Traum-Pizza', color: '#f59e0b', light: '#fef3c7' },
+  { id: 'croissant', icon: '🍫', resultIcon: '🥐', label: 'Schoko-Croissants', color: '#8b5cf6', light: '#ede9fe' }
 ];
 
 export function setupEventScreen(stateManager) {
@@ -236,6 +274,11 @@ export function setupEventScreen(stateManager) {
   let petShowState = null;
   let gardenState = null;
   let cafeState = null;
+  let treasureState = null;
+  let bandState = null;
+  let hideState = null;
+  let bakeState = null;
+  let starState = null;
 
   function showToast(msg, type = 'info') {
     if (!toastEl) return;
@@ -296,13 +339,21 @@ export function setupEventScreen(stateManager) {
             { x: 675, y: 375, minX: 590, maxX: 760, minY: 330, maxY: 430 },
             { x: 430, y: 352, minX: 340, maxX: 520, minY: 325, maxY: 420 }
           ]
-        : [
-            { x: 150, y: 292, minX: 65, maxX: 260, minY: 235, maxY: 425 },
-            { x: 300, y: 274, minX: 210, maxX: 410, minY: 230, maxY: 420 },
-            { x: 555, y: 276, minX: 450, maxX: 650, minY: 230, maxY: 420 },
-            { x: 710, y: 295, minX: 610, maxX: 800, minY: 235, maxY: 425 },
-            { x: 430, y: 255, minX: 310, maxX: 550, minY: 225, maxY: 395 }
-          ];
+        : kind === 'band_jam'
+          ? [
+              { x: 135, y: 248, minX: 90, maxX: 210, minY: 225, maxY: 270 },
+              { x: 285, y: 242, minX: 230, maxX: 360, minY: 225, maxY: 268 },
+              { x: 430, y: 238, minX: 375, maxX: 490, minY: 220, maxY: 265 },
+              { x: 575, y: 242, minX: 505, maxX: 645, minY: 225, maxY: 268 },
+              { x: 725, y: 248, minX: 655, maxX: 785, minY: 225, maxY: 270 }
+            ]
+          : [
+              { x: 150, y: 292, minX: 65, maxX: 260, minY: 235, maxY: 425 },
+              { x: 300, y: 274, minX: 210, maxX: 410, minY: 230, maxY: 420 },
+              { x: 555, y: 276, minX: 450, maxX: 650, minY: 230, maxY: 420 },
+              { x: 710, y: 295, minX: 610, maxX: 800, minY: 235, maxY: 425 },
+              { x: 430, y: 255, minX: 310, maxX: 550, minY: 225, maxY: 395 }
+            ];
 
     return FRIEND_TEMPLATES.map((tpl, idx) => {
       const slot = startSlots[idx];
@@ -330,6 +381,7 @@ export function setupEventScreen(stateManager) {
         speechTimer: 0,
         want: PARTY_TREATS[idx % PARTY_TREATS.length],
         served: false,
+        hiddenInSpot: kind === 'hide_and_seek',
         bounce: 0
       };
     });
@@ -493,6 +545,11 @@ export function setupEventScreen(stateManager) {
     petShowState = null;
     gardenState = null;
     cafeState = null;
+    treasureState = null;
+    bandState = null;
+    hideState = null;
+    bakeState = null;
+    starState = null;
 
     if (currentEvent.kind === 'party') {
       goal = 8;
@@ -593,6 +650,117 @@ export function setupEventScreen(stateManager) {
         roundsDone: 0
       };
       setStatus('🍦 Tippe auf die Zutaten passend zur Jury-Bestellung!');
+    } else if (currentEvent.kind === 'treasure_hunt') {
+      goal = 4;
+      if (subtitleEl) subtitleEl.textContent = 'Folge deinem Schatz-Radar (🔥 Heiß / ❄️ Kalt) & grab die 4 echten Piraten-Schätze aus!';
+      const spots = [
+        { x: 130, y: 295, dug: false, reward: '💎', name: 'Funkel-Diamant', isReal: true },
+        { x: 265, y: 402, dug: false, reward: '🥾', name: 'Alter Piraten-Stiefel', isReal: false },
+        { x: 380, y: 262, dug: false, reward: '👑', name: 'Goldene Insel-Krone', isReal: true },
+        { x: 495, y: 408, dug: false, reward: '🦀', name: 'Zwicker-Krabbe', isReal: false },
+        { x: 615, y: 278, dug: false, reward: '🪙', name: 'Goldmünzen-Truhe', isReal: true },
+        { x: 755, y: 392, dug: false, reward: '🧭', name: 'Zauber-Kompass', isReal: true },
+        { x: 735, y: 258, dug: false, reward: '🐚', name: 'Singende Muschel', isReal: false }
+      ];
+      // Shuffle positions slightly by swapping rewards randomly so every hunt feels fresh!
+      for (let i = spots.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const tmpR = spots[i].reward;
+        const tmpN = spots[i].name;
+        const tmpReal = spots[i].isReal;
+        spots[i].reward = spots[j].reward;
+        spots[i].name = spots[j].name;
+        spots[i].isReal = spots[j].isReal;
+        spots[j].reward = tmpR;
+        spots[j].name = tmpN;
+        spots[j].isReal = tmpReal;
+      }
+      treasureState = {
+        spots,
+        lastFoundMsg: ''
+      };
+      setStatus('🗺️ Lauf über den Strand! Je näher ein echter Schatz ist, desto heißer leuchtet dein Radar!');
+    } else if (currentEvent.kind === 'band_jam') {
+      goal = 8;
+      player.x = 430;
+      player.y = 335;
+      petFollowers.reset(player.x, player.y + 4);
+      if (subtitleEl) subtitleEl.textContent = 'Triff die bunten Musik-Noten, wenn sie auf deine 4 Bühnen-Instrumente fallen!';
+      bandState = {
+        notes: [
+          { laneIdx: 0, y: 120, speed: 1.55, icon: '🎵' },
+          { laneIdx: 2, y: 45, speed: 1.55, icon: '🎶' }
+        ],
+        spawnTick: 0,
+        combo: 0,
+        stageFlashTimer: 0,
+        activeLane: -1
+      };
+      setStatus('🎶 Tippe auf 🎸 🎹 🥁 🎤 im Takt der fallenden Noten!');
+    } else if (currentEvent.kind === 'hide_and_seek') {
+      goal = 5;
+      player.x = 430;
+      player.y = 385;
+      petFollowers.reset(player.x, player.y + 4);
+      if (subtitleEl) subtitleEl.textContent = 'Finde alle 5 versteckten Freunde im Zauberwald! Achte auf wackelnde Verstecke & „Kicher!“-Rufe!';
+      const spots = [
+        { id: 'bush_l', x: 135, y: 270, icon: '🌿', label: 'Blütenbusch', checked: false, friendId: null },
+        { id: 'tree_l', x: 280, y: 246, icon: '🌳', label: 'Hohle Eiche', checked: false, friendId: null },
+        { id: 'tent', x: 445, y: 252, icon: '⛺', label: 'Wald-Zelt', checked: false, friendId: null },
+        { id: 'hay', x: 610, y: 258, icon: '🍄', label: 'Pilzhütte', checked: false, friendId: null },
+        { id: 'barrel', x: 745, y: 292, icon: '🪵', label: 'Baumstamm', checked: false, friendId: null },
+        { id: 'bush_r', x: 185, y: 400, icon: '🌺', label: 'Rosenhecke', checked: false, friendId: null },
+        { id: 'rock', x: 690, y: 404, icon: '🪨', label: 'Moosstein', checked: false, friendId: null }
+      ];
+      const shuffledSpots = [...spots].sort(() => Math.random() - 0.5);
+      eventFriends.forEach((f, idx) => {
+        const sp = shuffledSpots[idx];
+        sp.friendId = f.id;
+        f.x = sp.x;
+        f.y = sp.y + 8;
+        f.tx = sp.x;
+        f.ty = sp.y + 8;
+        f.hiddenInSpot = true;
+      });
+      hideState = { spots };
+      setStatus('🙈 Wer kichert da hinter den Büschen? Tippe auf ein Versteck oder lauf hin!');
+    } else if (currentEvent.kind === 'baking_fest') {
+      goal = 3;
+      player.x = 430;
+      player.y = 338;
+      petFollowers.reset(player.x, player.y + 4);
+      if (subtitleEl) subtitleEl.textContent = 'Rühre den Teig, backe genau in der grünen Ofen-Zone & serviere 3 Leckereien!';
+      bakeState = {
+        recipeIdx: 0,
+        step: 0, // 0: stir (0..3), 1: oven gauge, 2: decorate
+        stirCount: 0,
+        ovenCursor: 15,
+        ovenDir: 1,
+        bakedGood: false
+      };
+      setStatus('🥣 Schritt 1: Tippe 3x auf „Teig rühren!“ für die Erdbeer-Torte!');
+    } else if (currentEvent.kind === 'stargazing') {
+      goal = 6;
+      player.x = 430;
+      player.y = 345;
+      petFollowers.reset(player.x, player.y + 4);
+      if (subtitleEl) subtitleEl.textContent = 'Zünde schwebende Himmels-Laternen an & fang funkelnde Sternschnuppen für deine Wünsche!';
+      starState = {
+        lanterns: [],
+        shootingStars: [
+          { x: 140, y: 78, vx: 3.1, vy: 1.0, active: true },
+          { x: 520, y: 58, vx: 2.8, vy: 1.15, active: true }
+        ],
+        lanternSpots: [
+          { x: 170, y: 315, lit: false },
+          { x: 430, y: 295, lit: false },
+          { x: 695, y: 315, lit: false }
+        ],
+        starsCaught: 0,
+        lanternsLit: 0,
+        spawnTick: 0
+      };
+      setStatus('🌠 Tippe auf eine fallende Sternschnuppe am Himmel oder zünde eine Laterne am Boden an!');
     }
 
     refreshHeaderStats();
@@ -649,6 +817,68 @@ export function setupEventScreen(stateManager) {
       goalChipsEl.innerHTML = `
         <span class="cone-scoop-chip" style="--scoop:#10b981;--scoop-light:#d1fae5;">
           🏃 Dein Fortschritt: ${Math.min(100, Math.round(raceState.myDist))}% · Leo: ${Math.min(100, Math.round(raceState.leoDist))}%
+        </span>
+      `;
+      return;
+    }
+
+    if (currentEvent.kind === 'treasure_hunt' && treasureState) {
+      const nearest = getNearestUndugRealTreasureDist();
+      const radarText = nearest === null
+        ? 'Alle Schätze gefunden!'
+        : nearest < 95
+          ? '🔥 GANZ HEISS!'
+          : nearest < 210
+            ? '☀️ Warm!'
+            : '❄️ Noch kalt';
+      goalChipsEl.innerHTML = `
+        <span class="cone-scoop-chip" style="--scoop:#f59e0b;--scoop-light:#fef3c7;">
+          🗺️ Schätze: ${score} / ${goal}
+        </span>
+        <span class="cone-scoop-chip" style="--scoop:#ef4444;--scoop-light:#ffe4e6;">
+          📡 Schatz-Radar: ${radarText}
+        </span>
+      `;
+      return;
+    }
+
+    if (currentEvent.kind === 'band_jam' && bandState) {
+      goalChipsEl.innerHTML = `
+        <span class="cone-scoop-chip" style="--scoop:#8b5cf6;--scoop-light:#ede9fe;">
+          🎶 Noten getroffen: ${score} / ${goal} · Combo: ${bandState.combo}x
+        </span>
+      `;
+      return;
+    }
+
+    if (currentEvent.kind === 'hide_and_seek' && hideState) {
+      goalChipsEl.innerHTML = `
+        <span class="cone-scoop-chip" style="--scoop:#10b981;--scoop-light:#d1fae5;">
+          🙈 Freunde gefunden: ${score} / ${goal}
+        </span>
+      `;
+      return;
+    }
+
+    if (currentEvent.kind === 'baking_fest' && bakeState) {
+      const rec = BAKE_RECIPES[Math.min(BAKE_RECIPES.length - 1, bakeState.recipeIdx)];
+      const stepLabels = [
+        `🥣 Rühren (${bakeState.stirCount}/3)`,
+        '🔥 Backen (Grüne Zone treffen!)',
+        '🎂 Verzieren & Servieren!'
+      ];
+      goalChipsEl.innerHTML = `
+        <span class="cone-scoop-chip" style="--scoop:${rec.color};--scoop-light:${rec.light};">
+          ${rec.resultIcon} ${rec.label} (${score + 1}/3) · ${stepLabels[bakeState.step]}
+        </span>
+      `;
+      return;
+    }
+
+    if (currentEvent.kind === 'stargazing' && starState) {
+      goalChipsEl.innerHTML = `
+        <span class="cone-scoop-chip" style="--scoop:#38bdf8;--scoop-light:#e0f2fe;">
+          🌠 Wünsche &amp; Laternen: ${score} / ${goal} (🏮 ${starState.lanternsLit} · 🌠 ${starState.starsCaught})
         </span>
       `;
       return;
@@ -835,6 +1065,95 @@ export function setupEventScreen(stateManager) {
         renderGoalChips();
       });
       actionBarEl.appendChild(clearBtn);
+    } else if (currentEvent.kind === 'treasure_hunt') {
+      const digBtn = document.createElement('button');
+      digBtn.type = 'button';
+      digBtn.className = 'ice-flavor-btn ice-accept-btn';
+      digBtn.innerHTML = `
+        <span class="ice-item-icon" style="background:radial-gradient(circle at 30% 30%, #fef08a, #f59e0b);">⛏️</span>
+        <span class="ice-item-meta">
+          <span class="ice-item-name">Nächstes X ausgraben!</span>
+          <span class="ice-item-price">Oder tippe auf eine Markierung</span>
+        </span>
+      `;
+      digBtn.addEventListener('click', digNearestTreasureSpot);
+      actionBarEl.appendChild(digBtn);
+    } else if (currentEvent.kind === 'band_jam') {
+      BAND_INSTRUMENTS.forEach((inst, laneIdx) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'ice-flavor-btn';
+        btn.innerHTML = `
+          <span class="ice-item-icon" style="background:radial-gradient(circle at 30% 30%, ${inst.light}, ${inst.color});">${inst.icon}</span>
+          <span class="ice-item-meta">
+            <span class="ice-item-name">${inst.label} spielen!</span>
+            <span class="ice-item-price">Taste ${laneIdx + 1} oder tippen</span>
+          </span>
+        `;
+        btn.addEventListener('click', () => playBandInstrument(laneIdx));
+        actionBarEl.appendChild(btn);
+      });
+    } else if (currentEvent.kind === 'hide_and_seek') {
+      const peekBtn = document.createElement('button');
+      peekBtn.type = 'button';
+      peekBtn.className = 'ice-flavor-btn ice-accept-btn';
+      peekBtn.innerHTML = `
+        <span class="ice-item-icon" style="background:radial-gradient(circle at 30% 30%, #d1fae5, #10b981);">🔍</span>
+        <span class="ice-item-meta">
+          <span class="ice-item-name">Nächstes Versteck absuchen!</span>
+          <span class="ice-item-price">Oder direkt auf einen Busch tippen</span>
+        </span>
+      `;
+      peekBtn.addEventListener('click', searchNearestHideSpot);
+      actionBarEl.appendChild(peekBtn);
+    } else if (currentEvent.kind === 'baking_fest') {
+      const rec = BAKE_RECIPES[Math.min(BAKE_RECIPES.length - 1, bakeState.recipeIdx)];
+      const stepBtns = [
+        { step: 0, icon: '🥣', title: 'Teig rühren!', sub: `${bakeState.stirCount}/3 gerührt` },
+        { step: 1, icon: '🔥', title: 'Aus dem Ofen holen!', sub: 'Im grünen Bereich tippen!' },
+        { step: 2, icon: rec.resultIcon, title: `${rec.label} servieren!`, sub: 'Verzieren & teilen' }
+      ];
+      stepBtns.forEach((sb) => {
+        const isCurrent = bakeState.step === sb.step;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `ice-flavor-btn${isCurrent ? ' ice-accept-btn' : ''}`;
+        btn.innerHTML = `
+          <span class="ice-item-icon" style="background:radial-gradient(circle at 30% 30%, ${rec.light}, ${rec.color});">${sb.icon}</span>
+          <span class="ice-item-meta">
+            <span class="ice-item-name">${sb.title}</span>
+            <span class="ice-item-price">${sb.sub}</span>
+          </span>
+        `;
+        btn.addEventListener('click', () => doBakeStep(sb.step));
+        actionBarEl.appendChild(btn);
+      });
+    } else if (currentEvent.kind === 'stargazing') {
+      const lanternBtn = document.createElement('button');
+      lanternBtn.type = 'button';
+      lanternBtn.className = 'ice-flavor-btn';
+      lanternBtn.innerHTML = `
+        <span class="ice-item-icon" style="background:radial-gradient(circle at 30% 30%, #fef3c7, #f59e0b);">🏮</span>
+        <span class="ice-item-meta">
+          <span class="ice-item-name">Himmels-Laterne anzünden</span>
+          <span class="ice-item-price">Schwebt in den Nachthimmel</span>
+        </span>
+      `;
+      lanternBtn.addEventListener('click', lightNextLantern);
+      actionBarEl.appendChild(lanternBtn);
+
+      const wishBtn = document.createElement('button');
+      wishBtn.type = 'button';
+      wishBtn.className = 'ice-flavor-btn ice-accept-btn';
+      wishBtn.innerHTML = `
+        <span class="ice-item-icon" style="background:radial-gradient(circle at 30% 30%, #e0f2fe, #38bdf8);">🌠</span>
+        <span class="ice-item-meta">
+          <span class="ice-item-name">Sternschnuppe fangen!</span>
+          <span class="ice-item-price">Einen Wunsch machen</span>
+        </span>
+      `;
+      wishBtn.addEventListener('click', catchAnyShootingStar);
+      actionBarEl.appendChild(wishBtn);
     }
   }
 
@@ -1027,6 +1346,256 @@ export function setupEventScreen(stateManager) {
     renderGoalChips();
   }
 
+  function getNearestUndugRealTreasureDist() {
+    if (!treasureState) return null;
+    let best = Infinity;
+    treasureState.spots.forEach((sp) => {
+      if (!sp.dug && sp.isReal) {
+        const d = Math.hypot(player.x - sp.x, player.y - sp.y);
+        if (d < best) best = d;
+      }
+    });
+    return best === Infinity ? null : best;
+  }
+
+  function digSpot(sp) {
+    if (!treasureState || sp.dug || eventCompleted) return;
+    sp.dug = true;
+    player.pose = 'pet';
+    player.poseTimer = 24;
+    if (sp.isReal) {
+      score += 1;
+      spawnFX('confetti', sp.x, sp.y - 16, 14);
+      eventFriends.forEach((f) => { f.bounce = 20; });
+      showToast(`💎 Schatz gefunden: ${sp.reward} ${sp.name}! (${score}/${goal})`, 'success');
+      if (score >= goal) completeCurrentEvent();
+    } else {
+      spawnFX('water', sp.x, sp.y - 10, 8);
+      showToast(`😅 Hier war nur: ${sp.reward} ${sp.name}! Such weiter mit dem Radar!`, 'info');
+    }
+    refreshHeaderStats();
+    renderGoalChips();
+  }
+
+  function digNearestTreasureSpot() {
+    if (!treasureState || eventCompleted) return;
+    let best = null;
+    let bestD = Infinity;
+    treasureState.spots.forEach((sp) => {
+      if (!sp.dug) {
+        const d = Math.hypot(player.x - sp.x, player.y - sp.y);
+        if (d < bestD) { bestD = d; best = sp; }
+      }
+    });
+    if (best) {
+      navigateToPoint(best.x, best.y + 18, () => digSpot(best));
+    }
+  }
+
+  function playBandInstrument(laneIdx) {
+    if (!bandState || eventCompleted) return;
+    const inst = BAND_INSTRUMENTS[laneIdx];
+    if (!inst) return;
+
+    bandState.activeLane = laneIdx;
+    bandState.stageFlashTimer = 14;
+    player.pose = 'jump';
+    player.poseTimer = 18;
+
+    // Look for a note close to the hit line (y between 255 and 385)
+    let hitNoteIdx = -1;
+    let bestDist = Infinity;
+    bandState.notes.forEach((n, idx) => {
+      if (n.laneIdx === laneIdx && n.y >= 245 && n.y <= 395) {
+        const d = Math.abs(n.y - 325);
+        if (d < bestDist) { bestDist = d; hitNoteIdx = idx; }
+      }
+    });
+
+    if (hitNoteIdx >= 0) {
+      bandState.notes.splice(hitNoteIdx, 1);
+      score += 1;
+      bandState.combo += 1;
+      eventFriends.forEach((f) => { f.bounce = 22; f.pose = 'jump'; });
+      spawnFX('confetti', inst.laneX, 325, 14);
+      showToast(`${inst.icon} Perfekter Treffer! (${score}/${goal})`, 'success');
+      refreshHeaderStats();
+      renderGoalChips();
+      if (score >= goal) completeCurrentEvent();
+    } else {
+      // Friendly hit-assist if note is close on another lane or missed timing
+      bandState.combo = 0;
+      spawnFX('water', inst.laneX, 325, 5);
+      showToast(`${inst.icon} Klingt super! Achte genau auf die Note im Leucht-Kreis!`, 'info');
+      renderGoalChips();
+    }
+  }
+
+  function checkHideSpot(sp) {
+    if (!hideState || sp.checked || eventCompleted) return;
+    sp.checked = true;
+    player.pose = 'pet';
+    player.poseTimer = 22;
+    if (sp.friendId) {
+      const f = eventFriends.find((fr) => fr.id === sp.friendId);
+      if (f) {
+        f.hiddenInSpot = false;
+        f.bounce = 28;
+        f.speechText = 'Erwischt! 😄';
+        f.speechTimer = 180;
+        f.tx = Math.max(70, Math.min(790, f.x + (Math.random() - 0.5) * 80));
+        f.ty = 340 + Math.random() * 50;
+      }
+      score += 1;
+      spawnFX('heart', sp.x, sp.y - 24, 12);
+      showToast(`🎉 ${f ? f.name : 'Freund'} hinter ${sp.label} gefunden! (${score}/${goal})`, 'success');
+      refreshHeaderStats();
+      renderGoalChips();
+      if (score >= goal) completeCurrentEvent();
+    } else {
+      spawnFX('water', sp.x, sp.y - 14, 6);
+      showToast(`🌿 Hinter ${sp.label} war niemand — such weiter!`, 'info');
+    }
+  }
+
+  function searchNearestHideSpot() {
+    if (!hideState || eventCompleted) return;
+    const unvisited = hideState.spots.filter((s) => !s.checked);
+    const preferred = unvisited.find((s) => s.friendId) || unvisited[0];
+    if (preferred) {
+      navigateToPoint(preferred.x, preferred.y + 32, () => checkHideSpot(preferred));
+    }
+  }
+
+  function doBakeStep(clickedStep = null) {
+    if (!bakeState || eventCompleted) return;
+    const rec = BAKE_RECIPES[Math.min(BAKE_RECIPES.length - 1, bakeState.recipeIdx)];
+    if (clickedStep !== null && clickedStep !== bakeState.step) {
+      showToast('👩‍🍳 Bitte mache zuerst den hervorgehobenen Schritt!', 'warn');
+      return;
+    }
+
+    if (bakeState.step === 0) {
+      bakeState.stirCount += 1;
+      player.pose = 'cook';
+      player.poseTimer = 20;
+      spawnFX('confetti', 310, 315, 7);
+      if (bakeState.stirCount >= 3) {
+        bakeState.step = 1;
+        setStatus('🔥 Schritt 2: Stoppe das Ofen-Thermometer genau in der GRÜNEN Zone!');
+        showToast('🥣 Super gerührt! Jetzt ab in den Steinofen!', 'success');
+      }
+    } else if (bakeState.step === 1) {
+      if (bakeState.ovenCursor >= 35 && bakeState.ovenCursor <= 68) {
+        bakeState.step = 2;
+        player.pose = 'jump';
+        player.poseTimer = 22;
+        spawnFX('confetti', 540, 265, 14);
+        setStatus(`🎂 Schritt 3: Verziere ${rec.label} & serviere es deinen Freunden!`);
+        showToast('🔥 Goldbraun gebacken! Perfekte Temperatur!', 'success');
+      } else {
+        spawnFX('water', 540, 265, 6);
+        showToast('⏱️ Fast! Warte kurz, bis der Zeiger im grünen Bereich steht!', 'warn');
+      }
+    } else if (bakeState.step === 2) {
+      score += 1;
+      player.pose = 'pet';
+      player.poseTimer = 24;
+      eventFriends.forEach((f) => {
+        f.bounce = 24;
+        f.speechText = `Mmmh, ${rec.resultIcon}!`;
+        f.speechTimer = 140;
+      });
+      spawnFX('heart', 430, 250, 14);
+      showToast(`${rec.resultIcon} ${rec.label} serviert! Deine Freunde jubeln! (${score}/${goal})`, 'success');
+      if (score >= goal) {
+        refreshHeaderStats();
+        renderGoalChips();
+        completeCurrentEvent();
+        return;
+      }
+      bakeState.recipeIdx += 1;
+      bakeState.step = 0;
+      bakeState.stirCount = 0;
+      const nextRec = BAKE_RECIPES[bakeState.recipeIdx];
+      setStatus(`🥣 Nächstes Rezept: ${nextRec.label}! Tippe 3x auf „Teig rühren!“`);
+    }
+
+    refreshHeaderStats();
+    renderGoalChips();
+    renderActionButtons();
+  }
+
+  function lightLanternSpot(spot) {
+    if (!starState || spot.lit || eventCompleted) return;
+    spot.lit = true;
+    starState.lanternsLit += 1;
+    starState.lanterns.push({
+      x: spot.x,
+      y: spot.y - 12,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: -0.75 - Math.random() * 0.3,
+      color: ['#fbbf24', '#fb7185', '#a855f7'][starState.lanternsLit % 3]
+    });
+    score += 1;
+    player.pose = 'jump';
+    player.poseTimer = 22;
+    spawnFX('confetti', spot.x, spot.y - 24, 12);
+    showToast(`🏮 Himmels-Laterne steigt in die Nacht! (${score}/${goal})`, 'success');
+    refreshHeaderStats();
+    renderGoalChips();
+    if (score >= goal) completeCurrentEvent();
+  }
+
+  function lightNextLantern() {
+    if (!starState || eventCompleted) return;
+    const spot = starState.lanternSpots.find((s) => !s.lit);
+    if (!spot) {
+      // Allow releasing extra lanterns freely from player spot!
+      starState.lanternsLit += 1;
+      starState.lanterns.push({
+        x: player.x,
+        y: player.y - 25,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: -0.8,
+        color: '#fbbf24'
+      });
+      score += 1;
+      spawnFX('confetti', player.x, player.y - 40, 12);
+      showToast(`🏮 Noch eine Glückslaterne steigt auf! (${score}/${goal})`, 'success');
+      refreshHeaderStats();
+      renderGoalChips();
+      if (score >= goal) completeCurrentEvent();
+      return;
+    }
+    navigateToPoint(spot.x, spot.y + 24, () => lightLanternSpot(spot));
+  }
+
+  function catchShootingStar(st) {
+    if (!starState || !st.active || eventCompleted) return;
+    st.active = false;
+    starState.starsCaught += 1;
+    score += 1;
+    player.pose = 'jump';
+    player.poseTimer = 24;
+    eventFriends.forEach((f) => { f.bounce = 18; });
+    spawnFX('confetti', st.x, st.y, 16);
+    showToast(`🌠 Sternschnuppe gefangen — mach dir einen Wunsch! (${score}/${goal})`, 'success');
+    refreshHeaderStats();
+    renderGoalChips();
+    if (score >= goal) completeCurrentEvent();
+  }
+
+  function catchAnyShootingStar() {
+    if (!starState || eventCompleted) return;
+    const st = starState.shootingStars.find((s) => s.active);
+    if (st) {
+      catchShootingStar(st);
+    } else {
+      showToast('✨ Schau in den Sternenhimmel — gleich erscheint eine neue Sternschnuppe!', 'info');
+    }
+  }
+
   function handleCanvasClick(clientX, clientY) {
     if (!canvas || !currentEvent) return;
     const rect = canvas.getBoundingClientRect();
@@ -1124,6 +1693,66 @@ export function setupEventScreen(stateManager) {
       return;
     }
 
+    if (currentEvent.kind === 'treasure_hunt' && treasureState) {
+      for (const sp of treasureState.spots) {
+        if (!sp.dug && Math.hypot(cx - sp.x, cy - sp.y) <= 44) {
+          navigateToPoint(sp.x, sp.y + 18, () => digSpot(sp));
+          return;
+        }
+      }
+      navigateToPoint(cx, cy, null);
+      return;
+    }
+
+    if (currentEvent.kind === 'band_jam' && bandState) {
+      for (let idx = 0; idx < BAND_INSTRUMENTS.length; idx++) {
+        const inst = BAND_INSTRUMENTS[idx];
+        if (Math.abs(cx - inst.laneX) <= 58 && cy >= 245 && cy <= 395) {
+          playBandInstrument(idx);
+          return;
+        }
+      }
+      navigateToPoint(cx, cy, null);
+      return;
+    }
+
+    if (currentEvent.kind === 'hide_and_seek' && hideState) {
+      for (const sp of hideState.spots) {
+        if (!sp.checked && Math.hypot(cx - sp.x, cy - sp.y) <= 52) {
+          navigateToPoint(sp.x, sp.y + 32, () => checkHideSpot(sp));
+          return;
+        }
+      }
+      navigateToPoint(cx, cy, null);
+      return;
+    }
+
+    if (currentEvent.kind === 'baking_fest' && bakeState) {
+      if (cy >= 200 && cy <= 355 && cx >= 240 && cx <= 630) {
+        doBakeStep(null);
+        return;
+      }
+      navigateToPoint(cx, cy, null);
+      return;
+    }
+
+    if (currentEvent.kind === 'stargazing' && starState) {
+      for (const st of starState.shootingStars) {
+        if (st.active && Math.hypot(cx - st.x, cy - st.y) <= 48) {
+          catchShootingStar(st);
+          return;
+        }
+      }
+      for (const sp of starState.lanternSpots) {
+        if (!sp.lit && Math.hypot(cx - sp.x, cy - sp.y) <= 46) {
+          navigateToPoint(sp.x, sp.y + 24, () => lightLanternSpot(sp));
+          return;
+        }
+      }
+      navigateToPoint(cx, cy, null);
+      return;
+    }
+
     navigateToPoint(cx, cy, null);
   }
 
@@ -1139,6 +1768,16 @@ export function setupEventScreen(stateManager) {
     else if (currentEvent.kind === 'cafe_contest' && cafeState) {
       const nextNeeded = cafeState.order[cafeState.tray.length];
       if (nextNeeded) addCafeIngredient(nextNeeded);
+    } else if (currentEvent.kind === 'treasure_hunt') digNearestTreasureSpot();
+    else if (currentEvent.kind === 'band_jam' && bandState) {
+      // Auto-hit closest note in hit zone or play lane 0
+      const targetNote = bandState.notes.find((n) => n.y >= 245 && n.y <= 395);
+      playBandInstrument(targetNote ? targetNote.laneIdx : 0);
+    } else if (currentEvent.kind === 'hide_and_seek') searchNearestHideSpot();
+    else if (currentEvent.kind === 'baking_fest') doBakeStep(null);
+    else if (currentEvent.kind === 'stargazing') {
+      if (starState && starState.shootingStars.some((s) => s.active)) catchAnyShootingStar();
+      else lightNextLantern();
     }
   }
 
@@ -1201,7 +1840,9 @@ export function setupEventScreen(stateManager) {
       if (currentEvent?.kind === 'race' && !e.repeat) boostRaceStep();
     } else if (e.code === 'ArrowUp' || e.code === 'KeyW') { keys.up = true; player.waypoints = []; }
     else if (e.code === 'ArrowDown' || e.code === 'KeyS') { keys.down = true; player.waypoints = []; }
-    else if (e.code === 'Space' || e.code === 'Enter') {
+    else if (currentEvent?.kind === 'band_jam' && ['Digit1', 'Digit2', 'Digit3', 'Digit4'].includes(e.code)) {
+      playBandInstrument(parseInt(e.code.replace('Digit', ''), 10) - 1);
+    } else if (e.code === 'Space' || e.code === 'Enter') {
       e.preventDefault();
       triggerMainAction();
     }
@@ -1256,6 +1897,8 @@ export function setupEventScreen(stateManager) {
     eventFriends.forEach((f, idx) => {
       if (f.speechTimer > 0) f.speechTimer--;
       if (f.bounce > 0) f.bounce--;
+
+      if (f.hiddenInSpot) return;
 
       // In race mode, Mia & Leo run in their lanes; spectators walk near the rail
       if (currentEvent?.kind === 'race' && f.lane) {
@@ -1413,6 +2056,63 @@ export function setupEventScreen(stateManager) {
       if (petShowState.juryScoreTimer > 0) petShowState.juryScoreTimer--;
     }
 
+    if (treasureState && animFrame % 10 === 0) {
+      renderGoalChips();
+    }
+
+    if (bandState && !eventCompleted) {
+      if (bandState.stageFlashTimer > 0) bandState.stageFlashTimer--;
+      bandState.spawnTick++;
+      if (bandState.spawnTick >= 55) {
+        bandState.spawnTick = 0;
+        bandState.notes.push({
+          laneIdx: Math.floor(Math.random() * BAND_INSTRUMENTS.length),
+          y: 52,
+          speed: 1.55,
+          icon: Math.random() < 0.5 ? '🎵' : '🎶'
+        });
+      }
+      for (let i = bandState.notes.length - 1; i >= 0; i--) {
+        bandState.notes[i].y += bandState.notes[i].speed;
+        if (bandState.notes[i].y > 410) {
+          bandState.notes.splice(i, 1);
+        }
+      }
+    }
+
+    if (bakeState && bakeState.step === 1 && !eventCompleted) {
+      bakeState.ovenCursor += 1.65 * bakeState.ovenDir;
+      if (bakeState.ovenCursor >= 96) { bakeState.ovenCursor = 96; bakeState.ovenDir = -1; }
+      if (bakeState.ovenCursor <= 4) { bakeState.ovenCursor = 4; bakeState.ovenDir = 1; }
+    }
+
+    if (starState) {
+      starState.lanterns.forEach((ln) => {
+        ln.x += ln.vx + Math.sin(animFrame * 0.04 + ln.y * 0.05) * 0.25;
+        ln.y += ln.vy;
+        if (ln.y < -30) ln.y = 260;
+      });
+      starState.spawnTick++;
+      if (!eventCompleted && starState.spawnTick >= 95) {
+        starState.spawnTick = 0;
+        starState.shootingStars.push({
+          x: 40 + Math.random() * 260,
+          y: 35 + Math.random() * 90,
+          vx: 2.9 + Math.random() * 1.1,
+          vy: 0.75 + Math.random() * 0.55,
+          active: true
+        });
+      }
+      for (let i = starState.shootingStars.length - 1; i >= 0; i--) {
+        const s = starState.shootingStars[i];
+        s.x += s.vx;
+        s.y += s.vy;
+        if (!s.active || s.x > 890 || s.y > 240) {
+          starState.shootingStars.splice(i, 1);
+        }
+      }
+    }
+
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
       p.x += p.vx;
@@ -1432,7 +2132,7 @@ export function setupEventScreen(stateManager) {
     ctx.clearRect(0, 0, w, h);
 
     const theme = currentEvent.theme;
-    if (theme === 'beach') {
+    if (theme === 'beach' || theme === 'treasure_island') {
       const sky = ctx.createLinearGradient(0, 0, 0, 220);
       sky.addColorStop(0, '#0284c7');
       sky.addColorStop(1, '#bae6fd');
@@ -1442,6 +2142,63 @@ export function setupEventScreen(stateManager) {
       ctx.fillRect(0, 168, w, 52);
       ctx.fillStyle = '#fde68a';
       ctx.fillRect(0, 215, w, h - 215);
+    } else if (theme === 'stage') {
+      const stg = ctx.createLinearGradient(0, 0, 0, h);
+      stg.addColorStop(0, '#1e1b4b');
+      stg.addColorStop(0.55, '#4c1d95');
+      stg.addColorStop(1, '#312e81');
+      ctx.fillStyle = stg;
+      ctx.fillRect(0, 0, w, h);
+      // Stage floor & spotlights
+      ctx.fillStyle = '#581c87';
+      ctx.fillRect(0, 215, w, h - 215);
+      for (let sx = 150; sx <= 720; sx += 190) {
+        const beam = ctx.createRadialGradient(sx, 0, 10, sx, 220, 220);
+        beam.addColorStop(0, 'rgba(244, 114, 182, 0.36)');
+        beam.addColorStop(1, 'rgba(244, 114, 182, 0)');
+        ctx.fillStyle = beam;
+        ctx.beginPath();
+        ctx.arc(sx, 140, 200, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (theme === 'night_sky') {
+      const nsky = ctx.createLinearGradient(0, 0, 0, 250);
+      nsky.addColorStop(0, '#0f172a');
+      nsky.addColorStop(0.7, '#1e1b4b');
+      nsky.addColorStop(1, '#312e81');
+      ctx.fillStyle = nsky;
+      ctx.fillRect(0, 0, w, 250);
+      // Twinkling stars + Crescent Moon
+      for (let si = 0; si < 32; si++) {
+        const sx = (si * 97 + 23) % w;
+        const sy = (si * 53 + 18) % 210;
+        const alpha = 0.4 + 0.5 * Math.sin(animFrame * 0.08 + si);
+        ctx.fillStyle = `rgba(254, 240, 138, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(sx, sy, 1.5 + (si % 2), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.arc(760, 68, 24, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#1e1b4b';
+      ctx.beginPath();
+      ctx.arc(770, 62, 20, 0, Math.PI * 2);
+      ctx.fill();
+
+      const meadow = ctx.createLinearGradient(0, 240, 0, h);
+      meadow.addColorStop(0, '#14532d');
+      meadow.addColorStop(1, '#064e3b');
+      ctx.fillStyle = meadow;
+      ctx.fillRect(0, 240, w, h - 240);
+    } else if (theme === 'bakery') {
+      const bg = ctx.createLinearGradient(0, 0, 0, h);
+      bg.addColorStop(0, '#fffbeb');
+      bg.addColorStop(0.55, '#fef3c7');
+      bg.addColorStop(1, '#fde68a');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, w, h);
     } else if (theme === 'ice') {
       const sky = ctx.createLinearGradient(0, 0, 0, 210);
       sky.addColorStop(0, '#0284c7');
@@ -1618,6 +2375,199 @@ export function setupEventScreen(stateManager) {
       ctx.font = '800 15px "Plus Jakarta Sans", sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('🏆 MEISTERSCHAFTS-THEKE 🍦🧇', 430, 258);
+    } else if (treasureState) {
+      // Palm tree & Radar ring around player
+      ctx.font = '44px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🌴', 92, 200);
+      ctx.fillText('🌴', 785, 205);
+
+      const nearest = getNearestUndugRealTreasureDist();
+      if (nearest !== null && !eventCompleted) {
+        const ringColor = nearest < 95 ? '#ef4444' : nearest < 210 ? '#f59e0b' : '#38bdf8';
+        ctx.save();
+        ctx.strokeStyle = ringColor;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([8, 6]);
+        ctx.beginPath();
+        ctx.ellipse(player.x, player.y + 8, 42 + Math.sin(animFrame * 0.18) * 6, 18, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      treasureState.spots.forEach((sp) => {
+        ctx.save();
+        ctx.fillStyle = sp.dug ? '#d97706' : '#fef3c7';
+        ctx.beginPath();
+        ctx.ellipse(sp.x, sp.y, 28, 15, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = sp.dug ? '#92400e' : '#ef4444';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        ctx.font = '22px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(sp.dug ? sp.reward : '❌', sp.x, sp.y - 6);
+        ctx.restore();
+      });
+    } else if (bandState) {
+      BAND_INSTRUMENTS.forEach((inst, laneIdx) => {
+        ctx.save();
+        // Vertical track rail
+        ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(inst.laneX, 46);
+        ctx.lineTo(inst.laneX, 345);
+        ctx.stroke();
+
+        // Hit Ring Pad
+        const isFlashing = bandState.activeLane === laneIdx && bandState.stageFlashTimer > 0;
+        ctx.fillStyle = isFlashing ? inst.color : 'rgba(255,255,255,0.18)';
+        ctx.beginPath();
+        ctx.arc(inst.laneX, 325, 34, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = inst.color;
+        ctx.lineWidth = isFlashing ? 5 : 3;
+        ctx.stroke();
+
+        ctx.font = '26px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(inst.icon, inst.laneX, 325);
+        ctx.restore();
+      });
+
+      // Falling Notes
+      bandState.notes.forEach((n) => {
+        const inst = BAND_INSTRUMENTS[n.laneIdx];
+        ctx.save();
+        ctx.fillStyle = inst.color;
+        ctx.beginPath();
+        ctx.arc(inst.laneX, n.y, 20, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        ctx.font = '20px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(n.icon, inst.laneX, n.y);
+        ctx.restore();
+      });
+    } else if (hideState) {
+      hideState.spots.forEach((sp, idx) => {
+        const hasHiddenFriend = !!sp.friendId && !sp.checked;
+        const wiggle = hasHiddenFriend && ((animFrame + idx * 17) % 90 < 16)
+          ? Math.sin(animFrame * 0.6) * 4
+          : 0;
+        ctx.save();
+        ctx.fillStyle = sp.checked ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.9)';
+        ctx.beginPath();
+        ctx.ellipse(sp.x + wiggle, sp.y + 8, 38, 18, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.font = '40px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(sp.icon, sp.x + wiggle, sp.y - 10);
+        if (hasHiddenFriend && ((animFrame + idx * 23) % 130 < 35)) {
+          drawSpeechBubble(sp.x, sp.y - 56, 'Kicher! 🤫', '#10b981', '#047857');
+        }
+        ctx.restore();
+      });
+    } else if (bakeState) {
+      // Mixing Table + Stone Brick Oven!
+      ctx.save();
+      ctx.fillStyle = '#fde68a';
+      ctx.beginPath();
+      ctx.roundRect(220, 260, 170, 56, [12]);
+      ctx.fill();
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.font = '28px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(bakeState.step === 0 ? '🥣' : '🧁', 305, 254);
+
+      // Brick Oven
+      ctx.fillStyle = '#b45309';
+      ctx.beginPath();
+      ctx.roundRect(475, 195, 130, 118, [26, 26, 8, 8]);
+      ctx.fill();
+      ctx.fillStyle = bakeState.step === 1 ? '#f97316' : '#1e293b';
+      ctx.beginPath();
+      ctx.arc(540, 265, 34, Math.PI, 0);
+      ctx.fill();
+
+      // Temperature Gauge Bar when baking!
+      if (bakeState.step === 1) {
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.roundRect(435, 148, 210, 28, [14]);
+        ctx.fill();
+        ctx.strokeStyle = '#d97706';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // Green target zone (35..68%)
+        ctx.fillStyle = '#10b981';
+        ctx.fillRect(435 + 2.1 * 35, 152, 2.1 * 33, 20);
+        // Moving needle
+        const nx = 435 + (bakeState.ovenCursor / 100) * 210;
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(nx - 3, 145, 6, 34);
+      }
+      ctx.restore();
+    } else if (starState) {
+      // Drifting glowing sky lanterns
+      starState.lanterns.forEach((ln) => {
+        ctx.save();
+        const glow = ctx.createRadialGradient(ln.x, ln.y, 4, ln.x, ln.y, 28);
+        glow.addColorStop(0, 'rgba(254, 240, 138, 0.9)');
+        glow.addColorStop(1, 'rgba(254, 240, 138, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(ln.x, ln.y, 28, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = ln.color;
+        ctx.beginPath();
+        ctx.roundRect(ln.x - 10, ln.y - 14, 20, 26, [6]);
+        ctx.fill();
+        ctx.restore();
+      });
+
+      // Streaking shooting stars
+      starState.shootingStars.forEach((s) => {
+        if (!s.active) return;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(254, 240, 138, 0.85)';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(s.x - 28, s.y - 10);
+        ctx.lineTo(s.x, s.y);
+        ctx.stroke();
+        ctx.font = '26px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🌠', s.x, s.y);
+        ctx.restore();
+      });
+
+      // Unlit lantern spots on meadow + brass telescope
+      ctx.font = '32px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🔭', 96, 262);
+      starState.lanternSpots.forEach((sp) => {
+        ctx.save();
+        ctx.fillStyle = sp.lit ? '#fef08a' : '#ffffff';
+        ctx.beginPath();
+        ctx.arc(sp.x, sp.y, 18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.font = '22px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(sp.lit ? '✨' : '🏮', sp.x, sp.y);
+        ctx.restore();
+      });
     }
 
     // Companion pets
@@ -1632,7 +2582,7 @@ export function setupEventScreen(stateManager) {
     // Depth-sorted Characters (Player + All Friends at EXACT SAME 0.86 scale!)
     const actors = [
       { kind: 'player', y: player.y },
-      ...eventFriends.map((f) => ({ kind: 'friend', f, y: f.y }))
+      ...eventFriends.filter((f) => !f.hiddenInSpot).map((f) => ({ kind: 'friend', f, y: f.y }))
     ];
     actors.sort((a, b) => a.y - b.y);
 

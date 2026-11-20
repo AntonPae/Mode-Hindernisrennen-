@@ -27,6 +27,7 @@ export function setupEditorUI(stateManager) {
   const editorLevelVal = document.getElementById('editorLevelVal');
   const shopToast = document.getElementById('shopToast');
   const goBoutiqueBtn = document.getElementById('editorGoBoutiqueBtn');
+  const goSalonBtn = document.getElementById('editorGoSalonBtn');
 
   const stickerSelect = document.getElementById('stickerSelect');
   const addStickerBtn = document.getElementById('addStickerBtn');
@@ -253,7 +254,7 @@ export function setupEditorUI(stateManager) {
   heightVal.textContent = PlayerConfig.body.height;
   bodyWidth.value = PlayerConfig.body.width;
   widthVal.textContent = PlayerConfig.body.width;
-  hairColor.value = PlayerConfig.body.hairColor;
+  if (hairColor) hairColor.value = PlayerConfig.body.hairColor;
   topColor.value = PlayerConfig.clothes.top.color;
   pantsColor.value = PlayerConfig.clothes.pants.color;
   shoesColor.value = PlayerConfig.clothes.shoes.color;
@@ -273,11 +274,13 @@ export function setupEditorUI(stateManager) {
     updatePreview();
   });
 
-  hairColor.addEventListener('input', (e) => {
-    PlayerConfig.body.hairColor = e.target.value;
-    ShopManager.savePlayerConfig(PlayerConfig);
-    updatePreview();
-  });
+  if (hairColor) {
+    hairColor.addEventListener('input', (e) => {
+      PlayerConfig.body.hairColor = e.target.value;
+      ShopManager.savePlayerConfig(PlayerConfig);
+      updatePreview();
+    });
+  }
 
   topColor.addEventListener('input', (e) => {
     PlayerConfig.clothes.top.color = e.target.value;
@@ -358,6 +361,11 @@ export function setupEditorUI(stateManager) {
   if (goBoutiqueBtn) {
     goBoutiqueBtn.addEventListener('click', () => {
       stateManager.setState('STORE', { shopId: 'boutique', aisle: 'clothes', from: 'EDITOR' });
+    });
+  }
+  if (goSalonBtn) {
+    goSalonBtn.addEventListener('click', () => {
+      stateManager.setState('STORE', { shopId: 'salon', aisle: 'hairstyles', from: 'EDITOR' });
     });
   }
 

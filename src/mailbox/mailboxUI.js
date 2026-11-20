@@ -124,17 +124,35 @@ export function setupMailboxUI(stateManager) {
     MailboxManager.ensureDailyMail();
     const state = MailboxManager.getState();
 
-    if (state.inbox.length === 0) {
-      bodyEl.innerHTML = `
-        <div class="quiz-empty-box">
-          <p>📭 Dein Briefkasten ist gerade leer. Schau morgen wieder vorbei oder schreibe selbst einen Brief!</p>
-        </div>
-      `;
-      return;
-    }
-
     const wrap = document.createElement('div');
     wrap.className = 'mailbox-list';
+
+    const postmanBar = document.createElement('div');
+    postmanBar.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-radius:14px;background:rgba(255,255,255,0.85);border:1.5px solid #fbcfe8;flex-wrap:wrap;';
+    postmanBar.innerHTML = `
+      <span style="font-size:0.86rem;font-weight:700;color:#831843;">📮 Lust auf noch mehr neue Einladungen?</span>
+      <button type="button" id="mailboxFetchExtraBtn" class="btn btn-small btn-primary">📬 Neue Einladung holen</button>
+    `;
+    postmanBar.querySelector('#mailboxFetchExtraBtn').addEventListener('click', () => {
+      const res = MailboxManager.deliverExtraPost();
+      if (res.ok) {
+        notifyGlobalUpdate();
+        renderTabs();
+        renderBody();
+        showToast(`📬 Neue Post von ${res.mail.senderName}: „${res.mail.title}“!`, 'success');
+      }
+    });
+    wrap.appendChild(postmanBar);
+
+    if (state.inbox.length === 0) {
+      const emptyBox = document.createElement('div');
+      emptyBox.className = 'quiz-empty-box';
+      emptyBox.innerHTML = '<p>📭 Dein Briefkasten ist gerade leer. Tippe oben auf „Neue Einladung holen“ oder schreibe selbst einen Brief!</p>';
+      wrap.appendChild(emptyBox);
+      bodyEl.innerHTML = '';
+      bodyEl.appendChild(wrap);
+      return;
+    }
 
     state.inbox.forEach((mail) => {
       const card = document.createElement('article');
