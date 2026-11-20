@@ -357,7 +357,7 @@ export function setupEditorUI(stateManager) {
 
   if (goBoutiqueBtn) {
     goBoutiqueBtn.addEventListener('click', () => {
-      stateManager.setState('TOWN', { from: 'EDITOR', openShop: 'boutique' });
+      stateManager.setState('STORE', { shopId: 'boutique', aisle: 'clothes', from: 'EDITOR' });
     });
   }
 

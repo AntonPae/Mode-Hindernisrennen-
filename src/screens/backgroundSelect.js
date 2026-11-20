@@ -47,27 +47,25 @@ export function setupBackgroundSelectScreen(stateManager) {
     // Individual Worlds
     SHOP_CATALOG.background.forEach((bg) => {
       const unlocked = ShopManager.isUnlocked('background', bg.id);
-      const isDeal = !unlocked && ShopManager.isDailyDeal('background', bg.id);
-      const effectivePrice = ShopManager.getEffectivePrice('background', bg);
 
       const card = document.createElement('div');
       card.className = `bg-card${!unlocked ? ' locked' : ''}`;
 
-      const tagHtml = isDeal
-        ? `<span class="bg-corner-badge deal">🔥 -30% HEUTE</span>`
+      const tagHtml = !unlocked
+        ? `<span class="bg-corner-badge new">👗 In der Boutique</span>`
         : bg.isNew
           ? `<span class="bg-corner-badge new">✨ NEU</span>`
           : '';
 
       const btnText = unlocked
-        ? 'Auswählen'
-        : `🔒 Freischalten (${effectivePrice} 🪙)`;
-      const btnClass = unlocked ? 'btn-secondary' : 'btn-primary';
+        ? '🏃 Losrennen!'
+        : '👗 Ticket in Mode-Boutique holen';
+      const btnClass = unlocked ? 'btn-primary' : 'btn-secondary';
 
       card.innerHTML = `
         ${tagHtml}
         <div class="bg-card-preview ${bg.previewClass}"></div>
-        <h3>${bg.name}</h3>
+        <h3>${bg.icon || ''} ${bg.name}</h3>
         <p>${bg.description}</p>
         <button type="button" class="btn ${btnClass} select-bg-btn">${btnText}</button>
       `;
@@ -78,14 +76,7 @@ export function setupBackgroundSelectScreen(stateManager) {
           stateManager.setState('GAME', { background: bg.id });
           return;
         }
-
-        const res = ShopManager.buyItem('background', bg.id);
-        if (res.ok) {
-          showToast(`🎉 Welt "${bg.name}" für ${res.price} 🪙 freigeschaltet!`, 'success');
-          renderBackgroundCards();
-        } else if (res.reason === 'insufficient_funds') {
-          showToast(`🔒 Noch ${res.missing} 🪙 nötig für "${bg.name}"!`, 'warn');
-        }
+        stateManager.setState('STORE', { shopId: 'boutique', aisle: 'background' });
       });
 
       container.appendChild(card);

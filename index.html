@@ -132,7 +132,7 @@
     <div id="bg-select-screen" class="screen-overlay hidden">
       <header class="app-header">
         <h1>Wähle dein Renn-Setting</h1>
-        <p>Schalte neue Welten frei oder starte die Überraschungs-Tour!</p>
+        <p>Starte in deinen freigeschalteten Welten – neue Tickets gibt es in der Mode-Boutique auf der Stadt-Straße!</p>
         <div class="coin-wallet-bar">
           <span class="coin-pill">🪙 Spielgeld: <strong id="bgCoinsVal">0</strong></span>
           <button type="button" id="openEarnBgBtn" class="btn btn-earn">💰 Geld verdienen</button>
@@ -190,6 +190,63 @@
             <span>Tippe auf eine Straße oder ein Geschäft, um direkt dorthin zu laufen!</span>
           </div>
           <div id="townDistrictBar" class="ice-flavor-bar"></div>
+        </aside>
+      </div>
+    </div>
+
+    <!-- State: Real Walkable Store Interior Overlay -->
+    <div id="store-screen" class="screen-overlay hidden">
+      <header class="app-header ice-compact-header">
+        <h1 id="storeTitleEl">🛒 Geschäft</h1>
+        <p id="storeSubtitleEl">Lauf durch den Laden zu den Regalen, leg Sachen in den Korb &amp; bezahle an der Kasse!</p>
+        <div class="coin-wallet-bar">
+          <span class="coin-pill">🪙 Spielgeld: <strong id="storeCoinsVal">0</strong></span>
+          <span class="level-pill">🏆 Level <strong id="storeLevelVal">1</strong></span>
+          <span class="supply-pill">🛒 Einkaufskorb: <strong id="storeBasketCountVal">0</strong></span>
+        </div>
+        <div id="storeToast" class="shop-toast hidden"></div>
+      </header>
+
+      <div class="icecream-layout">
+        <div class="ice-stage-column">
+          <div class="home-canvas-card ice-stage-card">
+            <div class="home-task-banner">
+              <span id="storeStatusText">Willkommen im Laden! Tippe auf ein Regal oder lauf direkt durch die Gänge.</span>
+            </div>
+            <canvas id="storeCanvas" width="860" height="470"></canvas>
+            <div class="icecream-cone-bar store-basket-bar">
+              <div class="icecream-cone-label">
+                <strong>🛒 Korb:</strong>
+                <div id="storeBasketSlots" class="ice-cone-slots"></div>
+              </div>
+              <div class="ice-cone-slots">
+                <button type="button" id="storePayBtn" class="btn btn-small btn-primary" disabled>💳 Zur Kasse</button>
+                <button type="button" id="storeClearBasketBtn" class="btn btn-small btn-secondary" disabled>🗑️ Leeren</button>
+              </div>
+            </div>
+            <div class="home-walk-pad">
+              <button type="button" id="storeWalkLeftBtn" class="walk-pad-btn" aria-label="Nach links gehen">◀ Links</button>
+              <button type="button" id="storeWalkUpBtn" class="walk-pad-btn" aria-label="Zu den Regalen gehen">▲ Regale</button>
+              <button type="button" id="storeActionBtn" class="walk-pad-btn walk-pad-action" aria-label="Regal ansehen oder Kasse">🛍️ Regal / Kasse</button>
+              <button type="button" id="storeWalkDownBtn" class="walk-pad-btn" aria-label="Nach vorne gehen">▼ Gang</button>
+              <button type="button" id="storeWalkRightBtn" class="walk-pad-btn" aria-label="Nach rechts zur Kasse gehen">Rechts ▶</button>
+            </div>
+          </div>
+
+          <div class="home-nav-row ice-nav-row">
+            <button type="button" id="storeBackStreetBtn" class="btn btn-town">🚪 Raus auf die Einkaufsstraße</button>
+            <button type="button" id="storeToHomeBtn" class="btn btn-home">🏡 Mein Haus &amp; Garten</button>
+            <button type="button" id="storeToEditorBtn" class="btn btn-secondary">👗 Charakter &amp; Kleiderschrank</button>
+          </div>
+        </div>
+
+        <aside class="ice-menu-column">
+          <div class="ice-menu-header">
+            <h2 id="storeShelfTitle">🛍️ Regal im Laden</h2>
+            <span id="storeShelfHint">Lauf zu einem Regal im Bild oder wähle hier eine Abteilung!</span>
+          </div>
+          <div id="storeAisleTabs" class="ice-station-tabs"></div>
+          <div id="storeShelfItems" class="store-shelf-items"></div>
         </aside>
       </div>
     </div>
@@ -549,30 +606,6 @@
         <div id="mailboxToast" class="shop-toast hidden"></div>
         <div id="mailboxTabs" class="earn-tabs"></div>
         <div id="mailboxBody" class="earn-tab-body"></div>
-      </div>
-    </div>
-
-    <!-- Town Street Store Interior Modal -->
-    <div id="town-shop-modal" class="modal hidden">
-      <div class="earn-modal-content town-shop-modal-content">
-        <div class="earn-modal-header">
-          <div>
-            <h2 id="townShopTitle">🛒 Geschäft</h2>
-            <p id="townShopSubtitle" class="town-shop-subtitle"></p>
-            <div class="coin-wallet-bar town-shop-wallet-row">
-              <span class="coin-pill">🪙 Spielgeld: <strong id="townShopCoinsVal">0</strong></span>
-              <span class="level-pill">🏆 Level <strong id="townShopLevelVal">1</strong></span>
-            </div>
-          </div>
-          <button type="button" id="closeTownShopBtn" class="btn btn-small btn-secondary" aria-label="Geschäft verlassen">✖</button>
-        </div>
-        <div id="townShopToast" class="shop-toast hidden"></div>
-        <div id="townShopBanner"></div>
-        <div id="townShopTabs" class="home-shop-tabs"></div>
-        <div id="townShopBody" class="earn-tab-body"></div>
-        <div class="town-shop-footer">
-          <button type="button" id="townShopBackStreetBtn" class="btn btn-secondary">🚶 Zurück auf die Einkaufsstraße</button>
-        </div>
       </div>
     </div>
   </div>

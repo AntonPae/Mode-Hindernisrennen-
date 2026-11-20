@@ -2,6 +2,7 @@ export const State = {
   EDITOR: 'EDITOR',
   BACKGROUND_SELECT: 'BACKGROUND_SELECT',
   TOWN: 'TOWN',
+  STORE: 'STORE',
   HOME: 'HOME',
   ICECREAM: 'ICECREAM',
   PETSITTING: 'PETSITTING',
@@ -17,6 +18,7 @@ export class StateManager {
     this.editorScreen = document.getElementById('editor-screen');
     this.bgSelectScreen = document.getElementById('bg-select-screen');
     this.townScreen = document.getElementById('town-screen');
+    this.storeScreen = document.getElementById('store-screen');
     this.homeScreen = document.getElementById('home-screen');
     this.iceCreamScreen = document.getElementById('icecream-screen');
     this.petSittingScreen = document.getElementById('pet-sitting-screen');
@@ -46,6 +48,7 @@ export class StateManager {
     if (this.editorScreen) this.editorScreen.classList.add('hidden');
     if (this.bgSelectScreen) this.bgSelectScreen.classList.add('hidden');
     if (this.townScreen) this.townScreen.classList.add('hidden');
+    if (this.storeScreen) this.storeScreen.classList.add('hidden');
     if (this.homeScreen) this.homeScreen.classList.add('hidden');
     if (this.iceCreamScreen) this.iceCreamScreen.classList.add('hidden');
     if (this.petSittingScreen) this.petSittingScreen.classList.add('hidden');
@@ -55,6 +58,7 @@ export class StateManager {
     if (this.editorScreen) this.editorScreen.classList.remove('active');
     if (this.bgSelectScreen) this.bgSelectScreen.classList.remove('active');
     if (this.townScreen) this.townScreen.classList.remove('active');
+    if (this.storeScreen) this.storeScreen.classList.remove('active');
     if (this.homeScreen) this.homeScreen.classList.remove('active');
     if (this.iceCreamScreen) this.iceCreamScreen.classList.remove('active');
     if (this.petSittingScreen) this.petSittingScreen.classList.remove('active');
@@ -78,6 +82,12 @@ export class StateManager {
         if (this.townScreen) {
           this.townScreen.classList.remove('hidden');
           this.townScreen.classList.add('active');
+        }
+        break;
+      case State.STORE:
+        if (this.storeScreen) {
+          this.storeScreen.classList.remove('hidden');
+          this.storeScreen.classList.add('active');
         }
         break;
       case State.HOME:

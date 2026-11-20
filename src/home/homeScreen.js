@@ -168,8 +168,8 @@ export function setupHomeScreen(stateManager) {
     if (!room) return false;
     if (!isRoomUnlocked(room)) {
       const catalogItem = HOME_CATALOG.expansions.find((e) => e.id === room.unlockItem);
-      showToast(`🏗️ "${catalogItem ? catalogItem.name : room.label}" kannst du im 🛋️ Möbel- & Bau-Kaufhaus in der Stadt kaufen!`, 'info');
-      stateManager.setState('TOWN', { from: 'HOME', openShop: 'furniture', shopTab: 'expansions' });
+      showToast(`🏗️ "${catalogItem ? catalogItem.name : room.label}" kannst du im 🛋️ Möbel- & Bau-Kaufhaus kaufen!`, 'info');
+      stateManager.setState('STORE', { shopId: 'furniture', aisle: 'expansions', from: 'HOME' });
       return false;
     }
 
@@ -444,7 +444,7 @@ export function setupHomeScreen(stateManager) {
 
   if (fridgeMarketBtn) {
     fridgeMarketBtn.addEventListener('click', () => {
-      stateManager.setState('TOWN', { from: 'HOME', openShop: 'supermarket' });
+      stateManager.setState('STORE', { shopId: 'supermarket', aisle: 'fridge', from: 'HOME' });
     });
   }
 
@@ -501,7 +501,7 @@ export function setupHomeScreen(stateManager) {
 
   if (openPetShopBtn) {
     openPetShopBtn.addEventListener('click', () => {
-      stateManager.setState('TOWN', { from: 'HOME', openShop: 'petshop', shopTab: 'petItems' });
+      stateManager.setState('STORE', { shopId: 'petshop', aisle: 'petItems', from: 'HOME' });
     });
   }
 

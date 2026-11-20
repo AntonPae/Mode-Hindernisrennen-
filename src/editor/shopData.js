@@ -94,28 +94,32 @@ export const SHOP_CATALOG = {
   background: [
     {
       id: 'meadow',
-      name: '🌱 Grüne Wiese',
+      name: 'Grüne Wiese',
+      icon: '🌱',
       previewClass: 'meadow-preview',
       price: 0,
       description: 'Klassischer Parcours mit blauem Himmel und frischer Luft.'
     },
     {
       id: 'cave',
-      name: '🌋 Höhle & Hölle',
+      name: 'Höhle & Hölle',
+      icon: '🌋',
       previewClass: 'cave-preview',
       price: 0,
       description: 'Dunkelrote Felsen, Lava-Elemente und gefährliche Hitze.'
     },
     {
       id: 'neon',
-      name: '🌆 Neon-City',
+      name: 'Neon-City',
+      icon: '🌆',
       previewClass: 'neon-preview',
       price: 0,
       description: 'Futuristisches Nacht-Szenario im leuchtenden Cyberpunk-Glanz.'
     },
     {
       id: 'ice',
-      name: '❄️ Eiswelt',
+      name: 'Eiswelt',
+      icon: '❄️',
       previewClass: 'ice-preview',
       price: 60,
       isNew: true,
@@ -123,7 +127,8 @@ export const SHOP_CATALOG = {
     },
     {
       id: 'beach',
-      name: '🏖️ Tropen-Strand',
+      name: 'Tropen-Strand',
+      icon: '🏖️',
       previewClass: 'beach-preview',
       price: 80,
       isNew: true,
@@ -131,7 +136,8 @@ export const SHOP_CATALOG = {
     },
     {
       id: 'space',
-      name: '🚀 Weltraum',
+      name: 'Weltraum',
+      icon: '🚀',
       previewClass: 'space-preview',
       price: 100,
       isNew: true,
@@ -139,7 +145,8 @@ export const SHOP_CATALOG = {
     },
     {
       id: 'candy',
-      name: '🍬 Candy-Land',
+      name: 'Candy-Land',
+      icon: '🍬',
       previewClass: 'candy-preview',
       price: 120,
       isNew: true,

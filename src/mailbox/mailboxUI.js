@@ -51,7 +51,7 @@ export function setupMailboxUI(stateManager) {
 
     triggerButtons.forEach((btn) => {
       if (!owned) {
-        btn.innerHTML = '📬 Briefkasten kaufen (45 🪙)';
+        btn.innerHTML = '📬 Briefkasten';
       } else if (pending > 0) {
         btn.innerHTML = `📬 Briefkasten <span class="mail-badge-count">${pending}</span>`;
       } else {
@@ -98,34 +98,24 @@ export function setupMailboxUI(stateManager) {
   }
 
   function renderLockedMailboxView() {
-    const coins = ShopManager.getCoins();
-    const canBuy = coins >= 45;
     bodyEl.innerHTML = `
       <div class="mailbox-buy-card">
         <div class="mailbox-buy-icon">📬</div>
-        <h3>Hol dir deinen eigenen Briefkasten!</h3>
-        <p>Mit dem Briefkasten bekommst du jeden Tag 1–2 Briefe und Einladungen zu Wettbewerben, Partys &amp; Ausflügen. Außerdem kannst du deinen Nachbarn schreiben und sie selbst einladen!</p>
+        <h3>Du hast noch keinen Briefkasten!</h3>
+        <p>Deinen eigenen Briefkasten findest du im <strong>🛋️ Möbel- &amp; Bau-Kaufhaus</strong> (Garten-Abteilung) auf der Stadt-Straße! Dort kannst du ihn aussuchen und an der Kasse bezahlen.</p>
         <div class="mailbox-buy-actions">
-          <button type="button" id="buyMailboxNowBtn" class="btn btn-primary btn-large">
-            ${canBuy ? '📬 Briefkasten kaufen (45 🪙)' : `🔒 Noch ${45 - coins} 🪙 nötig (Preis: 45 🪙)`}
+          <button type="button" id="goStoreForMailboxBtn" class="btn btn-primary btn-large">
+            🛋️ Zum Möbel- &amp; Bau-Kaufhaus gehen
           </button>
         </div>
       </div>
     `;
 
-    const buyBtn = document.getElementById('buyMailboxNowBtn');
-    if (buyBtn) {
-      buyBtn.addEventListener('click', () => {
-        const res = HomeManager.buyItem('garden', 'mailbox');
-        if (res.ok) {
-          MailboxManager.ensureDailyMail();
-          notifyGlobalUpdate();
-          renderTabs();
-          renderBody();
-          showToast('🎉 Briefkasten aufgestellt! Schau mal – deine ersten 2 Briefe sind schon da!', 'success');
-        } else if (res.reason === 'insufficient_funds') {
-          showToast(`🔒 Noch ${res.missing} 🪙 nötig! Spiele ein Rennen oder arbeite im Café.`, 'warn');
-        }
+    const goBtn = document.getElementById('goStoreForMailboxBtn');
+    if (goBtn) {
+      goBtn.addEventListener('click', () => {
+        closeModal();
+        stateManager.setState('STORE', { shopId: 'furniture', aisle: 'garden' });
       });
     }
   }

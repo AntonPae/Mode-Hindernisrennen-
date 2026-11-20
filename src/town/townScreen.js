@@ -4,7 +4,6 @@ import { ShopManager } from '../editor/shopData.js';
 import { HomeManager } from '../home/homeData.js';
 import { MailboxManager } from '../mailbox/mailboxData.js';
 import { PetFollowerController } from '../home/petCompanion.js';
-import { setupTownShopModal } from './townShops.js';
 
 const WORLD_WIDTH = 3100;
 const GARDEN_LEFT_X = 280;
@@ -124,10 +123,6 @@ export function setupTownScreen(stateManager) {
   const toHomeBtn = document.getElementById('townToHomeBtn');
   const toEditorBtn = document.getElementById('townToEditorBtn');
 
-  const shopModal = setupTownShopModal(stateManager, {
-    onPurchaseComplete: () => updateCoinsUI()
-  });
-
   let rafId = null;
   let animFrame = 0;
   let cameraX = 0;
@@ -176,7 +171,7 @@ export function setupTownScreen(stateManager) {
   function enterPlace(place) {
     if (!place) return;
     if (place.shopId) {
-      shopModal.openShop(place.shopId, place.preferredTab || null);
+      stateManager.setState('STORE', { shopId: place.shopId, aisle: place.preferredTab || null, from: 'TOWN' });
       return;
     }
     if (place.targetState === 'HOME_GARDEN') {
@@ -1069,10 +1064,13 @@ export function setupTownScreen(stateManager) {
   stateManager.onStateChange((newState, payload) => {
     if (newState === 'TOWN') {
       if (payload && payload.openShop) {
-        const target = TOWN_PLACES.find((p) => p.shopId === payload.openShop);
+        stateManager.setState('STORE', { shopId: payload.openShop, aisle: payload.shopTab || null, from: payload.from || 'TOWN' });
+        return;
+      } else if (payload && payload.from === 'STORE' && payload.lastShopId) {
+        const target = TOWN_PLACES.find((p) => p.shopId === payload.lastShopId);
         if (target) {
           player.x = target.x;
-          player.y = target.y;
+          player.y = 274;
         }
       } else if (payload && payload.from === 'HOME') {
         player.x = 155;
@@ -1098,12 +1096,7 @@ export function setupTownScreen(stateManager) {
       updateCoinsUI();
       renderDistrictBar();
       startLoop();
-
-      if (payload && payload.openShop) {
-        shopModal.openShop(payload.openShop, payload.shopTab || null);
-      }
     } else {
-      shopModal.closeShop();
       stopLoop();
     }
   });
