@@ -74,7 +74,9 @@ export const HOME_CATALOG = {
     { id: 'pet_house', name: 'Hundehütte', icon: '🛖', price: 120, unlockLevel: 2, isNew: true, desc: 'Gemütliche Hütte für Garten & Tierzimmer' }
   ],
   supplies: [
-    { id: 'buy_food', name: 'Koch-Zutaten (+3)', icon: '🥘', price: 15, isConsumable: true, key: 'food', amount: 3, desc: 'Frische Zutaten für 3x Kochen' },
+    { id: 'buy_food', name: 'Koch-Zutaten (+3)', icon: '🥘', price: 15, isConsumable: true, key: 'food', amount: 3, desc: 'Frische Zutaten für deinen Kühlschrank (3x Kochen)' },
+    { id: 'buy_snacks', name: 'Obst & Snacks (+3)', icon: '🍓', price: 14, isConsumable: true, key: 'fridgeSnacks', amount: 3, desc: 'Leckere Snacks direkt für deinen Kühlschrank' },
+    { id: 'buy_cheese_box', name: 'Käse & Pasta-Box (+4)', icon: '🧀', price: 18, isConsumable: true, key: 'food', amount: 4, desc: 'Große Vorratsbox für den Kühlschrank (4x Kochen)' },
     { id: 'buy_pet_food', name: 'Tierfutter (+3)', icon: '🦴', price: 15, isConsumable: true, key: 'petFood', amount: 3, desc: 'Leckeres Futter für 3x Füttern' },
     { id: 'vacuum', name: 'Turbo-Staubsauger', icon: '🧹', price: 75, desc: 'Putzt blitzschnell & gibt +5 🪙 Extra beim Putzen' },
     { id: 'gold_can', name: 'Gold-Gießkanne', icon: '🚿', price: 80, desc: 'Verdoppelt das Wachstum beim Gießen!' },
@@ -104,7 +106,8 @@ function getDefaultHomeState() {
     },
     inventory: {
       food: 3,
-      petFood: 3
+      petFood: 3,
+      fridgeSnacks: 2
     },
     needs: {
       cleanliness: 75,
@@ -483,6 +486,19 @@ export const HomeManager = {
     }
     this.saveState(state);
     return state;
+  },
+
+  eatFridgeSnack() {
+    const state = this.getState();
+    const snacks = state.inventory.fridgeSnacks || 0;
+    if (snacks <= 0) {
+      return { ok: false, reason: 'no_snacks' };
+    }
+    state.inventory.fridgeSnacks = snacks - 1;
+    state.needs.hunger = Math.min(100, (state.needs.hunger || 0) + 25);
+    this.saveState(state);
+    EarnMoneyManager.recordEvent({ care: 1 });
+    return { ok: true, remaining: state.inventory.fridgeSnacks, state };
   },
 
   cookMeal() {

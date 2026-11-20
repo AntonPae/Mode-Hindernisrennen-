@@ -1113,8 +1113,9 @@ body, html {
 .home-layout {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 1.5rem;
-  max-width: 1240px;
+  max-width: 920px;
   margin: 0 auto;
   width: 100%;
   align-items: flex-start;
@@ -1122,7 +1123,8 @@ body, html {
 }
 
 .home-stage-column {
-  flex: 1.55;
+  flex: 1;
+  width: 100%;
   min-width: 320px;
   display: flex;
   flex-direction: column;
@@ -2450,6 +2452,90 @@ body, html {
   color: var(--ink-strong);
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 15px;
+}
+
+.fridge-stock-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #ffffff;
+  color: #0369a1;
+  border: 1.5px solid rgba(14, 165, 233, 0.35);
+  border-radius: 12px;
+  padding: 0.36rem 0.72rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+/* Town Street Store Modal */
+#town-shop-modal {
+  z-index: 86;
+}
+
+.town-shop-modal-content {
+  max-width: 780px;
+  background: linear-gradient(180deg, #ffffff 0%, #fffafb 100%);
+}
+
+.town-shop-subtitle {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--ink-body);
+  margin-top: 0.15rem;
+}
+
+.town-shop-wallet-row {
+  justify-content: flex-start;
+  margin-top: 0.45rem;
+}
+
+.town-shop-fridge-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 0.9rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 100%);
+  border: 1.5px solid rgba(14, 165, 233, 0.28);
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #0c4a6e;
+  margin-bottom: 0.7rem;
+}
+
+.town-shop-promo-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.62rem 0.85rem;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #fdf2f8 0%, #f5f3ff 100%);
+  border: 1.5px solid rgba(236, 72, 153, 0.25);
+  margin-bottom: 0.7rem;
+}
+
+.town-shop-hint {
+  font-size: 0.83rem;
+  font-weight: 700;
+  color: #831843;
+  flex: 1;
+  min-width: 210px;
+}
+
+.town-shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 0.75rem;
+}
+
+.town-shop-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--hairline);
 }
 
 /* Focus & Reduced Motion */

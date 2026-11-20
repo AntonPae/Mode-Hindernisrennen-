@@ -5,16 +5,6 @@ import { HOME_CATALOG, HomeManager } from './homeData.js';
 import { MailboxManager } from '../mailbox/mailboxData.js';
 import { drawVectorPet, getPetMeta, PetFollowerController } from './petCompanion.js';
 
-const CATEGORY_TABS = [
-  { id: 'expansions', label: '🏗️ Anbau' },
-  { id: 'furniture', label: '🛋️ Möbel' },
-  { id: 'decor', label: '🖼️ Deko' },
-  { id: 'garden', label: '🌳 Garten' },
-  { id: 'pets', label: '🐾 Tiere' },
-  { id: 'petItems', label: '🧸 Tiersachen' },
-  { id: 'supplies', label: '🛒 Vorräte' }
-];
-
 const ROOMS = [
   { id: 'living_room', label: '🛋️ Wohnzimmer', alwaysUnlocked: true },
   { id: 'kitchen', label: '🍳 Küche', alwaysUnlocked: true },
@@ -30,13 +20,10 @@ export function setupHomeScreen(stateManager) {
 
   const coinsVal = document.getElementById('homeCoinsVal');
   const levelVal = document.getElementById('homeLevelVal');
-  const homeMysteryBtn = document.getElementById('homeMysteryBtn');
   const toastEl = document.getElementById('homeToast');
   const roomTabsEl = document.getElementById('homeRoomTabs');
   const taskTextEl = document.getElementById('homeTaskText');
   const stirBtn = document.getElementById('homeStirBtn');
-  const tabsEl = document.getElementById('homeShopTabs');
-  const itemsGridEl = document.getElementById('homeShopGrid');
 
   const walkLeftBtn = document.getElementById('homeWalkLeftBtn');
   const walkRightBtn = document.getElementById('homeWalkRightBtn');
@@ -46,6 +33,13 @@ export function setupHomeScreen(stateManager) {
   const pickAllPetsBtn = document.getElementById('homePickAllPetsBtn');
   const leaveAllPetsBtn = document.getElementById('homeLeaveAllPetsBtn');
   const openPetShopBtn = document.getElementById('homeOpenPetShopBtn');
+
+  const fridgeBar = document.getElementById('homeFridgeBar');
+  const fridgeStockSummary = document.getElementById('homeFridgeStockSummary');
+  const fridgeEatSnackBtn = document.getElementById('homeFridgeEatSnackBtn');
+  const fridgeCookBtn = document.getElementById('homeFridgeCookBtn');
+  const fridgeMarketBtn = document.getElementById('homeFridgeMarketBtn');
+  const fridgeCloseBtn = document.getElementById('homeFridgeCloseBtn');
 
   const cleanBar = document.getElementById('cleanBar');
   const hungerBar = document.getElementById('hungerBar');
@@ -70,7 +64,6 @@ export function setupHomeScreen(stateManager) {
   const backToEditorBtn = document.getElementById('homeToEditorBtn');
   const playFromHomeBtn = document.getElementById('homeToGameBtn');
 
-  let activeTab = 'expansions';
   let activeRoom = 'living_room';
   let animFrame = 0;
   let rafId = null;
@@ -96,6 +89,8 @@ export function setupHomeScreen(stateManager) {
   let activeTask = null;
   let doorHotspots = [];
   let petHotspots = [];
+  let fridgeHotspot = null;
+  let fridgeOpen = false;
   const petFollowers = new PetFollowerController();
   const fxParticles = [];
   let activeFind = null;
@@ -143,6 +138,26 @@ export function setupHomeScreen(stateManager) {
     }
   }
 
+  function updateFridgeUI() {
+    const state = HomeManager.getState();
+    const show = activeRoom === 'kitchen' && fridgeOpen;
+    if (fridgeBar) {
+      fridgeBar.classList.toggle('hidden', !show);
+    }
+    if (fridgeStockSummary) {
+      const food = state.inventory.food || 0;
+      const snacks = state.inventory.fridgeSnacks || 0;
+      fridgeStockSummary.textContent = `🧊 Im Kühlschrank: ${food} Koch-Zutaten · ${snacks} Frische Snacks`;
+    }
+    if (fridgeEatSnackBtn) {
+      const snacks = state.inventory.fridgeSnacks || 0;
+      fridgeEatSnackBtn.disabled = snacks <= 0;
+      fridgeEatSnackBtn.textContent = snacks > 0
+        ? `🍓 Snack aus Kühlschrank (${snacks})`
+        : '🍓 Keine Snacks mehr';
+    }
+  }
+
   function isRoomUnlocked(room) {
     if (room.alwaysUnlocked) return true;
     return HomeManager.hasItem('expansions', room.unlockItem);
@@ -152,17 +167,16 @@ export function setupHomeScreen(stateManager) {
     const room = ROOMS.find((r) => r.id === roomId);
     if (!room) return false;
     if (!isRoomUnlocked(room)) {
-      activeTab = 'expansions';
-      renderTabs();
-      renderShopGrid();
       const catalogItem = HOME_CATALOG.expansions.find((e) => e.id === room.unlockItem);
-      showToast(`🔒 "${catalogItem ? catalogItem.name : room.label}" kannst du rechts unter "🏗️ Anbau" freischalten!`, 'warn');
+      showToast(`🏗️ "${catalogItem ? catalogItem.name : room.label}" kannst du im 🛋️ Möbel- & Bau-Kaufhaus in der Stadt kaufen!`, 'info');
+      stateManager.setState('TOWN', { from: 'HOME', openShop: 'furniture', shopTab: 'expansions' });
       return false;
     }
 
     activeRoom = roomId;
     activeTask = null;
     activeFind = null;
+    fridgeOpen = false;
     player.x = entryX !== null ? entryX : 240;
     player.z = 0;
     player.targetX = null;
@@ -173,11 +187,14 @@ export function setupHomeScreen(stateManager) {
     if (petRoomBar) {
       petRoomBar.classList.toggle('hidden', activeRoom !== 'pet_room');
     }
+    updateFridgeUI();
     renderRoomTabs();
     if (activeRoom === 'pet_room') {
-      setTaskBanner('🐾 Tierzimmer: Hier bleiben deine Tiere! Tippe ein Tier an, um es abzuholen & mitzunehmen, oder kauf neue Tiersachen!');
+      setTaskBanner('🐾 Tierzimmer: Hier bleiben deine Tiere! Tippe ein Tier an, um es abzuholen & mitzunehmen!', false);
+    } else if (activeRoom === 'kitchen') {
+      setTaskBanner('🍳 Küche: Dein Essen liegt sicher im 🧊 Kühlschrank – tippe auf den Kühlschrank zum Öffnen!', false);
     } else {
-      setTaskBanner(`Du bist jetzt in: ${room.label.replace(/^[^\s]+\s/, '')} · Klicke auf den Boden oder gehe frei von Raum zu Raum!`);
+      setTaskBanner(`Du bist jetzt in: ${room.label.replace(/^[^\s]+\s/, '')} · Klicke auf den Boden oder gehe frei von Raum zu Raum!`, false);
     }
     return true;
   }
@@ -207,18 +224,6 @@ export function setupHomeScreen(stateManager) {
     if (coinsVal) coinsVal.textContent = ShopManager.getCoins();
     if (levelVal) levelVal.textContent = level;
 
-    const nextHintEl = document.getElementById('homeNextLevelHint');
-    if (nextHintEl) {
-      const nextLv = level + 1;
-      const nextHome = HomeManager.getItemsForLevel(nextLv);
-      if (nextHome.length > 0) {
-        const names = nextHome.slice(0, 3).map((i) => `${i.icon} ${i.name}`).join(' · ');
-        nextHintEl.textContent = `✨ Ab Level ${nextLv} neu im Haus-Shop: ${names}${nextHome.length > 3 ? ' …' : ''}`;
-      } else {
-        nextHintEl.textContent = `🏆 Level ${level}: Alle Haus- & Garten-Stufen freigeschaltet!`;
-      }
-    }
-
     const setBar = (bar, pctEl, val) => {
       const clamped = Math.max(0, Math.min(100, Math.round(val)));
       if (bar) {
@@ -238,8 +243,9 @@ export function setupHomeScreen(stateManager) {
     setBar(petBar, petPct, state.owned.pets.length > 0 ? state.needs.petCare : 100);
     setBar(gardenBar, gardenPct, state.needs.gardenGrowth);
 
-    if (foodCountEl) foodCountEl.textContent = state.inventory.food || 0;
+    if (foodCountEl) foodCountEl.textContent = (state.inventory.food || 0) + (state.inventory.fridgeSnacks || 0);
     if (petFoodCountEl) petFoodCountEl.textContent = state.inventory.petFood || 0;
+    updateFridgeUI();
 
     if (gardenBtn) {
       if (state.needs.gardenGrowth >= 100) {
@@ -256,156 +262,37 @@ export function setupHomeScreen(stateManager) {
     window.dispatchEvent(new CustomEvent('runner:coins-updated'));
   }
 
-  function renderTabs() {
-    if (!tabsEl) return;
-    tabsEl.innerHTML = '';
-    CATEGORY_TABS.forEach((tab) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = `home-tab-btn${activeTab === tab.id ? ' active' : ''}`;
-      btn.textContent = tab.label;
-      btn.addEventListener('click', () => {
-        activeTab = tab.id;
-        renderTabs();
-        renderShopGrid();
-      });
-      tabsEl.appendChild(btn);
-    });
-  }
-
-  function renderShopGrid() {
-    if (!itemsGridEl) return;
-    const list = HOME_CATALOG[activeTab] || [];
-    const coins = ShopManager.getCoins();
-
-    itemsGridEl.innerHTML = '';
-    list.forEach((item) => {
-      const owned = !item.isConsumable && HomeManager.hasItem(activeTab, item.id);
-      const levelOk = HomeManager.isLevelUnlocked(item);
-      const price = HomeManager.getEffectivePrice(activeTab, item);
-      const isDeal = !owned && !item.isConsumable && HomeManager.isDailyDeal(activeTab, item.id);
-      const canAfford = coins >= price;
-
-      const card = document.createElement('div');
-      card.className = `home-shop-card${owned ? ' owned' : ''}${!owned && levelOk && canAfford ? ' affordable' : ''}${!levelOk ? ' level-locked' : ''}`;
-
-      const badgeHtml = !owned && isDeal
-        ? '<span class="home-inline-tag deal">🔥 -30%</span>'
-        : !owned && item.isNew
-          ? '<span class="home-inline-tag new">✨ NEU</span>'
-          : '';
-
-      const isPetTab = activeTab === 'pets';
-      const hasPetRoom = HomeManager.hasPetRoom();
-      const isComingAlong = owned && isPetTab && HomeManager.isCompanionPet(item.id);
-      const btnLabel = owned
-        ? (isPetTab
-            ? (isComingAlong ? '🎒 Kommt mit' : hasPetRoom ? '🐾 Im Tierzimmer · Abholen' : '👆 Mitnehmen')
-            : '✓ Im Besitz')
-        : !levelOk
-          ? `🔒 Ab Level ${item.unlockLevel}`
-          : `${isDeal ? '🔥 ' : ''}Kaufen (${price} 🪙)`;
-
-      card.innerHTML = `
-        <div class="home-shop-top">
-          <span class="home-shop-icon">${item.icon}</span>
-          <div>
-            <strong>${item.name} ${badgeHtml}</strong>
-            <p>${item.desc}</p>
-          </div>
-        </div>
-        <button type="button" class="btn btn-small ${owned ? (isPetTab ? (isComingAlong ? 'btn-home' : 'btn-secondary') : 'btn-secondary') : !levelOk ? 'btn-secondary' : 'btn-primary'}" ${(owned && !isPetTab) || !levelOk ? 'disabled' : ''}>
-          ${btnLabel}
-        </button>
-      `;
-
-      const buyBtn = card.querySelector('button');
-      if (buyBtn && owned && isPetTab) {
-        buyBtn.addEventListener('click', () => {
-          const res = HomeManager.toggleCompanionPet(item.id);
-          if (res.ok) {
-            renderRoomTabs();
-            renderShopGrid();
-            if (res.active) {
-              HomeManager.cuddleCompanionPet(item.id);
-              spawnFX('heart', player.x, 220, 8);
-              showToast(
-                hasPetRoom
-                  ? `🐾 ${item.name} aus dem Tierzimmer abgeholt! Es kommt jetzt überall mit!`
-                  : `🐾 ${item.name} kommt jetzt überall mit!`,
-                'success'
-              );
-            } else {
-              showToast(
-                hasPetRoom
-                  ? `🐾 ${item.name} bleibt jetzt gemütlich im Tierzimmer.`
-                  : `🏡 ${item.name} bleibt gemütlich zuhause.`,
-                'info'
-              );
-            }
-          }
-        });
-      } else if (buyBtn && !owned && levelOk) {
-        buyBtn.addEventListener('click', () => {
-          const res = HomeManager.buyItem(activeTab, item.id);
-          if (res.ok) {
-            updateUI();
-            if (item.id === 'pet_room') {
-              activeTab = 'petItems';
-              switchRoom('pet_room', 140);
-              renderTabs();
-            } else {
-              renderRoomTabs();
-            }
-            renderShopGrid();
-            notifyMoneyOrMissionChange();
-            if (item.id === 'mailbox' || item.id === 'gold_mailbox') {
-              MailboxManager.ensureDailyMail();
-              window.dispatchEvent(new CustomEvent('runner:mailbox-updated'));
-            }
-            spawnFX('sparkle', player.x, 220, 12);
-            if (item.id === 'pet_room') {
-              showToast('🐾 Tierzimmer gebaut! Hier kannst du jetzt Tiersachen kaufen & deine Tiere abholen!', 'success');
-            } else if (activeTab === 'petItems' && HomeManager.hasPetRoom() && activeRoom !== 'pet_room') {
-              showToast(`🎉 "${item.name}" gekauft und direkt ins Tierzimmer gestellt!`, 'success');
-            } else if (isPetTab && HomeManager.hasPetRoom()) {
-              showToast(`🎉 "${item.name}" wartet jetzt im Tierzimmer! Hol es dort ab!`, 'success');
-            } else {
-              showToast(isPetTab ? `🎉 "${item.name}" gekauft! Tippe es im Zimmer an, um es mitzunehmen!` : `🎉 "${item.name}" gekauft!`, 'success');
-            }
-          } else if (res.reason === 'insufficient_funds') {
-            showToast(`🔒 Noch ${res.missing} 🪙 nötig für "${item.name}"!`, 'warn');
-          }
-        });
-      }
-
-      itemsGridEl.appendChild(card);
-    });
-  }
-
   // --- INTERACTIVE MOVEMENT TASKS ---
+
+  function takeIngredientsFromFridge() {
+    if (!activeTask || activeTask.type !== 'cook' || activeTask.phase !== 'fridge') return;
+    fridgeOpen = true;
+    activeTask.phase = 'stir';
+    spawnFX('sparkle', activeTask.fridgeX, 240, 9);
+    updateFridgeUI();
+    setTaskBanner('🍳 Kochen (2/2): Zutaten aus dem Kühlschrank geholt! Lauf jetzt zum Herd & tippe auf "🥄 Rühren!" (oder Leertaste)!', true);
+    showToast('🧊 Frische Zutaten aus dem Kühlschrank genommen – ab zum Herd!', 'success');
+  }
 
   function startCookingTask() {
     const state = HomeManager.getState();
     if ((state.inventory.food || 0) <= 0) {
-      showToast('🥘 Keine Koch-Zutaten mehr! Kauf welche unter "🛒 Vorräte".', 'warn');
+      showToast('🧊 Dein Kühlschrank hat keine Koch-Zutaten mehr! Kauf neue im 🛒 Supermarkt in der Stadt.', 'warn');
       return;
     }
     if (activeRoom !== 'kitchen') {
       switchRoom('kitchen', 110);
     }
+    fridgeOpen = true;
+    updateFridgeUI();
     activeTask = {
       type: 'cook',
-      phase: 'gather',
+      phase: 'fridge',
       stirProgress: 0,
-      targets: [
-        { id: 'ing1', kind: 'tomato', label: 'Tomaten', x: 165, collected: false },
-        { id: 'ing2', kind: 'cheese', label: 'Käse', x: 355, collected: false },
-        { id: 'ing3', kind: 'herb', label: 'Kräuter', x: 605, collected: false }
-      ],
+      fridgeX: 168,
       stoveX: 470
     };
-    setTaskBanner('🍳 Kochen (1/2): Lauf durch die Küche & sammle alle 3 frischen Zutaten ein! (0/3)', false);
+    setTaskBanner('🧊 Kochen (1/2): Geh links zum Kühlschrank (oder tippe ihn an), um die frischen Zutaten herauszuholen!', false);
   }
 
   function startCleaningTask() {
@@ -453,11 +340,11 @@ export function setupHomeScreen(stateManager) {
   function startPetTask(mode) {
     const state = HomeManager.getState();
     if (state.owned.pets.length === 0) {
-      showToast('🐾 Du hast noch kein Tier! Hol dir eins unter "🐾 Tiere".', 'warn');
+      showToast('🐾 Du hast noch kein Tier! Besuch die 🐾 Tierhandlung in der Stadt.', 'warn');
       return;
     }
     if (mode === 'feed' && (state.inventory.petFood || 0) <= 0) {
-      showToast('🦴 Kein Tierfutter mehr! Kauf Nachschub unter "🛒 Vorräte".', 'warn');
+      showToast('🦴 Kein Tierfutter mehr! Kauf Nachschub im 🛒 Supermarkt oder der 🐾 Tierhandlung.', 'warn');
       return;
     }
     if (HomeManager.hasPetRoom() && activeRoom !== 'pet_room') {
@@ -487,6 +374,8 @@ export function setupHomeScreen(stateManager) {
       showToast('🚶 Lauf zuerst zum Herd in der Mitte!', 'info');
       return;
     }
+    fridgeOpen = false;
+    updateFridgeUI();
     player.pose = 'cook';
     player.poseTimer = 28;
     activeTask.stirProgress = Math.min(100, activeTask.stirProgress + 25);
@@ -498,7 +387,6 @@ export function setupHomeScreen(stateManager) {
       setTaskBanner('🍽️ Lecker gekocht! Lauf gerne weiter durch die Küche oder besuche einen anderen Raum!', false);
       if (res.ok) {
         updateUI();
-        renderShopGrid();
         notifyMoneyOrMissionChange();
         spawnFX('coin', player.x, 190, 10);
         showToast(`🍽️ Lecker gekocht! +${res.bonusCoins} 🪙 Wohlfühl-Bonus!`, 'success');
@@ -512,38 +400,67 @@ export function setupHomeScreen(stateManager) {
     stirBtn.addEventListener('click', performStirAction);
   }
 
-  if (homeMysteryBtn) {
-    homeMysteryBtn.addEventListener('click', () => {
-      const res = HomeManager.buyHomeMysteryBox();
-      if (res.ok) {
-        updateUI();
-        renderRoomTabs();
-        renderShopGrid();
-        spawnFX('sparkle', player.x, 210, 12);
-        showToast(`🎁 Haus-Überraschung! Freigeschaltet: ${res.item.icon} ${res.item.name}!`, 'success');
-      } else if (res.reason === 'all_unlocked') {
-        showToast('🏆 Alle aktuell freigeschalteten Haus-Sachen gehören dir schon!', 'info');
-      } else if (res.reason === 'insufficient_funds') {
-        showToast(`🔒 Noch ${res.missing} 🪙 nötig für die Haus-Überraschung!`, 'warn');
-      }
-    });
-  }
-
   if (cookBtn) cookBtn.addEventListener('click', startCookingTask);
   if (cleanBtn) cleanBtn.addEventListener('click', startCleaningTask);
   if (feedPetsBtn) feedPetsBtn.addEventListener('click', () => startPetTask('feed'));
   if (petAnimalsBtn) petAnimalsBtn.addEventListener('click', () => startPetTask('pet'));
   if (gardenBtn) gardenBtn.addEventListener('click', startGardenTask);
 
+  if (fridgeEatSnackBtn) {
+    fridgeEatSnackBtn.addEventListener('click', () => {
+      const res = HomeManager.eatFridgeSnack();
+      if (res.ok) {
+        player.pose = 'pet';
+        player.poseTimer = 22;
+        spawnFX('heart', player.x, 220, 9);
+        updateUI();
+        showToast('🍓 Leckerer Snack aus dem Kühlschrank! +25% Sättigung!', 'success');
+      } else {
+        showToast('🧊 Keine Snacks mehr im Kühlschrank! Kauf neue im 🛒 Supermarkt in der Stadt!', 'info');
+      }
+    });
+  }
+
+  if (fridgeCookBtn) {
+    fridgeCookBtn.addEventListener('click', () => {
+      const state = HomeManager.getState();
+      if ((state.inventory.food || 0) <= 0) {
+        showToast('🧊 Keine Koch-Zutaten im Kühlschrank! Kauf welche im 🛒 Supermarkt.', 'warn');
+        return;
+      }
+      activeTask = {
+        type: 'cook',
+        phase: 'stir',
+        stirProgress: 0,
+        fridgeX: 168,
+        stoveX: 470
+      };
+      fridgeOpen = false;
+      updateFridgeUI();
+      player.targetX = 470;
+      setTaskBanner('🍳 Kochen: Lauf zum Herd in der Mitte & tippe auf "🥄 Rühren!"', true);
+    });
+  }
+
+  if (fridgeMarketBtn) {
+    fridgeMarketBtn.addEventListener('click', () => {
+      stateManager.setState('TOWN', { from: 'HOME', openShop: 'supermarket' });
+    });
+  }
+
+  if (fridgeCloseBtn) {
+    fridgeCloseBtn.addEventListener('click', () => {
+      fridgeOpen = false;
+      updateFridgeUI();
+    });
+  }
+
   if (homeLeashAllBtn) {
     homeLeashAllBtn.addEventListener('click', () => {
       const state = HomeManager.getState();
       const sitting = HomeManager.getSittingCompanions();
       if (!state.owned.pets.length && !sitting.length) {
-        activeTab = 'pets';
-        renderTabs();
-        renderShopGrid();
-        showToast('🐾 Kauf dir zuerst ein Tier unter "🐾 Tiere" oder hol Hunde bei den Nachbarn ab!', 'info');
+        showToast('🐾 Besuch die 🐾 Tierhandlung in der Stadt oder hol Hunde bei den Nachbarn ab!', 'info');
         return;
       }
       if (state.owned.pets.length > 0) {
@@ -552,7 +469,6 @@ export function setupHomeScreen(stateManager) {
       const total = state.owned.pets.length + sitting.length;
       updateUI();
       renderRoomTabs();
-      renderShopGrid();
       spawnFX('heart', player.x, 230, 12);
       showToast(`🐕 Alle ${total} Tiere gleichzeitig an der Leine! Sie laufen jetzt überall mit dir mit!`, 'success');
     });
@@ -562,16 +478,12 @@ export function setupHomeScreen(stateManager) {
     pickAllPetsBtn.addEventListener('click', () => {
       const state = HomeManager.getState();
       if (!state.owned.pets.length) {
-        activeTab = 'pets';
-        renderTabs();
-        renderShopGrid();
-        showToast('🐾 Kauf dir zuerst ein Tier unter "🐾 Tiere"!', 'info');
+        showToast('🐾 Kauf dir zuerst ein Tier in der 🐾 Tierhandlung in der Stadt!', 'info');
         return;
       }
       HomeManager.setAllCompanions(true);
       updateUI();
       renderRoomTabs();
-      renderShopGrid();
       spawnFX('heart', player.x, 230, 12);
       showToast('🐾 Alle deine Tiere abgeholt! Sie begleiten dich jetzt überall hin!', 'success');
     });
@@ -582,7 +494,6 @@ export function setupHomeScreen(stateManager) {
       HomeManager.setAllCompanions(false);
       updateUI();
       renderRoomTabs();
-      renderShopGrid();
       spawnFX('sparkle', player.x, 240, 10);
       showToast('🏠 Deine Tiere bleiben jetzt gemütlich im Tierzimmer!', 'info');
     });
@@ -590,11 +501,7 @@ export function setupHomeScreen(stateManager) {
 
   if (openPetShopBtn) {
     openPetShopBtn.addEventListener('click', () => {
-      activeTab = 'petItems';
-      renderTabs();
-      renderShopGrid();
-      if (itemsGridEl) itemsGridEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      showToast('🧸 Such dir schöne Sachen fürs Tierzimmer aus!', 'info');
+      stateManager.setState('TOWN', { from: 'HOME', openShop: 'petshop', shopTab: 'petItems' });
     });
   }
 
@@ -678,13 +585,27 @@ export function setupHomeScreen(stateManager) {
         activeFind = null;
         nextFindTimer = 500 + Math.floor(Math.random() * 280);
         updateUI();
-        renderShopGrid();
         notifyMoneyOrMissionChange();
         showToast(`✨ Glücksfund entdeckt! +${reward} 🪙 eingesammelt!`, 'success');
         return;
       }
 
-      // 2. Interactive Stove click during Cooking Stir phase
+      // 2. Interactive Refrigerator click in Kitchen (all food is inside the fridge!)
+      if (activeRoom === 'kitchen' && fridgeHotspot &&
+          cx >= fridgeHotspot.x && cx <= fridgeHotspot.x + fridgeHotspot.w &&
+          cy >= fridgeHotspot.y && cy <= fridgeHotspot.y + fridgeHotspot.h) {
+        if (activeTask && activeTask.type === 'cook' && activeTask.phase === 'fridge') {
+          takeIngredientsFromFridge();
+        } else {
+          fridgeOpen = !fridgeOpen;
+          updateFridgeUI();
+          spawnFX('sparkle', fridgeHotspot.x + fridgeHotspot.w / 2, fridgeHotspot.y + 45, 5);
+          showToast(fridgeOpen ? '🧊 Kühlschrank geöffnet – hier ist dein ganzes Essen!' : '🧊 Kühlschrank geschlossen.', 'info');
+        }
+        return;
+      }
+
+      // 2b. Interactive Stove click during Cooking Stir phase
       if (activeTask && activeTask.type === 'cook' && activeTask.phase === 'stir') {
         if (Math.abs(cx - activeTask.stoveX) < 55 && cy > 180 && cy < 330) {
           performStirAction();
@@ -692,7 +613,7 @@ export function setupHomeScreen(stateManager) {
         }
       }
 
-      // 2b. Tap directly on a Pet in the room/garden to take it everywhere with you (or leave it in Tierzimmer)!
+      // 2c. Tap directly on a Pet in the room/garden to take it everywhere with you (or leave it in Tierzimmer)!
       for (let i = petHotspots.length - 1; i >= 0; i--) {
         const ph = petHotspots[i];
         if (Math.hypot(cx - ph.x, cy - ph.y) <= ph.r) {
@@ -728,7 +649,6 @@ export function setupHomeScreen(stateManager) {
             }
             updateUI();
             renderRoomTabs();
-            renderShopGrid();
           }
           return;
         }
@@ -910,23 +830,9 @@ export function setupHomeScreen(stateManager) {
     // Task Proximity Checks
     if (activeTask) {
       if (activeTask.type === 'cook') {
-        if (activeTask.phase === 'gather') {
-          let newlyCollected = false;
-          activeTask.targets.forEach((t) => {
-            if (!t.collected && Math.abs(player.x - t.x) < 42) {
-              t.collected = true;
-              newlyCollected = true;
-              spawnFX('sparkle', t.x, 275, 7);
-            }
-          });
-          const done = activeTask.targets.filter((t) => t.collected).length;
-          if (newlyCollected) {
-            if (done === activeTask.targets.length) {
-              activeTask.phase = 'stir';
-              setTaskBanner('🍳 Kochen (2/2): Super! Lauf jetzt zum Herd & tippe auf "🥄 Rühren!" (oder Leertaste)!', true);
-            } else {
-              setTaskBanner(`🍳 Kochen (1/2): Zutaten einsammeln! (${done}/3)`, false);
-            }
+        if (activeTask.phase === 'fridge') {
+          if (Math.abs(player.x - activeTask.fridgeX) < 52) {
+            takeIngredientsFromFridge();
           }
         } else if (activeTask.phase === 'stir') {
           const nearStove = Math.abs(player.x - activeTask.stoveX) <= 75;
@@ -956,7 +862,6 @@ export function setupHomeScreen(stateManager) {
             setTaskBanner('✨ Blitzblank geputzt! Alles strahlt wieder!', false);
             if (res.ok) {
               updateUI();
-              renderShopGrid();
               notifyMoneyOrMissionChange();
               spawnFX('coin', player.x, 220, 10);
               showToast(`🧹 Alles sauber gefegt! +${res.bonusCoins} 🪙 Fleiß-Bonus!`, 'success');
@@ -990,7 +895,6 @@ export function setupHomeScreen(stateManager) {
               showToast('🚿 Garten gegossen! Die Pflanzen wachsen!', 'info');
             }
             updateUI();
-            renderShopGrid();
             notifyMoneyOrMissionChange();
           } else {
             setTaskBanner(
@@ -1021,7 +925,6 @@ export function setupHomeScreen(stateManager) {
             setTaskBanner('🐾 Deine Tiere sind überglücklich!', false);
             if (res.ok) {
               updateUI();
-              renderShopGrid();
               notifyMoneyOrMissionChange();
               if (isFeed) {
                 spawnFX('coin', player.x, 210, 8);
@@ -1049,6 +952,7 @@ export function setupHomeScreen(stateManager) {
     const floorY = h - 66;
     const state = HomeManager.getState();
     doorHotspots = [];
+    fridgeHotspot = null;
 
     ctx.clearRect(0, 0, w, h);
     ctx.lineJoin = 'round';
@@ -1590,20 +1494,90 @@ export function setupHomeScreen(stateManager) {
     ctx.lineWidth = 7;
     ctx.stroke();
 
-    // Retro Rounded Pastel Fridge (Left-Center)
-    const fridgeGrad = ctx.createLinearGradient(125, floorY - 175, 205, floorY);
-    fridgeGrad.addColorStop(0, isDeluxe ? '#f9a8d4' : '#a5f3fc');
-    fridgeGrad.addColorStop(1, isDeluxe ? '#ec4899' : '#06b6d4');
-    ctx.fillStyle = fridgeGrad;
+    // Retro Rounded Interactive Pastel Fridge (Left-Center — ALL FOOD LIVES INSIDE!)
+    const fridgeX = 124;
+    const fridgeY = floorY - 176;
+    const fridgeW = isDeluxe ? 92 : 78;
+    const fridgeH = 176;
+    fridgeHotspot = { x: fridgeX - 6, y: fridgeY - 10, w: fridgeW + (fridgeOpen ? 44 : 12), h: fridgeH + 10 };
+
+    if (fridgeOpen) {
+      // Glowing open fridge interior shelves stocked with neat food!
+      ctx.fillStyle = '#e0f2fe';
+      ctx.beginPath();
+      ctx.roundRect(fridgeX, fridgeY, fridgeW, fridgeH, [16, 16, 4, 4]);
+      ctx.fill();
+      ctx.strokeStyle = isDeluxe ? '#ec4899' : '#06b6d4';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      // Interior cool light glow
+      ctx.fillStyle = '#fef9c3';
+      ctx.fillRect(fridgeX + 10, fridgeY + 8, fridgeW - 20, 7);
+
+      // Shelf dividers & neatly stocked food inside the refrigerator!
+      const shelfYs = [fridgeY + 46, fridgeY + 84, fridgeY + 122];
+      shelfYs.forEach((sy) => {
+        ctx.fillStyle = '#bae6fd';
+        ctx.fillRect(fridgeX + 6, sy, fridgeW - 12, 4);
+      });
+
+      const foodAmt = state.inventory.food || 0;
+      const snackAmt = state.inventory.fridgeSnacks || 0;
+      ctx.font = '16px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      if (foodAmt + snackAmt > 0) {
+        ctx.fillText('🥛', fridgeX + 24, fridgeY + 32);
+        ctx.fillText('🧀', fridgeX + 54, fridgeY + 32);
+        ctx.fillText('🍅', fridgeX + 24, fridgeY + 70);
+        ctx.fillText('🍓', fridgeX + 54, fridgeY + 70);
+        ctx.fillText('🍎', fridgeX + 26, fridgeY + 108);
+        ctx.fillText('🌿', fridgeX + 54, fridgeY + 108);
+      } else {
+        ctx.font = '700 10px "Plus Jakarta Sans", sans-serif';
+        ctx.fillStyle = '#64748b';
+        ctx.fillText('Leer!', fridgeX + fridgeW / 2, fridgeY + 80);
+      }
+
+      // Swung-open fridge door on the right edge
+      const doorGrad = ctx.createLinearGradient(fridgeX + fridgeW, fridgeY, fridgeX + fridgeW + 34, fridgeY + fridgeH);
+      doorGrad.addColorStop(0, isDeluxe ? '#f9a8d4' : '#a5f3fc');
+      doorGrad.addColorStop(1, isDeluxe ? '#ec4899' : '#06b6d4');
+      ctx.fillStyle = doorGrad;
+      ctx.beginPath();
+      ctx.roundRect(fridgeX + fridgeW - 2, fridgeY + 4, 34, fridgeH - 6, [4, 14, 4, 4]);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(fridgeX + fridgeW + 6, fridgeY + 48, 22, 4);
+      ctx.fillRect(fridgeX + fridgeW + 6, fridgeY + 96, 22, 4);
+    } else {
+      const fridgeGrad = ctx.createLinearGradient(fridgeX, fridgeY, fridgeX + fridgeW, floorY);
+      fridgeGrad.addColorStop(0, isDeluxe ? '#f9a8d4' : '#a5f3fc');
+      fridgeGrad.addColorStop(1, isDeluxe ? '#ec4899' : '#06b6d4');
+      ctx.fillStyle = fridgeGrad;
+      ctx.beginPath();
+      ctx.roundRect(fridgeX, fridgeY, fridgeW, fridgeH, [18, 18, 4, 4]);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(fridgeX + 3, floorY - 72, fridgeW - 6, 3);
+      ctx.beginPath();
+      ctx.roundRect(fridgeX + 11, floorY - 140, 6, 36, [3]);
+      ctx.roundRect(fridgeX + 11, floorY - 56, 6, 26, [3]);
+      ctx.fill();
+    }
+
+    // Crisp clickable badge above Fridge
+    const totalFridgeItems = (state.inventory.food || 0) + (state.inventory.fridgeSnacks || 0);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
     ctx.beginPath();
-    ctx.roundRect(125, floorY - 175, isDeluxe ? 88 : 74, 175, [18, 18, 4, 4]);
+    ctx.roundRect(fridgeX - 6, fridgeY - 26, fridgeW + 14, 20, [10]);
     ctx.fill();
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(128, floorY - 72, isDeluxe ? 82 : 68, 3);
-    ctx.beginPath();
-    ctx.roundRect(136, floorY - 140, 6, 36, [3]);
-    ctx.roundRect(136, floorY - 56, 6, 26, [3]);
-    ctx.fill();
+    ctx.font = '800 10.5px "Plus Jakarta Sans", sans-serif';
+    ctx.fillStyle = '#0369a1';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`🧊 Kühlschrank (${totalFridgeItems})`, fridgeX + fridgeW / 2 + 1, fridgeY - 16);
 
     // Kitchen Counter & Quartz Top
     ctx.fillStyle = '#ffffff';
@@ -2461,14 +2435,41 @@ export function setupHomeScreen(stateManager) {
   }
 
   function drawActiveTaskTargets(ctx, floorY) {
-    if (!activeTask || !activeTask.targets) return;
+    if (!activeTask) return;
+
+    // Cooking Phase 1: Highlight the Kühlschrank itself (NO food floating in the room!)
+    if (activeTask.type === 'cook' && activeTask.phase === 'fridge') {
+      const pulse = 1 + Math.sin(animFrame * 0.14) * 0.12;
+      ctx.save();
+      ctx.strokeStyle = '#0ea5e9';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.roundRect(118, floorY - 182, 92 * pulse, 184, [18]);
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
+
+    // Stove beacon during phase 2 of cooking
+    if (activeTask.type === 'cook' && activeTask.phase === 'stir') {
+      const pulse = 1 + Math.sin(animFrame * 0.14) * 0.12;
+      ctx.save();
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(activeTask.stoveX, floorY - 100, 26 * pulse, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
+
+    if (!activeTask.targets) return;
 
     activeTask.targets.forEach((t, idx) => {
       if (t.collected) return;
       const bob = Math.sin(animFrame * 0.1 + idx) * 5;
       const ty = floorY - 26 + bob;
 
-      // Glowing target halo
       const halo = ctx.createRadialGradient(t.x, ty, 3, t.x, ty, 28);
       halo.addColorStop(0, 'rgba(254, 240, 138, 0.88)');
       halo.addColorStop(1, 'rgba(251, 191, 36, 0)');
@@ -2477,18 +2478,7 @@ export function setupHomeScreen(stateManager) {
       ctx.arc(t.x, ty, 28, 0, Math.PI * 2);
       ctx.fill();
 
-      if (activeTask.type === 'cook') {
-        // Painted Ingredient Circle + Color Shape
-        ctx.fillStyle = t.kind === 'tomato' ? '#f43f5e' : t.kind === 'cheese' ? '#fbbf24' : '#10b981';
-        ctx.beginPath();
-        ctx.arc(t.x, ty, 12, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '700 11px "Plus Jakarta Sans", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(t.label, t.x, ty - 20);
-      } else if (activeTask.type === 'clean') {
-        // Soft Dust Cloud to Sweep
+      if (activeTask.type === 'clean') {
         ctx.fillStyle = 'rgba(148, 163, 184, 0.72)';
         ctx.beginPath();
         ctx.arc(t.x - 7, floorY + 8, 9, 0, Math.PI * 2);
@@ -2509,18 +2499,6 @@ export function setupHomeScreen(stateManager) {
         ctx.fill();
       }
     });
-
-    // Stove beacon during phase 2 of cooking
-    if (activeTask.type === 'cook' && activeTask.phase === 'stir') {
-      const pulse = 1 + Math.sin(animFrame * 0.14) * 0.12;
-      ctx.save();
-      ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(activeTask.stoveX, floorY - 100, 26 * pulse, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-    }
   }
 
   function drawRoomPets(ctx, floorY, state, playerDrawY) {
@@ -2629,17 +2607,15 @@ export function setupHomeScreen(stateManager) {
     if (stateManager.getState() === 'HOME') {
       updateUI();
       renderRoomTabs();
-      renderShopGrid();
     }
   });
 
   window.addEventListener('runner:level-up', (e) => {
     const lv = e.detail?.level;
     const newHome = lv ? HomeManager.getItemsForLevel(lv) : [];
-    const listText = newHome.length > 0 ? ` Neu im Haus-Shop: ${newHome.map((i) => `${i.icon} ${i.name}`).join(', ')}` : '';
+    const listText = newHome.length > 0 ? ` Neu in den Stadt-Geschäften: ${newHome.map((i) => `${i.icon} ${i.name}`).join(', ')}` : '';
     if (stateManager.getState() === 'HOME' && lv) {
       updateUI();
-      renderShopGrid();
       showToast(`🎉 Level ${lv} erreicht! (+${e.detail.bonusCoins} 🪙)${listText}`, 'success');
     }
   });
@@ -2651,13 +2627,13 @@ export function setupHomeScreen(stateManager) {
       if (payload && payload.room) {
         switchRoom(payload.room, payload.room === 'garden' ? 285 : 240);
       } else {
+        fridgeOpen = false;
         petFollowers.reset(player.x, canvas ? canvas.height - 54 : 336);
         if (petRoomBar) petRoomBar.classList.toggle('hidden', activeRoom !== 'pet_room');
+        updateFridgeUI();
       }
       updateUI();
       renderRoomTabs();
-      renderTabs();
-      renderShopGrid();
       startLoop();
       if (dailyBonus > 0) {
         spawnFX('coin', 380, 180, 10);

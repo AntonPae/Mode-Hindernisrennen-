@@ -17,15 +17,13 @@
     <!-- State: Editor Container Overlay -->
     <div id="editor-screen" class="screen-overlay active">
       <header class="app-header">
-        <h1>Charakter-Editor & Shop</h1>
-        <p>Gestalte deinen Läufer &amp; kaufe neue Styles mit Spielgeld</p>
+        <h1>Charakter-Studio &amp; Kleiderschrank</h1>
+        <p>Style deine Figur mit deinen Sachen – neue Kleidung gibt es in der 👗 Mode-Boutique auf der Stadt-Straße!</p>
         <div class="coin-wallet-bar">
           <span class="coin-pill">🪙 Spielgeld: <strong id="editorCoinsVal">0</strong></span>
           <span class="level-pill">🏆 Level <strong id="editorLevelVal">1</strong></span>
           <button type="button" id="openEarnEditorBtn" class="btn btn-earn">💰 Geld verdienen</button>
-          <button type="button" id="mysteryBoxBtn" class="btn btn-mystery">🎁 Überraschungs-Kiste (65 🪙)</button>
         </div>
-        <p id="editorNextLevelHint" class="next-level-hint"></p>
         <div id="shopToast" class="shop-toast hidden"></div>
       </header>
 
@@ -119,11 +117,12 @@
           </fieldset>
 
           <div class="editor-cta-row">
-            <button id="toTownBtn" class="btn btn-town btn-large">🏙️ Zur Traumstadt (Alles verbunden)</button>
+            <button type="button" id="editorGoBoutiqueBtn" class="btn btn-primary btn-large">👗 Neue Outfits in der Mode-Boutique (Stadt-Straße) kaufen</button>
+            <button id="toTownBtn" class="btn btn-town btn-large">🏙️ Zur Traumstadt (Einkaufsstraße)</button>
             <button id="toHomeBtn" class="btn btn-home btn-large">🏡 Mein Haus &amp; Garten</button>
             <button id="toIceCreamBtn" class="btn btn-icecream btn-large">🍦 Beruf: Café &amp; Eisdiele</button>
             <button id="toPetSitBtn" class="btn btn-petsit btn-large">🐾 Beruf: Hundesitting bei Nachbarn</button>
-            <button id="toBgSelectBtn" class="btn btn-primary btn-large">Weiter zur Hintergrundauswahl ➔</button>
+            <button id="toBgSelectBtn" class="btn btn-secondary btn-large">Weiter zur Hintergrundauswahl ➔</button>
           </div>
         </div>
       </div>
@@ -153,8 +152,8 @@
     <!-- State: Traumstadt (Connected Open Town) Overlay -->
     <div id="town-screen" class="screen-overlay hidden">
       <header class="app-header ice-compact-header">
-        <h1>🏙️ Traumstadt – Alles offen verbunden!</h1>
-        <p>Lauf frei durch die ganze Stadt ohne Türen im Weg – nur in den Garten geht es durch das Gartentor!</p>
+        <h1>🏙️ Traumstadt – Wohnviertel &amp; Einkaufsstraße</h1>
+        <p>Lauf von deinem Zuhause über die gepflasterte Einkaufsstraße in alle Geschäfte!</p>
         <div class="coin-wallet-bar">
           <span class="coin-pill">🪙 Spielgeld: <strong id="townCoinsVal">0</strong></span>
           <span class="level-pill">🏆 Level <strong id="townLevelVal">1</strong></span>
@@ -187,8 +186,8 @@
 
         <aside class="ice-menu-column">
           <div class="ice-menu-header">
-            <h2>🗺️ Orte in der Traumstadt</h2>
-            <span>Tippe auf einen Ort, um direkt dorthin zu laufen!</span>
+            <h2>🗺️ Orte &amp; Geschäfte</h2>
+            <span>Tippe auf eine Straße oder ein Geschäft, um direkt dorthin zu laufen!</span>
           </div>
           <div id="townDistrictBar" class="ice-flavor-bar"></div>
         </aside>
@@ -203,13 +202,11 @@
         <div class="coin-wallet-bar">
           <span class="coin-pill">🪙 Spielgeld: <strong id="homeCoinsVal">0</strong></span>
           <span class="level-pill">🏆 Level <strong id="homeLevelVal">1</strong></span>
-          <span class="supply-pill">🥘 Zutaten: <strong id="foodCountVal">3</strong></span>
+          <span class="supply-pill">🧊 Kühlschrank: <strong id="foodCountVal">5</strong></span>
           <span class="supply-pill">🦴 Tierfutter: <strong id="petFoodCountVal">3</strong></span>
           <button type="button" id="openEarnHomeBtn" class="btn btn-earn">💰 Geld verdienen</button>
-          <button type="button" id="homeMysteryBtn" class="btn btn-mystery">🎁 Haus-Überraschung (75 🪙)</button>
           <button type="button" id="homeMailboxBtn" class="btn btn-mailbox">📬 Briefkasten</button>
         </div>
-        <p id="homeNextLevelHint" class="next-level-hint"></p>
         <div id="homeToast" class="shop-toast hidden"></div>
       </header>
 
@@ -227,7 +224,14 @@
             <div id="homePetRoomBar" class="home-pet-room-bar hidden">
               <button type="button" id="homePickAllPetsBtn" class="btn btn-small btn-primary">🐾 Alle Tiere abholen</button>
               <button type="button" id="homeLeaveAllPetsBtn" class="btn btn-small btn-secondary">🏠 Alle im Tierzimmer lassen</button>
-              <button type="button" id="homeOpenPetShopBtn" class="btn btn-small btn-home">🧸 Tiersachen kaufen</button>
+              <button type="button" id="homeOpenPetShopBtn" class="btn btn-small btn-home">🐾 Zur Tierhandlung (Stadt)</button>
+            </div>
+            <div id="homeFridgeBar" class="home-pet-room-bar hidden">
+              <span id="homeFridgeStockSummary" class="fridge-stock-pill"></span>
+              <button type="button" id="homeFridgeEatSnackBtn" class="btn btn-small btn-primary">🍓 Snack aus Kühlschrank</button>
+              <button type="button" id="homeFridgeCookBtn" class="btn btn-small btn-secondary">🍳 Zum Herd &amp; Kochen</button>
+              <button type="button" id="homeFridgeMarketBtn" class="btn btn-small btn-home">🛒 Zum Supermarkt (Stadt)</button>
+              <button type="button" id="homeFridgeCloseBtn" class="btn btn-small btn-secondary">✖ Zu</button>
             </div>
             <div class="home-walk-pad">
               <button type="button" id="homeWalkLeftBtn" class="walk-pad-btn" aria-label="Nach links gehen">◀ Links</button>
@@ -265,17 +269,12 @@
           </div>
 
           <div class="home-nav-row">
-            <button type="button" id="homeToTownBtn" class="btn btn-town">🏙️ In die Stadt</button>
-            <button type="button" id="homeToEditorBtn" class="btn btn-secondary">✏️ Zurück zum Editor</button>
+            <button type="button" id="homeToTownBtn" class="btn btn-town">🛍️ Geschäfte in der Stadt</button>
+            <button type="button" id="homeToEditorBtn" class="btn btn-secondary">👗 Charakter &amp; Kleiderschrank</button>
             <button type="button" id="homeToPetSitBtn" class="btn btn-petsit">🐾 Zu den Nachbarn (Hundesitting)</button>
             <button type="button" id="homeToIceCreamBtn" class="btn btn-icecream">🍦 Beruf: Café &amp; Eisdiele</button>
             <button type="button" id="homeToGameBtn" class="btn btn-primary">🏃 Rennen starten &amp; Geld verdienen</button>
           </div>
-        </div>
-
-        <div class="home-shop-column">
-          <div id="homeShopTabs" class="home-shop-tabs"></div>
-          <div id="homeShopGrid" class="home-shop-grid"></div>
         </div>
       </div>
     </div>
@@ -515,7 +514,7 @@
           <div class="modal-actions">
             <button id="restartBtn" class="btn btn-primary">🔄 Nochmal versuchen</button>
             <button id="homeReturnBtn" class="btn btn-home">🏡 Zum Haus &amp; Garten</button>
-            <button id="editorReturnBtn" class="btn btn-secondary">🛍️ Charakter &amp; Shop</button>
+            <button id="editorReturnBtn" class="btn btn-secondary">👗 Charakter &amp; Kleiderschrank</button>
           </div>
         </div>
       </div>
@@ -550,6 +549,30 @@
         <div id="mailboxToast" class="shop-toast hidden"></div>
         <div id="mailboxTabs" class="earn-tabs"></div>
         <div id="mailboxBody" class="earn-tab-body"></div>
+      </div>
+    </div>
+
+    <!-- Town Street Store Interior Modal -->
+    <div id="town-shop-modal" class="modal hidden">
+      <div class="earn-modal-content town-shop-modal-content">
+        <div class="earn-modal-header">
+          <div>
+            <h2 id="townShopTitle">🛒 Geschäft</h2>
+            <p id="townShopSubtitle" class="town-shop-subtitle"></p>
+            <div class="coin-wallet-bar town-shop-wallet-row">
+              <span class="coin-pill">🪙 Spielgeld: <strong id="townShopCoinsVal">0</strong></span>
+              <span class="level-pill">🏆 Level <strong id="townShopLevelVal">1</strong></span>
+            </div>
+          </div>
+          <button type="button" id="closeTownShopBtn" class="btn btn-small btn-secondary" aria-label="Geschäft verlassen">✖</button>
+        </div>
+        <div id="townShopToast" class="shop-toast hidden"></div>
+        <div id="townShopBanner"></div>
+        <div id="townShopTabs" class="home-shop-tabs"></div>
+        <div id="townShopBody" class="earn-tab-body"></div>
+        <div class="town-shop-footer">
+          <button type="button" id="townShopBackStreetBtn" class="btn btn-secondary">🚶 Zurück auf die Einkaufsstraße</button>
+        </div>
       </div>
     </div>
   </div>

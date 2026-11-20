@@ -25,8 +25,8 @@ export function setupEditorUI(stateManager) {
 
   const editorCoinsVal = document.getElementById('editorCoinsVal');
   const editorLevelVal = document.getElementById('editorLevelVal');
-  const mysteryBoxBtn = document.getElementById('mysteryBoxBtn');
   const shopToast = document.getElementById('shopToast');
+  const goBoutiqueBtn = document.getElementById('editorGoBoutiqueBtn');
 
   const stickerSelect = document.getElementById('stickerSelect');
   const addStickerBtn = document.getElementById('addStickerBtn');
@@ -54,17 +54,6 @@ export function setupEditorUI(stateManager) {
     const level = ShopManager.getStats().level;
     if (editorLevelVal) {
       editorLevelVal.textContent = level;
-    }
-    const nextHintEl = document.getElementById('editorNextLevelHint');
-    if (nextHintEl) {
-      const nextLv = level + 1;
-      const nextShop = ShopManager.getItemsForLevel(nextLv);
-      if (nextShop.length > 0) {
-        const names = nextShop.slice(0, 3).map((i) => `${i.icon} ${i.name}`).join(' · ');
-        nextHintEl.textContent = `✨ Ab Level ${nextLv} neu im Shop: ${names}${nextShop.length > 3 ? ' …' : ''}`;
-      } else {
-        nextHintEl.textContent = `🏆 Level ${level}: Alle Charakter-Stufen freigeschaltet!`;
-      }
     }
   }
 
@@ -203,59 +192,29 @@ export function setupEditorUI(stateManager) {
   }
 
   function handleItemClick(category, item) {
-    if (ShopManager.isUnlocked(category, item.id)) {
-      setSelectedId(category, item.id);
-      renderAllShopGrids();
-      updatePreview();
-      return;
-    }
-
-    if (!ShopManager.isLevelUnlocked(item)) {
-      showToast(`🔒 "${item.name}" schaltest du ab Level ${item.unlockLevel} frei! Sammle Punkte durch Laufen, Jobs oder Briefe.`, 'warn');
-      return;
-    }
-
-    const res = ShopManager.buyItem(category, item.id);
-    if (res.ok) {
-      setSelectedId(category, item.id);
-      updateWalletUI();
-      renderAllShopGrids();
-      updatePreview();
-      showToast(`🎉 "${item.name}" für ${res.price} 🪙 gekauft & ausgerüstet!`, 'success');
-    } else if (res.reason === 'insufficient_funds') {
-      showToast(`🔒 Noch ${res.missing} 🪙 nötig für "${item.name}"! Sammle Münzen im Lauf oder löse Rätsel.`, 'warn');
-    } else if (res.reason === 'level_locked') {
-      showToast(`🔒 Ab Level ${res.requiredLevel} kaufbar!`, 'warn');
-    }
+    if (!ShopManager.isUnlocked(category, item.id)) return;
+    setSelectedId(category, item.id);
+    renderAllShopGrids();
+    updatePreview();
   }
 
   function renderCategoryGrid(container, category) {
     if (!container) return;
-    const items = SHOP_CATALOG[category] || [];
+    // Wardrobe mode: only show owned items (buying happens in the City Street Boutique!)
+    const items = (SHOP_CATALOG[category] || []).filter((item) => ShopManager.isUnlocked(category, item.id));
     const currentId = getSelectedId(category);
-    const coins = ShopManager.getCoins();
 
     container.innerHTML = '';
     items.forEach((item) => {
-      const unlocked = ShopManager.isUnlocked(category, item.id);
-      const levelOk = ShopManager.isLevelUnlocked(item);
       const selected = currentId === item.id;
-      const effectivePrice = ShopManager.getEffectivePrice(category, item);
-      const isDeal = !unlocked && levelOk && ShopManager.isDailyDeal(category, item.id);
-      const canAfford = levelOk && coins >= effectivePrice;
-
       const btn = document.createElement('button');
       btn.type = 'button';
 
       if (category === 'ability') {
-        btn.className = `ability-shop-card${selected ? ' selected' : ''}${!unlocked ? ' locked' : ''}${!unlocked && canAfford ? ' affordable' : ''}${!unlocked && !levelOk ? ' level-locked' : ''}`;
+        btn.className = `ability-shop-card${selected ? ' selected' : ''}`;
         const statusHtml = selected
           ? '<span class="shop-tag shop-tag-active">Aktiv</span>'
-          : unlocked
-            ? '<span class="shop-tag shop-tag-owned">Besitz</span>'
-            : !levelOk
-              ? `<span class="shop-tag shop-tag-owned">🔒 Level ${item.unlockLevel}</span>`
-              : `<span class="shop-tag shop-tag-price">${isDeal ? '🔥 ' : '🔒 '}${effectivePrice} 🪙</span>`;
+          : '<span class="shop-tag shop-tag-owned">Besitz</span>';
 
         btn.innerHTML = `
           <div class="ability-shop-top">
@@ -265,27 +224,10 @@ export function setupEditorUI(stateManager) {
           <p>${item.description}</p>
         `;
       } else {
-        btn.className = `shop-item-btn${selected ? ' selected' : ''}${!unlocked ? ' locked' : ''}${!unlocked && canAfford ? ' affordable' : ''}${!unlocked && !levelOk ? ' level-locked' : ''}`;
-        const badgeText = selected
-          ? '✓ Aktiv'
-          : unlocked
-            ? 'Frei'
-            : !levelOk
-              ? `🔒 Ab Lv.${item.unlockLevel}`
-              : isDeal
-                ? `🔥 ${effectivePrice} 🪙`
-                : `🔒 ${effectivePrice} 🪙`;
-
-        const cornerBadge = !unlocked && !levelOk
-          ? `<span class="item-corner-tag new">Lv.${item.unlockLevel}</span>`
-          : !unlocked && isDeal
-            ? '<span class="item-corner-tag deal">-30%</span>'
-            : item.isNew && !unlocked
-              ? '<span class="item-corner-tag new">NEU</span>'
-              : '';
+        btn.className = `shop-item-btn${selected ? ' selected' : ''}`;
+        const badgeText = selected ? '✓ Aktiv' : 'Anziehen';
 
         btn.innerHTML = `
-          ${cornerBadge}
           <span class="shop-item-icon">${item.icon}</span>
           <span class="shop-item-name">${item.name}</span>
           <span class="shop-item-badge">${badgeText}</span>
@@ -413,32 +355,9 @@ export function setupEditorUI(stateManager) {
     }
   }
 
-  if (mysteryBoxBtn) {
-    mysteryBoxBtn.addEventListener('click', () => {
-      const res = ShopManager.buyMysteryBox();
-      if (res.ok) {
-        if (res.category !== 'background') {
-          setSelectedId(res.category, res.item.id);
-        }
-        updateWalletUI();
-        renderAllShopGrids();
-        updatePreview();
-        const catLabels = {
-          face: 'Gesicht',
-          hair: 'Frisur',
-          top: 'Oberteil',
-          pants: 'Hose',
-          shoes: 'Schuhe',
-          ability: 'Fähigkeit',
-          background: 'Welt'
-        };
-        const label = catLabels[res.category] || 'Extra';
-        showToast(`🎁 Überraschung! Neue ${label} freigeschaltet: ${res.item.icon || ''} ${res.item.name}!`, 'success');
-      } else if (res.reason === 'all_unlocked') {
-        showToast('🏆 Wow! Du besitzt schon alle Items im Spiel!', 'info');
-      } else if (res.reason === 'insufficient_funds') {
-        showToast(`🔒 Noch ${res.missing} 🪙 nötig für die Überraschungs-Kiste!`, 'warn');
-      }
+  if (goBoutiqueBtn) {
+    goBoutiqueBtn.addEventListener('click', () => {
+      stateManager.setState('TOWN', { from: 'EDITOR', openShop: 'boutique' });
     });
   }
 
@@ -449,7 +368,7 @@ export function setupEditorUI(stateManager) {
   const toTownBtn = document.getElementById('toTownBtn');
   if (toTownBtn) {
     toTownBtn.addEventListener('click', () => {
-      stateManager.setState('TOWN');
+      stateManager.setState('TOWN', { from: 'EDITOR' });
     });
   }
 

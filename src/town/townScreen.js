@@ -4,12 +4,14 @@ import { ShopManager } from '../editor/shopData.js';
 import { HomeManager } from '../home/homeData.js';
 import { MailboxManager } from '../mailbox/mailboxData.js';
 import { PetFollowerController } from '../home/petCompanion.js';
+import { setupTownShopModal } from './townShops.js';
 
-const WORLD_WIDTH = 2240;
+const WORLD_WIDTH = 3100;
 const GARDEN_LEFT_X = 280;
 const GARDEN_RIGHT_X = 560;
 const LEFT_GATE_X = 280;
 const RIGHT_GATE_X = 560;
+const STREET_START_X = 1170;
 
 export const TOWN_PLACES = [
   {
@@ -20,7 +22,7 @@ export const TOWN_PLACES = [
     targetState: 'HOME',
     badge: 'Betreten',
     color: '#ec4899',
-    desc: 'Geh in dein offenes Haus (keine Türen im Weg!)'
+    desc: 'Dein offenes Zuhause (ohne Türen im Weg)'
   },
   {
     id: 'garden',
@@ -28,49 +30,79 @@ export const TOWN_PLACES = [
     x: 420,
     y: 320,
     targetState: 'HOME_GARDEN',
-    badge: 'Durchs Gartentor!',
+    badge: 'Durchs Gartentor',
     color: '#10b981',
-    desc: 'Eingezäunter Garten mit Gartentor & Blick aufs ganze Haus'
+    desc: 'Eingezäunter Garten mit Gartentor & Blick aufs Haus'
   },
   {
     id: 'neighbors',
     label: '🐾 Nachbarn & Hunde',
-    x: 840,
+    x: 880,
     y: 274,
     targetState: 'PETSITTING',
     badge: 'Hundesitting',
     color: '#8b5cf6',
-    desc: 'Herr Weber, Oma Frieda & Frau Kaya warten vor ihren Häusern'
+    desc: 'Herr Weber, Oma Frieda & Frau Kaya warten draußen'
+  },
+  {
+    id: 'supermarket',
+    label: '🛒 Supermarkt',
+    x: 1350,
+    y: 266,
+    shopId: 'supermarket',
+    badge: 'Essen kaufen',
+    color: '#10b981',
+    desc: 'Frisches Essen & Zutaten für deinen Kühlschrank'
+  },
+  {
+    id: 'boutique',
+    label: '👗 Mode-Boutique',
+    x: 1665,
+    y: 266,
+    shopId: 'boutique',
+    badge: 'Kleidung kaufen',
+    color: '#db2777',
+    desc: 'Outfits, Schuhe, Frisuren, Gesichter & Fähigkeiten'
+  },
+  {
+    id: 'furniture',
+    label: '🛋️ Möbel & Bau',
+    x: 1980,
+    y: 266,
+    shopId: 'furniture',
+    badge: 'Möbel & Zimmer',
+    color: '#f59e0b',
+    desc: 'Neue Räume, Möbel, Deko, Garten & Haus-Geräte'
+  },
+  {
+    id: 'petshop',
+    label: '🐾 Tierhandlung',
+    x: 2295,
+    y: 266,
+    shopId: 'petshop',
+    badge: 'Tiere & Futter',
+    color: '#0ea5e9',
+    desc: 'Haustiere, Tiersachen fürs Tierzimmer & Tierfutter'
   },
   {
     id: 'cafe',
     label: '🍦 Café & Eisdiele',
-    x: 1360,
-    y: 268,
+    x: 2610,
+    y: 266,
     targetState: 'ICECREAM',
     badge: 'Arbeiten',
     color: '#f43f5e',
-    desc: 'Eis, Waffeln, warmes Essen & Getränke an Tische servieren'
-  },
-  {
-    id: 'boutique',
-    label: '🛍️ Style-Boutique',
-    x: 1715,
-    y: 268,
-    targetState: 'EDITOR',
-    badge: 'Shop & Outfit',
-    color: '#0284c7',
-    desc: 'Neue Haare, Outfits, Sticker & Fähigkeiten kaufen'
+    desc: 'Eis, Waffeln, warmes Essen & Getränke servieren'
   },
   {
     id: 'stadium',
     label: '🏃 Renn-Stadion',
-    x: 2045,
-    y: 268,
+    x: 2925,
+    y: 266,
     targetState: 'BACKGROUND_SELECT',
     badge: 'Rennen starten',
-    color: '#f59e0b',
-    desc: 'Starte dein Rennen durch Traumwelten & sammle Münzen'
+    color: '#eab308',
+    desc: 'Rennen durch Traumwelten & Münzen sammeln'
   }
 ];
 
@@ -92,15 +124,19 @@ export function setupTownScreen(stateManager) {
   const toHomeBtn = document.getElementById('townToHomeBtn');
   const toEditorBtn = document.getElementById('townToEditorBtn');
 
+  const shopModal = setupTownShopModal(stateManager, {
+    onPurchaseComplete: () => updateCoinsUI()
+  });
+
   let rafId = null;
   let animFrame = 0;
   let cameraX = 0;
-  let leftGateOpen = 0;  // 0..1 swing animation for Garden Gate
-  let rightGateOpen = 0; // 0..1 swing animation for Neighbor Garden Gate
+  let leftGateOpen = 0;
+  let rightGateOpen = 0;
 
   const player = {
-    x: 195,
-    y: 282,
+    x: 1310,
+    y: 268,
     facing: 1,
     waypoints: [],
     pendingPlace: null,
@@ -109,6 +145,12 @@ export function setupTownScreen(stateManager) {
 
   const petFollowers = new PetFollowerController();
   const fxParticles = [];
+
+  const streetCars = [
+    { x: 1320, speed: 1.5, color: '#f43f5e', roof: '#ffe4e6', dir: 1 },
+    { x: 2050, speed: 1.25, color: '#0284c7', roof: '#e0f2fe', dir: -1 },
+    { x: 2640, speed: 1.65, color: '#fbbf24', roof: '#fef3c7', dir: 1 }
+  ];
 
   const keys = { left: false, right: false, up: false, down: false };
   const holdPad = { left: false, right: false, up: false, down: false };
@@ -120,7 +162,7 @@ export function setupTownScreen(stateManager) {
 
   function getNearestPlace(px, py) {
     let best = null;
-    let bestDist = 135;
+    let bestDist = 130;
     TOWN_PLACES.forEach((p) => {
       const d = Math.hypot(px - p.x, py - p.y);
       if (d < bestDist) {
@@ -133,6 +175,10 @@ export function setupTownScreen(stateManager) {
 
   function enterPlace(place) {
     if (!place) return;
+    if (place.shopId) {
+      shopModal.openShop(place.shopId, place.preferredTab || null);
+      return;
+    }
     if (place.targetState === 'HOME_GARDEN') {
       stateManager.setState('HOME', { room: 'garden' });
     } else if (place.targetState === 'HOME') {
@@ -142,17 +188,15 @@ export function setupTownScreen(stateManager) {
     }
   }
 
-  // Routes character cleanly, ALWAYS passing through the Gartentor when entering/leaving the Garden!
   function navigateInTown(tx, ty, pendingPlace = null) {
     const clampedX = Math.max(48, Math.min(WORLD_WIDTH - 48, tx));
-    const clampedY = Math.max(246, Math.min(430, ty));
+    const clampedY = Math.max(242, Math.min(434, ty));
     const startInGarden = player.x > GARDEN_LEFT_X + 6 && player.x < GARDEN_RIGHT_X - 6;
     const endInGarden = clampedX > GARDEN_LEFT_X + 6 && clampedX < GARDEN_RIGHT_X - 6;
     const waypoints = [];
 
     const gateY = 304;
     if (!startInGarden && endInGarden) {
-      // Must go through left or right Gartentor!
       const gateX = player.x <= LEFT_GATE_X + 120 ? LEFT_GATE_X : RIGHT_GATE_X;
       waypoints.push({ x: gateX + (gateX === LEFT_GATE_X ? -24 : 24), y: gateY });
       waypoints.push({ x: gateX + (gateX === LEFT_GATE_X ? 28 : -28), y: gateY });
@@ -161,7 +205,6 @@ export function setupTownScreen(stateManager) {
       waypoints.push({ x: gateX + (gateX === LEFT_GATE_X ? 26 : -26), y: gateY });
       waypoints.push({ x: gateX + (gateX === LEFT_GATE_X ? -28 : 28), y: gateY });
     } else if (player.x <= LEFT_GATE_X && clampedX >= RIGHT_GATE_X) {
-      // Crossing past garden via the sidewalk in front of the fence (y = 264), no gate needed unless stepping inside!
       waypoints.push({ x: clampedX, y: Math.min(266, clampedY) });
     } else if (player.x >= RIGHT_GATE_X && clampedX <= LEFT_GATE_X) {
       waypoints.push({ x: clampedX, y: Math.min(266, clampedY) });
@@ -200,7 +243,7 @@ export function setupTownScreen(stateManager) {
       if (near) {
         enterPlace(near);
       } else if (statusEl) {
-        statusEl.textContent = 'Lauf ein Stück näher an ein Haus, den Garten, das Café oder die Boutique heran!';
+        statusEl.textContent = 'Lauf ein Stück näher an ein Geschäft, Haus, Café oder den Garten heran!';
       }
     });
   }
@@ -214,7 +257,6 @@ export function setupTownScreen(stateManager) {
       const worldX = screenX + cameraX;
       const worldY = (e.clientY - rect.top) * scaleY;
 
-      // Tap on a companion pet walking with you?
       const petTap = petFollowers.handleTap(worldX, worldY);
       if (petTap.hit) {
         for (let i = 0; i < 6; i++) {
@@ -230,16 +272,15 @@ export function setupTownScreen(stateManager) {
         return;
       }
 
-      // Clicked directly on the Mailbox outside Dein Haus?
       if (HomeManager.hasMailbox() && worldX >= 220 && worldX <= 268 && worldY >= 165 && worldY <= 250) {
         window.dispatchEvent(new CustomEvent('runner:open-mailbox', { detail: { tab: 'inbox' } }));
         return;
       }
 
-      // Clicked directly on one of the town landmarks?
       for (const p of TOWN_PLACES) {
-        if (Math.abs(worldX - p.x) <= 96 && worldY >= 55 && worldY <= 360) {
+        if (Math.abs(worldX - p.x) <= 98 && worldY >= 55 && worldY <= 278) {
           navigateInTown(p.x, p.y, p);
+          if (statusEl) statusEl.textContent = `🚶 Du läufst zu: ${p.label} – ${p.desc}`;
           return;
         }
       }
@@ -311,15 +352,12 @@ export function setupTownScreen(stateManager) {
     const nextX = Math.max(42, Math.min(WORLD_WIDTH - 42, player.x + dx));
     const nextY = Math.max(242, Math.min(434, player.y + dy));
 
-    // Only block the garden fence perimeter (y >= 278) EXCEPT at the two Gartentor openings (y: 284..332)!
     const atGatePassage = (y) => y >= 282 && y <= 336;
     const isFenceBlocked = (oldX, newX, y) => {
-      if (y < 276) return false; // In front of garden along the town sidewalk
-      // Crossing left fence wall (LEFT_GATE_X)
+      if (y < 276) return false;
       if ((oldX <= LEFT_GATE_X && newX > LEFT_GATE_X) || (oldX >= LEFT_GATE_X && newX < LEFT_GATE_X)) {
         if (!atGatePassage(y)) return true;
       }
-      // Crossing right fence wall (RIGHT_GATE_X)
       if ((oldX <= RIGHT_GATE_X && newX > RIGHT_GATE_X) || (oldX >= RIGHT_GATE_X && newX < RIGHT_GATE_X)) {
         if (!atGatePassage(y)) return true;
       }
@@ -340,7 +378,7 @@ export function setupTownScreen(stateManager) {
     if (keys.up || holdPad.up) moveY -= 1;
     if (keys.down || holdPad.down) moveY += 1;
 
-    const speed = 5.4;
+    const speed = 5.6;
     if (moveX !== 0 || moveY !== 0) {
       const len = Math.hypot(moveX, moveY) || 1;
       moveWithGardenFence((moveX / len) * speed, (moveY / len) * speed);
@@ -370,19 +408,23 @@ export function setupTownScreen(stateManager) {
       player.pose = 'idle';
     }
 
-    // Animate swinging Gartentor when player approaches either gate!
+    // Move cute background cars along the shopping street road!
+    streetCars.forEach((car) => {
+      car.x += car.speed * car.dir;
+      if (car.dir > 0 && car.x > WORLD_WIDTH - 40) car.x = STREET_START_X + 20;
+      if (car.dir < 0 && car.x < STREET_START_X + 20) car.x = WORLD_WIDTH - 40;
+    });
+
     const nearLeftGate = Math.abs(player.x - LEFT_GATE_X) < 58 && player.y >= 265;
     const nearRightGate = Math.abs(player.x - RIGHT_GATE_X) < 58 && player.y >= 265;
     leftGateOpen += ((nearLeftGate ? 1 : 0) - leftGateOpen) * 0.16;
     rightGateOpen += ((nearRightGate ? 1 : 0) - rightGateOpen) * 0.16;
 
-    // Smooth camera follow across the 2240px town
     if (canvas) {
       const targetCam = Math.max(0, Math.min(WORLD_WIDTH - canvas.width, player.x - canvas.width * 0.45));
       cameraX += (targetCam - cameraX) * 0.12;
     }
 
-    // Update nearby landmark prompt button
     const near = getNearestPlace(player.x, player.y);
     if (enterPlaceBtn) {
       if (near) {
@@ -390,14 +432,13 @@ export function setupTownScreen(stateManager) {
         enterPlaceBtn.textContent = `✨ ${near.label} (${near.badge})`;
       } else {
         enterPlaceBtn.disabled = true;
-        enterPlaceBtn.textContent = '🚶 Lauf zu einem Ort in der Stadt';
+        enterPlaceBtn.textContent = '🚶 Lauf zu einem Geschäft oder Ort';
       }
     }
   }
 
   function drawTownHouseBuilding(x, y, w, h, roofColor, wallColor, label, openArch = true) {
     ctx.save();
-    // Walls
     ctx.fillStyle = wallColor;
     ctx.beginPath();
     ctx.roundRect(x - w / 2, y + 48, w, h - 48, [10]);
@@ -406,7 +447,6 @@ export function setupTownScreen(stateManager) {
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // Pitched roof
     ctx.fillStyle = roofColor;
     ctx.beginPath();
     ctx.moveTo(x - w / 2 - 14, y + 54);
@@ -415,7 +455,6 @@ export function setupTownScreen(stateManager) {
     ctx.closePath();
     ctx.fill();
 
-    // Windows
     [x - w * 0.28, x + w * 0.15].forEach((wx) => {
       ctx.fillStyle = '#bae6fd';
       ctx.beginPath();
@@ -426,7 +465,6 @@ export function setupTownScreen(stateManager) {
       ctx.stroke();
     });
 
-    // Open entrance archway (no closed blocking door!)
     if (openArch) {
       const archG = ctx.createLinearGradient(0, y + 84, 0, y + h);
       archG.addColorStop(0, '#fdf2f8');
@@ -440,7 +478,6 @@ export function setupTownScreen(stateManager) {
       ctx.stroke();
     }
 
-    // Banner sign
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.roundRect(x - 84, y + h - 10, 168, 24, [12]);
@@ -451,6 +488,221 @@ export function setupTownScreen(stateManager) {
     ctx.textBaseline = 'middle';
     ctx.fillText(label, x, y + h + 2);
     ctx.restore();
+  }
+
+  function drawShoppingStreetStore(opts) {
+    const { x, w = 224, h = 162, y = 66, wall, trim, awningA, awningB, signText, signColor, windowItems } = opts;
+    ctx.save();
+
+    // Main two-tone modern boutique/store building
+    ctx.fillStyle = wall;
+    ctx.beginPath();
+    ctx.roundRect(x - w / 2, y, w, h, [14, 14, 4, 4]);
+    ctx.fill();
+    ctx.strokeStyle = trim;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Decorative roof cornice
+    ctx.fillStyle = trim;
+    ctx.beginPath();
+    ctx.roundRect(x - w / 2 - 6, y - 8, w + 12, 16, [8]);
+    ctx.fill();
+
+    // Top Store Sign Board
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.roundRect(x - 92, y + 12, 184, 28, [12]);
+    ctx.fill();
+    ctx.strokeStyle = trim;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.font = '800 12px "Outfit", "Plus Jakarta Sans", sans-serif';
+    ctx.fillStyle = signColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(signText, x, y + 26);
+
+    // Striped Shop Awning
+    const stripeW = (w - 16) / 6;
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = i % 2 === 0 ? awningA : awningB;
+      ctx.beginPath();
+      ctx.roundRect(x - w / 2 + 8 + i * stripeW, y + 48, stripeW, 20, [0, 0, 8, 8]);
+      ctx.fill();
+    }
+
+    // Left Glass Display Window ("Schaufenster") with merchandise icons!
+    const winX = x - w / 2 + 16;
+    const winY = y + 76;
+    const winW = w * 0.48;
+    const winH = 66;
+    const winGrad = ctx.createLinearGradient(winX, winY, winX, winY + winH);
+    winGrad.addColorStop(0, '#e0f2fe');
+    winGrad.addColorStop(1, '#fffbeb');
+    ctx.fillStyle = winGrad;
+    ctx.beginPath();
+    ctx.roundRect(winX, winY, winW, winH, [10]);
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Merchandise inside Schaufenster
+    if (Array.isArray(windowItems)) {
+      ctx.font = '20px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      windowItems.forEach((icon, idx) => {
+        ctx.fillText(icon, winX + 22 + idx * 30, winY + 34);
+      });
+    }
+
+    // Open Shop Glass Entrance on Right Side
+    const doorW = 54;
+    const doorH = 78;
+    const doorX = x + w / 2 - doorW - 18;
+    const doorY = y + h - doorH;
+    const doorGrad = ctx.createLinearGradient(0, doorY, 0, y + h);
+    doorGrad.addColorStop(0, '#bae6fd');
+    doorGrad.addColorStop(1, '#fdf2f8');
+    ctx.fillStyle = doorGrad;
+    ctx.beginPath();
+    ctx.roundRect(doorX, doorY, doorW, doorH, [12, 12, 0, 0]);
+    ctx.fill();
+    ctx.strokeStyle = trim;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Open Sign on door
+    ctx.fillStyle = '#10b981';
+    ctx.beginPath();
+    ctx.roundRect(doorX + 6, doorY + 12, doorW - 12, 18, [8]);
+    ctx.fill();
+    ctx.font = '800 9.5px "Plus Jakarta Sans", sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('OFFEN', doorX + doorW / 2, doorY + 21);
+
+    ctx.restore();
+  }
+
+  function drawShoppingStreetEnvironment(h) {
+    // 1. Stone Sidewalk Promenade along all stores on the shopping street
+    const sidewalkG = ctx.createLinearGradient(0, 214, 0, 288);
+    sidewalkG.addColorStop(0, '#f8fafc');
+    sidewalkG.addColorStop(1, '#e2e8f0');
+    ctx.fillStyle = sidewalkG;
+    ctx.fillRect(STREET_START_X, 214, WORLD_WIDTH - STREET_START_X, 74);
+
+    // Sidewalk curb line
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(STREET_START_X, 284, WORLD_WIDTH - STREET_START_X, 6);
+
+    // 2. Real Asphalt City Street ("Stadt-Straße")!
+    const roadG = ctx.createLinearGradient(0, 290, 0, 392);
+    roadG.addColorStop(0, '#475569');
+    roadG.addColorStop(0.5, '#334155');
+    roadG.addColorStop(1, '#1e293b');
+    ctx.fillStyle = roadG;
+    ctx.fillRect(STREET_START_X, 290, WORLD_WIDTH - STREET_START_X, 102);
+
+    // Dashed White Road Center Markings
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    for (let rx = STREET_START_X + 20; rx < WORLD_WIDTH - 30; rx += 64) {
+      ctx.beginPath();
+      ctx.roundRect(rx, 338, 36, 6, [3]);
+      ctx.fill();
+    }
+
+    // Crisp Crosswalks ("Zebrastreifen") in front of shops!
+    [1350, 1665, 1980, 2295, 2610].forEach((cx) => {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
+      for (let sy = 296; sy <= 376; sy += 16) {
+        ctx.fillRect(cx - 28, sy, 56, 8);
+      }
+    });
+
+    // Lower Sidewalk Promenade & Flower Planters across the street
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillRect(STREET_START_X, 392, WORLD_WIDTH - STREET_START_X, h - 392);
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(STREET_START_X, 392, WORLD_WIDTH - STREET_START_X, 5);
+
+    // Warm Streetlamps & Green Flower Planters along Shopping Street
+    for (let lx = STREET_START_X + 35; lx < WORLD_WIDTH - 40; lx += 155) {
+      // Planter box
+      ctx.fillStyle = '#b45309';
+      ctx.beginPath();
+      ctx.roundRect(lx - 18, 266, 36, 16, [5]);
+      ctx.fill();
+      ctx.fillStyle = '#10b981';
+      ctx.beginPath();
+      ctx.arc(lx, 262, 13, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#f472b6';
+      ctx.beginPath();
+      ctx.arc(lx - 5, 259, 4, 0, Math.PI * 2);
+      ctx.arc(lx + 5, 261, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Streetlamp pole & warm lantern
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(lx + 42, 128, 5, 140);
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.arc(lx + 44.5, 126, 9, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Street Sign Banner at start of Shopping Street
+    ctx.save();
+    ctx.fillStyle = '#0284c7';
+    ctx.beginPath();
+    ctx.roundRect(STREET_START_X + 12, 146, 146, 30, [10]);
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.font = '800 11.5px "Outfit", sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🛍️ Einkaufsstraße ➔', STREET_START_X + 85, 161);
+    ctx.restore();
+  }
+
+  function drawStreetCars() {
+    streetCars.forEach((car) => {
+      const cy = car.dir > 0 ? 356 : 306;
+      const bounce = Math.sin(animFrame * 0.25 + car.x) * 0.8;
+      ctx.save();
+      ctx.translate(car.x, cy + bounce);
+      if (car.dir < 0) ctx.scale(-1, 1);
+
+      // Shadow
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.28)';
+      ctx.beginPath();
+      ctx.ellipse(0, 12, 26, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Car body
+      ctx.fillStyle = car.color;
+      ctx.beginPath();
+      ctx.roundRect(-24, -6, 48, 16, [8]);
+      ctx.fill();
+      ctx.fillStyle = car.roof;
+      ctx.beginPath();
+      ctx.roundRect(-14, -15, 26, 12, [7, 7, 0, 0]);
+      ctx.fill();
+
+      // Wheels
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(-13, 10, 5.5, 0, Math.PI * 2);
+      ctx.arc(13, 10, 5.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
   }
 
   function drawScene() {
@@ -484,24 +736,24 @@ export function setupTownScreen(stateManager) {
     ctx.closePath();
     ctx.fill();
 
-    // Grass & Town Sidewalk
+    // Residential Lawn (Left District x: 0..STREET_START_X)
     const grass = ctx.createLinearGradient(0, 215, 0, h);
     grass.addColorStop(0, '#4ade80');
     grass.addColorStop(1, '#10b981');
     ctx.fillStyle = grass;
-    ctx.fillRect(0, 215, WORLD_WIDTH, h - 215);
+    ctx.fillRect(0, 215, STREET_START_X, h - 215);
 
-    // Wide Open Town Promenade Sidewalk (no doors blocking!)
+    // Residential Promenade Sidewalk leading into the Shopping Street
     const walkGrad = ctx.createLinearGradient(0, 232, 0, 290);
     walkGrad.addColorStop(0, '#fef3c7');
     walkGrad.addColorStop(1, '#fde68a');
     ctx.fillStyle = walkGrad;
-    ctx.fillRect(0, 234, WORLD_WIDTH, 54);
+    ctx.fillRect(0, 234, STREET_START_X, 54);
     ctx.fillStyle = 'rgba(217, 119, 6, 0.16)';
-    ctx.fillRect(0, 234, WORLD_WIDTH, 4);
-    ctx.fillRect(0, 284, WORLD_WIDTH, 4);
+    ctx.fillRect(0, 234, STREET_START_X, 4);
+    ctx.fillRect(0, 284, STREET_START_X, 4);
 
-    // --- ZONE 1: DEIN TRAUMHAUS (with 2nd floor / conservatory if built!) ---
+    // --- ZONE 1: DEIN TRAUMHAUS ---
     const hasUpper = HomeManager.hasItem('expansions', 'bedroom');
     const hasConserv = HomeManager.hasItem('expansions', 'conservatory');
     if (hasUpper) {
@@ -519,7 +771,6 @@ export function setupTownScreen(stateManager) {
     }
     drawTownHouseBuilding(155, 76, 178, 146, '#ec4899', '#fff1f2', '🏡 Dein Haus (Offen!)', true);
 
-    // Physical Mailbox in front of Dein Haus in Traumstadt!
     if (HomeManager.hasMailbox()) {
       const isGold = HomeManager.hasItem('garden', 'gold_mailbox');
       const unread = MailboxManager.getUnreadCount();
@@ -550,14 +801,12 @@ export function setupTownScreen(stateManager) {
       ctx.restore();
     }
 
-    // --- ZONE 2: EINGEZÄUNTER GARTEN MIT GARTENTOR (right beside Dein Haus!) ---
-    // Garden lush lawn patch inside fence
+    // --- ZONE 2: EINGEZÄUNTER GARTEN MIT GARTENTOR ---
     ctx.fillStyle = '#22c55e';
     ctx.beginPath();
     ctx.roundRect(GARDEN_LEFT_X, 272, GARDEN_RIGHT_X - GARDEN_LEFT_X, 148, [12]);
     ctx.fill();
 
-    // Flowers, Apple Tree & Pool inside Garden
     [330, 360, 390].forEach((fx, i) => {
       ctx.fillStyle = '#15803d';
       ctx.fillRect(fx - 2, 344, 4, 16);
@@ -575,7 +824,6 @@ export function setupTownScreen(stateManager) {
       ctx.fill();
     }
 
-    // Garden label sign
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.roundRect(352, 384, 136, 24, [12]);
@@ -586,26 +834,21 @@ export function setupTownScreen(stateManager) {
     ctx.textBaseline = 'middle';
     ctx.fillText('🌳 Dein Garten', 420, 396);
 
-    // Front & Back Picket Fence around Garden (with Left & Right Gartentor!)
     ctx.fillStyle = '#ffffff';
     for (let fx = GARDEN_LEFT_X; fx <= GARDEN_RIGHT_X; fx += 22) {
-      // Back fence along sidewalk with entrance opening? Keep back fence closed so you go through the Gartentor!
       ctx.beginPath();
       ctx.roundRect(fx - 4, 260, 9, 26, [4, 4, 0, 0]);
       ctx.fill();
     }
     ctx.fillRect(GARDEN_LEFT_X, 270, GARDEN_RIGHT_X - GARDEN_LEFT_X, 5);
 
-    // Side fences with Swinging Gartentor openings at y = 285..335!
     const drawSideFenceAndGate = (fenceX, openProgress, gateLabel) => {
-      // Solid lower fence segments (below gate)
       ctx.fillStyle = '#ffffff';
       for (let fy = 338; fy <= 408; fy += 18) {
         ctx.beginPath();
         ctx.roundRect(fenceX - 4, fy, 10, 14, [3]);
         ctx.fill();
       }
-      // Hinged Swinging Gartentor!
       ctx.save();
       ctx.translate(fenceX, 286);
       ctx.rotate(-openProgress * 1.15);
@@ -618,7 +861,6 @@ export function setupTownScreen(stateManager) {
       ctx.stroke();
       ctx.restore();
 
-      // Floating Gate Badge
       ctx.fillStyle = openProgress > 0.35 ? '#10b981' : '#ffffff';
       ctx.beginPath();
       ctx.roundRect(fenceX - 42, 232, 84, 22, [11]);
@@ -632,12 +874,11 @@ export function setupTownScreen(stateManager) {
     drawSideFenceAndGate(LEFT_GATE_X, leftGateOpen, '🚪 Gartentor');
     drawSideFenceAndGate(RIGHT_GATE_X, rightGateOpen, '🚪 Gartentor');
 
-    // --- ZONE 3: NACHBARSCHAFT (3 Houses + Neighbors waving outside!) ---
+    // --- ZONE 3: NACHBARSCHAFT ---
     drawTownHouseBuilding(700, 74, 152, 148, '#f43f8e', '#ffe4e6', '🏠 Herr Weber', true);
     drawTownHouseBuilding(885, 74, 152, 148, '#f59e0b', '#fef3c7', '🏡 Oma Frieda', true);
     drawTownHouseBuilding(1070, 74, 152, 148, '#0284c7', '#e0f2fe', '🏘️ Frau Kaya', true);
 
-    // Friendly waving neighbors + dog badge in front
     [
       { x: 700, shirt: '#0284c7', icon: '🐕' },
       { x: 885, shirt: '#a855f7', icon: '🐱' },
@@ -657,43 +898,96 @@ export function setupTownScreen(stateManager) {
       ctx.fillText(n.icon, n.x + 28, 224);
     });
 
-    // --- ZONE 4: TRAUM-CAFÉ & EISDIELE ---
-    drawTownHouseBuilding(1360, 66, 220, 156, '#fb7185', '#fff1f2', '🍦 Traum-Café & Eisdiele', true);
-    // Striped Café Awning
-    for (let i = 0; i < 6; i++) {
-      ctx.fillStyle = i % 2 === 0 ? '#f43f8e' : '#ffffff';
-      ctx.beginPath();
-      ctx.roundRect(1264 + i * 32, 134, 32, 18, [0, 0, 8, 8]);
-      ctx.fill();
-    }
+    // --- ZONE 4: REAL CITY SHOPPING STREET ("Einkaufsstraße") WITH STORES! ---
+    drawShoppingStreetEnvironment(h);
 
-    // --- ZONE 5: STYLE-BOUTIQUE ---
-    drawTownHouseBuilding(1715, 70, 196, 152, '#a855f7', '#fdf4ff', '🛍️ Style-Boutique', true);
+    // 1. Supermarkt (Fridge Food!)
+    drawShoppingStreetStore({
+      x: 1350,
+      wall: '#ecfdf5',
+      trim: '#059669',
+      awningA: '#10b981',
+      awningB: '#ffffff',
+      signText: '🛒 SUPERMARKT',
+      signColor: '#047857',
+      windowItems: ['🍎', '🧀', '🥛']
+    });
 
-    // --- ZONE 6: RENN-STADION ARCH ---
+    // 2. Mode- & Style-Boutique (Outfits & Styles!)
+    drawShoppingStreetStore({
+      x: 1665,
+      wall: '#fdf2f8',
+      trim: '#db2777',
+      awningA: '#ec4899',
+      awningB: '#ffffff',
+      signText: '👗 MODE-BOUTIQUE',
+      signColor: '#be185d',
+      windowItems: ['👗', '👟', '👑']
+    });
+
+    // 3. Möbel- & Bau-Kaufhaus (Rooms, Furniture, Garden!)
+    drawShoppingStreetStore({
+      x: 1980,
+      wall: '#fffbeb',
+      trim: '#d97706',
+      awningA: '#f59e0b',
+      awningB: '#ffffff',
+      signText: '🛋️ MÖBEL & BAU',
+      signColor: '#b45309',
+      windowItems: ['🛋️', '📺', '🪴']
+    });
+
+    // 4. Tierhandlung (Pets & Pet Items!)
+    drawShoppingStreetStore({
+      x: 2295,
+      wall: '#f0f9ff',
+      trim: '#0284c7',
+      awningA: '#0ea5e9',
+      awningB: '#ffffff',
+      signText: '🐾 TIERHANDLUNG',
+      signColor: '#0369a1',
+      windowItems: ['🐶', '🐱', '🦴']
+    });
+
+    // 5. Traum-Café & Eisdiele
+    drawShoppingStreetStore({
+      x: 2610,
+      wall: '#fff1f2',
+      trim: '#e11d48',
+      awningA: '#f43f5e',
+      awningB: '#ffffff',
+      signText: '🍦 CAFÉ & EISDIELE',
+      signColor: '#be123c',
+      windowItems: ['🍦', '🧇', '🥤']
+    });
+
+    // 6. Renn-Stadion Arch at end of Street
     ctx.save();
     ctx.strokeStyle = '#f43f8e';
     ctx.lineWidth = 14;
     ctx.beginPath();
-    ctx.arc(2045, 222, 86, Math.PI, 0);
+    ctx.arc(2925, 222, 86, Math.PI, 0);
     ctx.stroke();
     ctx.strokeStyle = '#fbbf24';
     ctx.lineWidth = 6;
     ctx.beginPath();
-    ctx.arc(2045, 222, 76, Math.PI, 0);
+    ctx.arc(2925, 222, 76, Math.PI, 0);
     ctx.stroke();
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.roundRect(1955, 208, 180, 26, [13]);
+    ctx.roundRect(2835, 208, 180, 26, [13]);
     ctx.fill();
     ctx.font = '800 12px "Plus Jakarta Sans", sans-serif';
     ctx.fillStyle = '#be185d';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('🏃 Renn-Stadion (Start!)', 2045, 221);
+    ctx.fillText('🏃 Renn-Stadion (Start!)', 2925, 221);
     ctx.restore();
 
-    // Update & Draw Companion Pets following you through Traumstadt!
+    // Animated city cars on the road (drawn behind player when player is in foreground, or nicely along lane)
+    drawStreetCars();
+
+    // Companion Pets following player!
     petFollowers.update(player.x, player.y + 4, player.facing, {
       minX: 30,
       maxX: WORLD_WIDTH - 30,
@@ -708,7 +1002,7 @@ export function setupTownScreen(stateManager) {
       facing: player.facing
     });
 
-    // Draw Player Character walking freely through Town!
+    // Player Character
     ctx.save();
     ctx.translate(player.x, player.y);
     ctx.scale(0.84, 0.84);
@@ -736,17 +1030,20 @@ export function setupTownScreen(stateManager) {
 
     ctx.restore();
 
-    // Subtle minimap progress bar at top of canvas
+    // Banner at top of canvas
     ctx.save();
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.86)';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
     ctx.beginPath();
-    ctx.roundRect(w / 2 - 140, 10, 280, 22, [11]);
+    ctx.roundRect(w / 2 - 190, 10, 380, 22, [11]);
     ctx.fill();
     ctx.font = '800 11px "Outfit", sans-serif';
     ctx.fillStyle = '#271333';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('🏙️ TRAUMSTADT · Überall frei herumlaufen!', w / 2, 21);
+    const zoneLabel = player.x >= STREET_START_X
+      ? '🛍️ EINKAUFSSTRASSE · Geh in die Geschäfte!'
+      : '🏡 WOHNVIERTEL · Weiter rechts ist die Geschäftsstraße!';
+    ctx.fillText(zoneLabel, w / 2, 21);
     ctx.restore();
 
     rafId = requestAnimationFrame(drawScene);
@@ -771,14 +1068,27 @@ export function setupTownScreen(stateManager) {
 
   stateManager.onStateChange((newState, payload) => {
     if (newState === 'TOWN') {
-      if (payload && payload.from === 'HOME') {
+      if (payload && payload.openShop) {
+        const target = TOWN_PLACES.find((p) => p.shopId === payload.openShop);
+        if (target) {
+          player.x = target.x;
+          player.y = target.y;
+        }
+      } else if (payload && payload.from === 'HOME') {
         player.x = 155;
         player.y = 266;
       } else if (payload && payload.from === 'PETSITTING') {
-        player.x = 840;
+        player.x = 880;
         player.y = 274;
       } else if (payload && payload.from === 'ICECREAM') {
-        player.x = 1360;
+        player.x = 2610;
+        player.y = 266;
+      } else if (payload && payload.from === 'EDITOR') {
+        player.x = 1665;
+        player.y = 266;
+      } else {
+        // Default landing right on the Shopping Street so the user immediately sees the street & stores!
+        player.x = 1490;
         player.y = 268;
       }
       player.waypoints = [];
@@ -788,7 +1098,12 @@ export function setupTownScreen(stateManager) {
       updateCoinsUI();
       renderDistrictBar();
       startLoop();
+
+      if (payload && payload.openShop) {
+        shopModal.openShop(payload.openShop, payload.shopTab || null);
+      }
     } else {
+      shopModal.closeShop();
       stopLoop();
     }
   });
