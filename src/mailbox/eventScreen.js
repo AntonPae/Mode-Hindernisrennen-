@@ -390,15 +390,23 @@ export function setupEventScreen(stateManager) {
             ];
 
     const allTemplates = buildAllFriendTemplates();
-    const activeTemplates = allTemplates.filter((tpl) => {
-      if (!tpl.isNewPerson) return true;
+    const roommateId = SocialManager.getRoommate()?.id || null;
+    const metOrSenderNew = allTemplates.filter((tpl) => {
+      if (!tpl.isNewPerson) return false;
       const met = SocialManager.getAcquaintanceProgress(tpl.id).stage >= 1;
+      const isRoommate = roommateId === tpl.id;
       const isSender = senderName && senderName.toLowerCase().includes(tpl.name.toLowerCase());
-      return met || isSender;
+      return met || isRoommate || isSender;
     });
+    const unmetNew = allTemplates.filter((tpl) => tpl.isNewPerson && !metOrSenderNew.includes(tpl));
+    const activeTemplates = [
+      ...allTemplates.filter((tpl) => !tpl.isNewPerson),
+      ...metOrSenderNew,
+      ...unmetNew.slice(0, 2)
+    ];
 
     const chosenTemplates = kind === 'hide_and_seek'
-      ? activeTemplates.slice(0, 5)
+      ? [...activeTemplates.slice(0, 3), ...activeTemplates.filter((t) => t.isNewPerson).slice(0, 2)]
       : activeTemplates;
 
     return chosenTemplates.map((tpl, idx) => {
@@ -495,14 +503,23 @@ export function setupEventScreen(stateManager) {
   function renderFriendChatBar() {
     const petTargets = getEventPetTargets();
     const isPetTarget = typeof activeChatFriendId === 'string' && activeChatFriendId.startsWith('pet:');
+    const roommate = SocialManager.getRoommate();
 
     if (friendPillsEl) {
       friendPillsEl.innerHTML = '';
       eventFriends.forEach((f) => {
+        const isRoommate = roommate && roommate.id === f.id;
+        const isNew = f.isNewPerson && SocialManager.getAcquaintanceProgress(f.id).stage === 0;
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = `event-friend-pill${activeChatFriendId === f.id ? ' active' : ''}`;
-        btn.textContent = `${f.icon} ${f.name}`;
+        btn.className = `event-friend-pill${isNew ? ' new-person-pill' : ''}${activeChatFriendId === f.id ? ' active' : ''}`;
+        if (isRoommate) {
+          btn.textContent = `🏡 ${f.name} (WG)`;
+        } else if (isNew) {
+          btn.textContent = `🆕 ${f.name} kennenlernen`;
+        } else {
+          btn.textContent = `${f.icon} ${f.name}`;
+        }
         btn.addEventListener('click', () => selectFriendToTalk(f.id, true));
         friendPillsEl.appendChild(btn);
       });
@@ -539,8 +556,33 @@ export function setupEventScreen(stateManager) {
         praiseBtn.addEventListener('click', () => commandEventPet(targetPetId, { commandId: 'praise', text: 'Brav gemacht!' }));
         quickChatRowEl.appendChild(praiseBtn);
       } else {
-        if (chatInputEl) chatInputEl.placeholder = 'Schreib selbst etwas an deine Freunde...';
+        const activeFriend = eventFriends.find((fr) => fr.id === activeChatFriendId) || eventFriends[0];
+        if (chatInputEl) {
+          chatInputEl.placeholder = activeFriend
+            ? `Schreib etwas an ${activeFriend.name}...`
+            : 'Schreib selbst etwas an deine Freunde...';
+        }
         if (chatSendBtn) chatSendBtn.textContent = '💬 Sagen';
+
+        if (activeFriend?.isNewPerson) {
+          const isRoommate = roommate && roommate.id === activeFriend.id;
+          if (isRoommate) {
+            const goHomeBtn = document.createElement('button');
+            goHomeBtn.type = 'button';
+            goHomeBtn.className = 'talk-movein-btn';
+            goHomeBtn.textContent = '🏡 Gemeinsam ins Haus';
+            goHomeBtn.addEventListener('click', () => stateManager.setState('HOME', { room: 'living_room' }));
+            quickChatRowEl.appendChild(goHomeBtn);
+          } else {
+            const moveInBtn = document.createElement('button');
+            moveInBtn.type = 'button';
+            moveInBtn.className = 'talk-movein-btn';
+            moveInBtn.textContent = '🏡 Wollen wir zusammenziehen?';
+            moveInBtn.addEventListener('click', () => sayToFriend('Wollen wir zusammenziehen?'));
+            quickChatRowEl.appendChild(moveInBtn);
+          }
+        }
+
         QUICK_CHAT_LINES.forEach((line) => {
           const btn = document.createElement('button');
           btn.type = 'button';
@@ -601,7 +643,7 @@ export function setupEventScreen(stateManager) {
     player.pose = 'pet';
     player.poseTimer = 24;
 
-    const gen = generatePersonReply({ id: f.id, name: f.name, kind: 'friend' }, text, { scene: 'event' });
+    const gen = generatePersonReply({ id: f.id, name: f.name, kind: 'friend', isNewPerson: f.isNewPerson }, text, { scene: 'event' });
     const reply = f.isNewPerson ? gen.reply : (Math.random() < 0.55 ? gen.reply : f.replies[Math.floor(Math.random() * f.replies.length)]);
     f.facing = player.x < f.x ? -1 : 1;
     f.speechText = reply.length > 46 ? `${reply.slice(0, 43)}…` : reply;
@@ -614,12 +656,24 @@ export function setupEventScreen(stateManager) {
       chatReplyLineEl.textContent = `💬 Du: „${text}“  →  ${f.icon} ${f.name}: „${reply}“`;
     }
 
+    if (gen.movedIn) {
+      spawnFX('confetti', f.x, f.y - 60, 18);
+      refreshHeaderStats();
+      renderFriendChatBar();
+      showToast(`🏡 Hurra! ${f.name} hat „Ja!“ gesagt und wohnt jetzt bei dir!`, 'success');
+      setStatus(`🏡 ${f.name} zieht zu dir ins Traumhaus! Klicke auf „🏡 Gemeinsam ins Haus“, wenn du direkt heimgehen willst.`);
+    } else if (f.isNewPerson) {
+      renderFriendChatBar();
+    }
+
     if (!chattedFriendIds.has(f.id)) {
       chattedFriendIds.add(f.id);
       ShopManager.addCoins(2);
       refreshHeaderStats();
       window.dispatchEvent(new CustomEvent('runner:coins-updated'));
-      showToast(`💬 Schönes Gespräch mit ${f.name}! +2 🪙`, 'success');
+      if (!gen.movedIn) {
+        showToast(`💬 Schönes Gespräch mit ${f.name}! +2 🪙`, 'success');
+      }
     }
   }
 
@@ -2937,6 +2991,12 @@ export function setupEventScreen(stateManager) {
       rafId = null;
     }
   }
+
+  window.addEventListener('runner:roommate-updated', () => {
+    if (stateManager.getState() === 'EVENT') {
+      renderFriendChatBar();
+    }
+  });
 
   stateManager.onStateChange((newState, payload) => {
     if (newState === 'EVENT') {

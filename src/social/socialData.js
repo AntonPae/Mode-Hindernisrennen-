@@ -21,6 +21,11 @@ export const NEW_ACQUAINTANCES = [
       'Mein größter Traum ist ein Foto-Album mit allen Nachbar-Hunden!',
       'Ich liebe Pistazien-Eis und gehe abends gern durchs Wohnviertel spazieren.'
     ],
+    homeLines: [
+      'Unser Zuhause ist so schön gemütlich! Ich mache gleich noch tolle Erinnerungsfotos von dir und deinen Tieren! 📸',
+      'Zusammen wohnen macht so viel Spaß – soll ich beim Kochen oder Blumengießen helfen?',
+      'Es ist einfach schön, nach einem langen Tag gemeinsam nach Hause zu kommen! 💛'
+    ],
     charConfig: {
       body: { height: 1.0, width: 1.0, faceId: 'face_4', hairId: 'hair_flower', hairColor: '#b45309' },
       clothes: {
@@ -45,6 +50,11 @@ export const NEW_ACQUAINTANCES = [
       'Ich bin letzte Woche in die Straße hinter dem Supermarkt gezogen.',
       'Ich züchte rote Äpfel und repariere alte Skateboards.',
       'Wenn du mal Lust auf ein Wettrennen hast, schreib mir einfach im Briefkasten!'
+    ],
+    homeLines: [
+      'Hey Mitbewohner! Der Garten sieht super aus – ich helfe dir total gern beim Gießen! 🌱',
+      'Ich hab mein Skateboard ordentlich im Flur abgestellt – bereit für ein bisschen Entspannung!',
+      'Zusammen hier zu wohnen ist echt mega cool! Was wollen wir heute unternehmen? 🛹'
     ],
     charConfig: {
       body: { height: 1.0, width: 1.0, faceId: 'face_2', hairId: 'hair_2', hairColor: '#0f172a' },
@@ -71,12 +81,47 @@ export const NEW_ACQUAINTANCES = [
       'Im Traum-Café trinke ich immer einen warmen Kakao zum Malen.',
       'Ich würde mich riesig freuen, wenn wir richtige Freunde werden!'
     ],
+    homeLines: [
+      'Das Licht im Wohnzimmer ist perfekt zum Aquarell-Malen! Ich fühl mich hier wie zuhause! 🎨',
+      'Wollen wir uns zusammen an den Küchentisch setzen und etwas Schönes trinken? ☕',
+      'So eine liebe Mitbewohner-WG hab ich mir immer gewünscht! 💕'
+    ],
     charConfig: {
       body: { height: 1.0, width: 1.0, faceId: 'face_8', hairId: 'hair_3', hairColor: '#7c2d12' },
       clothes: {
         top: { style: 'sparkle_top', color: '#f43f5e', stickers: [{ type: 'heart', x: 0, y: 0.45, scale: 1 }] },
         pants: { style: 'star_jeans', color: '#312e81' },
         shoes: { style: 'glitter_boots', color: '#fbcfe8' }
+      }
+    }
+  },
+  {
+    id: 'jonas',
+    name: 'Jonas',
+    icon: '🎸',
+    role: 'Musiker & Hobbykoch',
+    hobby: 'Gitarre spielen & leckere Pfannkuchen backen',
+    favoriteFood: 'Schoko-Waffeln & Kakao 🍫',
+    townX: 2135,
+    townY: 416,
+    spotLabel: 'Promenade zwischen Boutique & Möbelhaus',
+    introLine: 'Hey! Ich bin Jonas und übe gerade neue Lieder für die Traumstadt! Schön, dich kennenzulernen!',
+    facts: [
+      'Abends spiele ich am liebsten Akustik-Gitarre im Wohnzimmer.',
+      'Ich backe super gern Pfannkuchen und liebe es, gemütlich am Küchentisch zu sitzen.',
+      'Wenn wir uns gut verstehen, würde ich total gern eine WG mit dir gründen!'
+    ],
+    homeLines: [
+      'Ich hab meine Gitarre mitgebracht – soll ich uns zuhause ein Lied spielen? 🎸',
+      'Komm, ich mach uns bald leckere Pfannkuchen in deiner Küche! 🥞',
+      'Hier zusammen zu wohnen fühlt sich einfach richtig schön an! 🏡'
+    ],
+    charConfig: {
+      body: { height: 1.0, width: 1.0, faceId: 'face_1', hairId: 'hair_1', hairColor: '#92400e' },
+      clothes: {
+        top: { style: 'jacket', color: '#8b5cf6', stickers: [{ type: 'star', x: 0, y: 0.45, scale: 1 }] },
+        pants: { style: 'jeans', color: '#1e293b' },
+        shoes: { style: 'sneakers', color: '#fbbf24' }
       }
     }
   }
@@ -202,7 +247,9 @@ export function parsePetCommand(inputText, petMeta) {
 function getDefaultSocialState() {
   return {
     acquaintances: {}, // { [id]: { stage: 0..3, points: 0, talks: 0, invitedWelcome: false } }
-    personAffinity: {} // { [id]: number }
+    personAffinity: {}, // { [id]: number }
+    roommateId: null, // id of NEW_ACQUAINTANCES currently living with the player
+    movedInRewarded: {} // { [id]: true }
   };
 }
 
@@ -213,7 +260,9 @@ export const SocialManager = {
       if (saved && typeof saved === 'object') {
         return {
           acquaintances: saved.acquaintances || {},
-          personAffinity: saved.personAffinity || {}
+          personAffinity: saved.personAffinity || {},
+          roommateId: saved.roommateId || null,
+          movedInRewarded: saved.movedInRewarded || {}
         };
       }
     } catch {
@@ -228,6 +277,85 @@ export const SocialManager = {
     } catch {
       // ignore storage errors
     }
+  },
+
+  getRoommate() {
+    const state = this.getState();
+    if (!state.roommateId) return null;
+    const person = NEW_ACQUAINTANCES.find((p) => p.id === state.roommateId);
+    if (!person) return null;
+    return {
+      ...person,
+      progress: state.acquaintances[person.id] || { stage: 3, points: 4, talks: 2, invitedWelcome: true }
+    };
+  },
+
+  canMoveIn(personId) {
+    const person = NEW_ACQUAINTANCES.find((p) => p.id === personId);
+    if (!person) return { ok: false, reason: 'not_found', neededTalks: 0 };
+    const state = this.getState();
+    if (state.roommateId === personId) {
+      return { ok: false, reason: 'already_roommate', neededTalks: 0 };
+    }
+    return { ok: true, reason: 'ready', neededTalks: 0 };
+  },
+
+  moveInWith(personId) {
+    const person = NEW_ACQUAINTANCES.find((p) => p.id === personId);
+    if (!person) return { ok: false, reason: 'not_found' };
+
+    const state = this.getState();
+    const prevRoommateId = state.roommateId;
+    if (prevRoommateId === personId) {
+      return { ok: false, reason: 'already_roommate', person };
+    }
+
+    const cur = state.acquaintances[personId] || { stage: 0, points: 0, talks: 0, invitedWelcome: false };
+    cur.stage = 3;
+    cur.points = Math.max(cur.points || 0, 4);
+    cur.invitedWelcome = true;
+    state.acquaintances[personId] = cur;
+    state.roommateId = personId;
+
+    let bonusCoins = 0;
+    if (!state.movedInRewarded[personId]) {
+      state.movedInRewarded[personId] = true;
+      bonusCoins = 25;
+      ShopManager.addCoins(bonusCoins);
+      ShopManager.recordProgress(0, 2);
+      window.dispatchEvent(new CustomEvent('runner:coins-updated'));
+    }
+
+    MailboxManager.deliverCustomMail({
+      id: `mail_movein_${person.id}`,
+      category: 'friend',
+      categoryLabel: '🏡 Einzug ins Traumhaus',
+      senderId: person.id,
+      senderName: person.name,
+      senderIcon: person.icon,
+      title: `Ich bin bei dir eingezogen! 🏡 – ${person.name}`,
+      body: `Hurra! Hier ist ${person.name}! Ich habe meine Koffer gepackt und wohne jetzt mit dir zusammen in deinem Haus & Garten. Wir können zusammen am Tisch sitzen, plaudern und entspannen!`,
+      isInvitation: false,
+      rewardCoins: 15
+    });
+    window.dispatchEvent(new CustomEvent('runner:mailbox-updated'));
+
+    this.saveState(state);
+    window.dispatchEvent(new CustomEvent('runner:social-updated'));
+    window.dispatchEvent(new CustomEvent('runner:roommate-updated', { detail: { roommateId: personId, prevRoommateId } }));
+
+    return { ok: true, person, bonusCoins, prevRoommateId };
+  },
+
+  moveOutRoommate() {
+    const state = this.getState();
+    if (!state.roommateId) return { ok: false };
+    const prev = NEW_ACQUAINTANCES.find((p) => p.id === state.roommateId) || null;
+    state.roommateId = null;
+    this.saveState(state);
+    window.dispatchEvent(new CustomEvent('runner:social-updated'));
+    window.dispatchEvent(new CustomEvent('runner:roommate-updated', { detail: { roommateId: null, prevRoommateId: prev?.id || null } }));
+    return { ok: true, prev };
   },
 
   getAcquaintanceProgress(personId) {
@@ -349,18 +477,50 @@ export function generatePersonReply(target, playerText = '', sceneContext = {}) 
   // Advance acquaintance/talk counter
   const progress = SocialManager.recordTalk(id);
 
-  // 1. New Acquaintances (Mila, Tom, Lina) have rich Kennenlernen replies!
+  // 1. New Acquaintances (Mila, Tom, Lina) have rich Kennenlernen & Zusammenziehen replies!
   const newPerson = NEW_ACQUAINTANCES.find((p) => p.id === id);
   if (newPerson) {
     let reply = '';
+    let movedInResult = null;
+    const isRoommateNow = SocialManager.getRoommate()?.id === id;
+    const wantsMoveIn = /(zusammen\s*zieh|zusammen\s*wohn|einzieh|bei mir (wohn|leb)|mit mir (wohn|leb)|ziehst du (zu|mit)|mitbewohner|in mein haus|wg gründen|wg mit mir)/i.test(q);
+
+    if (wantsMoveIn) {
+      if (isRoommateNow) {
+        reply = `Wir wohnen doch schon glücklich zusammen in deinem Traumhaus! 🏡💛`;
+      } else {
+        movedInResult = SocialManager.moveInWith(id);
+        reply = `Ja, total gern! 🏡💛 Ich packe sofort meine Sachen und ziehe zu dir ins Traumhaus!${movedInResult.bonusCoins > 0 ? ` (+${movedInResult.bonusCoins} 🪙 Einzugs-Bonus!)` : ''}`;
+      }
+      return {
+        reply,
+        bubble: reply.length > 52 ? `${reply.slice(0, 49)}…` : reply,
+        progress,
+        movedIn: Boolean(movedInResult?.ok),
+        moveInData: movedInResult
+      };
+    }
+
     if (progress && progress.prevStage === 0) {
       reply = newPerson.introLine;
+    } else if (sceneContext.scene === 'home' && isRoommateNow) {
+      if (/\b(kochen|essen|tisch|küche|kühlschrank|hunger)\b/.test(q)) {
+        reply = `Komm, wir setzen uns zusammen an den Küchentisch oder holen was Leckeres aus dem Kühlschrank! 🍽️`;
+      } else if (/\b(schlaf|müde|bett|nacht|ausruh)\b/.test(q)) {
+        reply = `Wenn du schlafen gehst, ruhe ich mich direkt neben dir mit aus! Gute Erholung! 😴💤`;
+      } else if (/\b(garten|blumen|pflanzen|gießen|tier|hund|katze)\b/.test(q)) {
+        reply = `Ich liebe unseren Garten und deine süßen Tiere hier zuhause! 🌸🐾`;
+      } else {
+        const pool = newPerson.homeLines || newPerson.facts;
+        const idx = (SocialManager.getAcquaintanceProgress(id).talks || 0) % pool.length;
+        reply = pool[idx];
+      }
     } else if (/\b(hobby|machst|beruf|arbeit|foto|mal|skaten|garten)\b/.test(q)) {
       reply = `Mein Hobby ist: ${newPerson.hobby}! Und was machst du am liebsten? 😊`;
     } else if (/\b(essen|eis|liebling|trinken|snack)\b/.test(q)) {
       reply = `Ich liebe ${newPerson.favoriteFood}! Gehen wir da bald zusammen hin?`;
     } else if (/\b(freund|einlad|treffen|brief)\b/.test(q)) {
-      reply = `Ja total gerne! Du findest mich ab jetzt auch in deinem Briefkasten zum Schreiben & Einladen! 💌`;
+      reply = `Ja total gerne! Du findest mich ab jetzt auch in deinem Briefkasten – und wenn du willst, können wir sogar zusammenziehen! 🏡💌`;
     } else if (/\b(hallo|hi|hey|guten|servus|moin|name|heißt|vorstellen)\b/.test(q)) {
       reply = `Hallo! Freut mich riesig, dich kennenzulernen! Ich bin ${newPerson.name} (${newPerson.role}).`;
     } else if (/\b(toll|cool|schön|super|nett|lieb|danke)\b/.test(q)) {

@@ -4,7 +4,7 @@ import { ShopManager } from '../editor/shopData.js';
 import { HOME_CATALOG, HomeManager } from './homeData.js';
 import { MailboxManager } from '../mailbox/mailboxData.js';
 import { drawVectorPet, getPetMeta, PetFollowerController } from './petCompanion.js';
-import { PetCommandStore, parsePetCommand } from '../social/socialData.js';
+import { PetCommandStore, SocialManager, generatePersonReply, parsePetCommand } from '../social/socialData.js';
 import { drawCanvasSpeechBubble } from '../social/canvasSpeech.js';
 import { mountTalkPanel } from '../social/talkPanel.js';
 
@@ -62,6 +62,7 @@ export function setupHomeScreen(stateManager) {
   const petFoodCountEl = document.getElementById('petFoodCountVal');
   const medCountEl = document.getElementById('homeMedCountVal');
   const healthPillEl = document.getElementById('homeHealthPill');
+  const roommatePillEl = document.getElementById('homeRoommatePill');
 
   const cookBtn = document.getElementById('cookBtn');
   const cleanBtn = document.getElementById('cleanBtn');
@@ -111,6 +112,20 @@ export function setupHomeScreen(stateManager) {
   let fridgeHotspot = null;
   let fridgeOpen = false;
   let sleepStepCounter = 0;
+  let roommateHotspot = null;
+  const roommateAgent = {
+    x: 470,
+    z: 4,
+    facing: -1,
+    pose: 'idle',
+    poseTimer: 0,
+    speechText: '',
+    speechTimer: 0,
+    targetX: null,
+    strollTimer: 110,
+    sitting: false,
+    sleeping: false
+  };
   const petFollowers = new PetFollowerController();
   const roamingPetFx = new Map(); // { speechText, speechTimer, trickTimer, tapBounce }
   const fxParticles = [];
@@ -125,6 +140,10 @@ export function setupHomeScreen(stateManager) {
     const ownedPets = HomeManager.getState().owned.pets || [];
     const sitPets = HomeManager.getSittingCompanions();
     const targets = [];
+    const rm = SocialManager.getRoommate();
+    if (rm) {
+      targets.push({ ...rm, type: 'person', kind: 'roommate', isNewPerson: true });
+    }
     if (ownedPets.length + sitPets.length > 0) {
       targets.push({ id: 'all', type: 'pet', name: 'Alle Tiere', icon: '🐾' });
       ownedPets.forEach((id) => {
@@ -142,6 +161,42 @@ export function setupHomeScreen(stateManager) {
   const talkPanel = mountTalkPanel({
     mountEl: document.getElementById('homeTalkMount'),
     getTargets: getHomeTalkTargets,
+    onFocusTarget: (target) => {
+      if (target.type === 'person') {
+        standUpIfNeeded(false);
+        const standX = Math.max(60, Math.min((canvas ? canvas.width : 760) - 60, roommateAgent.x + (player.x < roommateAgent.x ? -46 : 46)));
+        player.targetX = standX;
+        player.targetZ = roommateAgent.z;
+      }
+    },
+    onTalkPerson: (target, phrase) => {
+      const rm = SocialManager.getRoommate();
+      if (!rm || rm.id !== target.id) return;
+      player.facing = roommateAgent.x >= player.x ? 1 : -1;
+      player.speechText = phrase;
+      player.speechTimer = 135;
+      if (!player.sittingAt && !player.sleepingAt) {
+        player.pose = 'pet';
+        player.poseTimer = 20;
+      }
+      const res = generatePersonReply(target, phrase, { scene: 'home' });
+      roommateAgent.facing = player.x >= roommateAgent.x ? 1 : -1;
+      roommateAgent.speechText = res.bubble;
+      roommateAgent.speechTimer = 185;
+      if (!roommateAgent.sitting && !roommateAgent.sleeping) {
+        roommateAgent.pose = 'pet';
+        roommateAgent.poseTimer = 24;
+      }
+      talkPanel.refresh(`${target.icon} ${target.name}: „${res.reply}“`);
+      showToast(`💬 ${target.name}: „${res.reply}“`, 'info');
+    },
+    onMoveOutRequest: (target) => {
+      SocialManager.moveOutRoommate();
+      roommateHotspot = null;
+      updateUI();
+      talkPanel.refresh(`👋 ${target.name} ist freundlich ausgezogen – ihr bleibt natürlich gute Freunde!`);
+      showToast(`👋 ${target.name} wohnt jetzt wieder in der Traumstadt!`, 'info');
+    },
     onCommandPet: (target, payload) => {
       const ownedPets = HomeManager.getState().owned.pets || [];
       const firstRef = target.id === 'all' ? (ownedPets[0] || 'dog') : target.id;
@@ -182,6 +237,17 @@ export function setupHomeScreen(stateManager) {
       showToast(`🐾 ${parsed.reply}`, 'success');
     }
   });
+
+  if (roommatePillEl) {
+    roommatePillEl.style.cursor = 'pointer';
+    roommatePillEl.title = 'Tippen, um mit deinem Mitbewohner zu reden';
+    roommatePillEl.addEventListener('click', () => {
+      const rm = SocialManager.getRoommate();
+      if (rm) {
+        talkPanel.selectTarget(rm.id, `🏡 Sprich mit ${rm.name}!`);
+      }
+    });
+  }
 
   function spawnGardenWaterDrops(fromX, fromY, targetX, targetY) {
     for (let i = 0; i < 12; i++) {
@@ -292,6 +358,13 @@ export function setupHomeScreen(stateManager) {
     player.targetZ = null;
     player.pose = 'idle';
     player.poseTimer = 0;
+    roommateAgent.x = roomId === 'garden' ? 355 : roomId === 'kitchen' ? 355 : roomId === 'bedroom' ? 425 : 465;
+    roommateAgent.z = 4;
+    roommateAgent.targetX = null;
+    roommateAgent.sitting = false;
+    roommateAgent.sleeping = false;
+    roommateAgent.pose = 'idle';
+    roommateAgent.strollTimer = 95;
     petFollowers.reset(player.x, canvas ? canvas.height - 54 : 336);
     if (petRoomBar) {
       petRoomBar.classList.toggle('hidden', activeRoom !== 'pet_room');
@@ -374,6 +447,16 @@ export function setupHomeScreen(stateManager) {
         healthPillEl.textContent = `🤒 ${meta.name} kränkelt`;
       } else {
         healthPillEl.textContent = '❤️ Fit & Gesund';
+      }
+    }
+
+    if (roommatePillEl) {
+      const rm = SocialManager.getRoommate();
+      if (rm) {
+        roommatePillEl.classList.remove('hidden');
+        roommatePillEl.textContent = `🏡 WG mit ${rm.icon} ${rm.name}`;
+      } else {
+        roommatePillEl.classList.add('hidden');
       }
     }
 
@@ -976,6 +1059,26 @@ export function setupHomeScreen(stateManager) {
         }
       }
 
+      // 2c-b. Tap directly on Roommate at Home to talk!
+      if (roommateHotspot && Math.hypot(cx - roommateHotspot.x, cy - roommateHotspot.y) <= roommateHotspot.r) {
+        const rm = SocialManager.getRoommate();
+        if (rm) {
+          standUpIfNeeded(false);
+          const standX = Math.max(60, Math.min(canvas.width - 60, roommateHotspot.x + (player.x < roommateHotspot.x ? -44 : 44)));
+          player.targetX = standX;
+          player.targetZ = roommateAgent.z;
+          const res = generatePersonReply(rm, `Hallo ${rm.name}!`, { scene: 'home' });
+          roommateAgent.facing = player.x >= roommateAgent.x ? 1 : -1;
+          roommateAgent.speechText = res.bubble;
+          roommateAgent.speechTimer = 175;
+          roommateAgent.pose = 'pet';
+          roommateAgent.poseTimer = 22;
+          talkPanel.selectTarget(rm.id, `${rm.icon} ${rm.name}: „${res.reply}“`);
+          showToast(`💬 ${rm.name}: „${res.reply}“`, 'info');
+          return;
+        }
+      }
+
       // 2d. Clickable Chairs / Table to Sit Down!
       for (const seat of seatHotspots) {
         if (cx >= seat.x && cx <= seat.x + seat.w && cy >= seat.y && cy <= seat.y + seat.h) {
@@ -1377,6 +1480,63 @@ export function setupHomeScreen(stateManager) {
       if (fx.trickTimer > 0) fx.trickTimer--;
       if (fx.tapBounce > 0) fx.tapBounce--;
     });
+
+    // Update Roommate Agent if someone moved in with the player!
+    const rm = SocialManager.getRoommate();
+    if (rm) {
+      if (roommateAgent.speechTimer > 0) roommateAgent.speechTimer--;
+      if (roommateAgent.poseTimer > 0) roommateAgent.poseTimer--;
+
+      if (player.sleepingAt) {
+        roommateAgent.sleeping = true;
+        roommateAgent.sitting = false;
+        roommateAgent.targetX = null;
+        roommateAgent.pose = 'sleep';
+      } else if (activeRoom === 'kitchen' && player.sittingAt) {
+        roommateAgent.sleeping = false;
+        const chairX = 626;
+        const dxChair = chairX - roommateAgent.x;
+        if (Math.abs(dxChair) > 4) {
+          roommateAgent.sitting = false;
+          roommateAgent.x += Math.sign(dxChair) * Math.min(2.7, Math.abs(dxChair));
+          roommateAgent.facing = dxChair > 0 ? 1 : -1;
+          roommateAgent.pose = 'walk';
+        } else {
+          if (!roommateAgent.sitting && roommateAgent.speechTimer <= 0) {
+            roommateAgent.speechText = 'Schön, zusammen am Tisch zu sitzen! ☕';
+            roommateAgent.speechTimer = 150;
+          }
+          roommateAgent.x = chairX;
+          roommateAgent.z = 4;
+          roommateAgent.facing = -1;
+          roommateAgent.sitting = true;
+          roommateAgent.pose = 'sit';
+        }
+      } else {
+        roommateAgent.sleeping = false;
+        roommateAgent.sitting = false;
+        if (roommateAgent.targetX !== null) {
+          const dxRm = roommateAgent.targetX - roommateAgent.x;
+          if (Math.abs(dxRm) <= 3) {
+            roommateAgent.targetX = null;
+            roommateAgent.pose = 'idle';
+            roommateAgent.strollTimer = 140 + Math.floor(Math.random() * 120);
+          } else {
+            roommateAgent.x += Math.sign(dxRm) * 1.9;
+            roommateAgent.facing = dxRm > 0 ? 1 : -1;
+            roommateAgent.pose = 'walk';
+          }
+        } else {
+          if (roommateAgent.poseTimer <= 0) roommateAgent.pose = 'idle';
+          roommateAgent.strollTimer--;
+          if (roommateAgent.strollTimer <= 0) {
+            const minRmX = activeRoom === 'garden' ? 278 : 135;
+            const maxRmX = activeRoom === 'garden' ? 545 : w - 135;
+            roommateAgent.targetX = minRmX + Math.random() * (maxRmX - minRmX);
+          }
+        }
+      }
+    }
   }
 
   // --- ROOM-BY-ROOM PAINTERLY SCENE RENDERER ---
@@ -1445,6 +1605,51 @@ export function setupHomeScreen(stateManager) {
     const charY = player.sleepingAt ? player.sleepingAt.bedY : drawY;
     const charFacing = player.sleepingAt ? player.sleepingAt.facing : player.facing;
 
+    // Roommate Character living with you in the house!
+    roommateHotspot = null;
+    const activeRoommate = SocialManager.getRoommate();
+    if (activeRoommate) {
+      let rmX = roommateAgent.x;
+      let rmY = floorY + 12 + roommateAgent.z;
+      let rmFacing = roommateAgent.facing;
+      if (roommateAgent.sleeping) {
+        if (activeRoom === 'bedroom') {
+          rmX = 248;
+          rmY = floorY - 40;
+          rmFacing = 1;
+        } else if (activeRoom === 'living_room') {
+          rmX = 114;
+          rmY = floorY - 26;
+          rmFacing = 1;
+        } else {
+          rmX = Math.max(75, charX - 68);
+          rmY = charY;
+          rmFacing = 1;
+        }
+      }
+
+      ctx.save();
+      ctx.translate(rmX, rmY);
+      ctx.scale(0.84, 0.84);
+      renderCharacter(ctx, 0, 0, activeRoommate.charConfig, {
+        frame: animFrame + 13,
+        pose: roommateAgent.pose,
+        facing: rmFacing
+      });
+      ctx.restore();
+
+      roommateHotspot = { x: rmX, y: rmY - 38, r: 44 };
+
+      if (roommateAgent.speechTimer > 0 && roommateAgent.speechText) {
+        drawCanvasSpeechBubble(ctx, rmX, rmY - (roommateAgent.sleeping ? 44 : 112), roommateAgent.speechText, {
+          accent: '#10b981',
+          maxX: w - 10
+        });
+      } else if (!roommateAgent.sleeping) {
+        drawFloatingHint(ctx, rmX, rmY - 122, `🏡 ${activeRoommate.name}`, '#059669');
+      }
+    }
+
     ctx.save();
     ctx.translate(charX, charY);
     ctx.scale(0.86, 0.86);
@@ -1456,8 +1661,8 @@ export function setupHomeScreen(stateManager) {
     });
     ctx.restore();
 
-    // Foreground Dining Tabletop overlay when seated in Kitchen so knees sit naturally under table!
-    if (activeRoom === 'kitchen' && player.sittingAt) {
+    // Foreground Dining Tabletop overlay when either player or roommate sits in Kitchen so knees tuck neatly under table!
+    if (activeRoom === 'kitchen' && (player.sittingAt || (activeRoommate && roommateAgent.sitting))) {
       drawKitchenTableForeground(ctx, floorY);
     }
 
@@ -2163,8 +2368,8 @@ export function setupHomeScreen(stateManager) {
     ctx.fillRect(620, floorY - 20, 6, 20);
     ctx.fill();
 
-    // Draw the table itself unless character is actively sitting (then foreground tabletop renders on top of knees!)
-    if (!player.sittingAt) {
+    // Draw the table itself unless character or roommate is actively sitting (then foreground tabletop renders on top of knees!)
+    if (!player.sittingAt && !(SocialManager.getRoommate() && roommateAgent.sitting)) {
       drawKitchenTableForeground(ctx, floorY, woodMain);
     }
 
@@ -3289,6 +3494,13 @@ export function setupHomeScreen(stateManager) {
     if (stateManager.getState() === 'HOME') {
       updateUI();
       renderRoomTabs();
+    }
+  });
+
+  window.addEventListener('runner:roommate-updated', () => {
+    if (stateManager.getState() === 'HOME') {
+      updateUI();
+      talkPanel.refresh();
     }
   });
 

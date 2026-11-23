@@ -287,9 +287,15 @@ export function setupTownScreen(stateManager) {
         player.pose = 'pet';
         player.poseTimer = 20;
         const res = generatePersonReply(target, phrase, { scene: 'town' });
-        setNpcSpeech(target.id, res.bubble, 175);
+        setNpcSpeech(target.id, res.bubble, 185);
         talkPanel.refresh(`${target.icon} ${target.name}: „${res.reply}“`);
-        if (statusEl) statusEl.textContent = `💬 ${target.name}: „${res.reply}“`;
+        if (res.movedIn) {
+          if (statusEl) {
+            statusEl.textContent = `🏡 Hurra! ${target.name} wohnt jetzt mit dir zusammen! Klick unten auf „🏡 Direkt ins Haus“!`;
+          }
+        } else if (statusEl) {
+          statusEl.textContent = `💬 ${target.name}: „${res.reply}“`;
+        }
       };
       if (Math.hypot(player.x - target.x, player.y - target.y) > 130) {
         navigateInTown(standX, standY, null, runChat);
@@ -297,6 +303,37 @@ export function setupTownScreen(stateManager) {
         runChat();
       }
     },
+    onMoveInRequest: (target) => {
+      const standX = target.x + (player.x < target.x ? -44 : 44);
+      const standY = target.y >= LOWER_WALK_MIN_Y ? target.y : 268;
+      const askMoveIn = () => {
+        player.facing = target.x >= player.x ? 1 : -1;
+        player.speechText = 'Wollen wir zusammenziehen? 🏡';
+        player.speechTimer = 140;
+        player.pose = 'pet';
+        player.poseTimer = 24;
+        const res = generatePersonReply(target, 'Wollen wir zusammenziehen?', { scene: 'town' });
+        setNpcSpeech(target.id, res.bubble, 200);
+        talkPanel.refresh(`${target.icon} ${target.name}: „${res.reply}“`);
+        if (statusEl) {
+          statusEl.textContent = res.movedIn
+            ? `🏡 Hurra! ${target.name} ist bei dir eingezogen! Geh ins Haus („🏡 Direkt ins Haus“), um zusammen zu wohnen!`
+            : `💬 ${target.name}: „${res.reply}“`;
+        }
+      };
+      if (Math.hypot(player.x - target.x, player.y - target.y) > 130) {
+        navigateInTown(standX, standY, null, askMoveIn);
+      } else {
+        askMoveIn();
+      }
+    },
+    onMoveOutRequest: (target) => {
+      SocialManager.moveOutRoommate();
+      setNpcSpeech(target.id, 'Bis bald in der Stadt! 👋', 150);
+      talkPanel.refresh(`👋 ${target.name} ist ausgezogen – ihr bleibt natürlich gute Freunde!`);
+      if (statusEl) statusEl.textContent = `👋 ${target.name} wohnt jetzt wieder in der Traumstadt – ihr bleibt Freunde!`;
+    },
+    onGoHome: () => stateManager.setState('HOME', { room: 'living_room' }),
     onCommandPet: (target, payload) => {
       const firstPet = petFollowers.followers[0];
       const meta = getPetMeta(target.id === 'all' ? (firstPet?.petRef || 'dog') : (firstPet?.petRef || target.id));
@@ -1370,8 +1407,10 @@ export function setupTownScreen(stateManager) {
     drawStreetCars();
 
     // New People to Meet along the Shopping Street & Promenade!
+    const currentRoommateId = SocialManager.getRoommate()?.id;
     NEW_ACQUAINTANCES.forEach((p, idx) => {
       const prog = SocialManager.getAcquaintanceProgress(p.id);
+      const isRoommate = p.id === currentRoommateId;
       ctx.save();
       ctx.translate(p.townX, p.townY);
       ctx.scale(0.84, 0.84);
@@ -1382,22 +1421,24 @@ export function setupTownScreen(stateManager) {
       });
       ctx.restore();
 
-      const badge = prog.stage === 0
-        ? `🆕 ${p.name} kennenlernen!`
-        : prog.stage >= 3
-          ? `💛 ${p.name}`
-          : `${p.icon} ${p.name}`;
+      const badge = isRoommate
+        ? `🏡 ${p.name} (Wohnt bei dir)`
+        : prog.stage === 0
+          ? `🆕 ${p.name} kennenlernen!`
+          : prog.stage >= 3
+            ? `💛 ${p.name}`
+            : `${p.icon} ${p.name}`;
       ctx.save();
       ctx.font = '800 9.5px "Plus Jakarta Sans", sans-serif';
       const bw = ctx.measureText(badge).width + 14;
-      ctx.fillStyle = prog.stage === 0 ? '#fffbeb' : '#ffffff';
-      ctx.strokeStyle = prog.stage === 0 ? '#f59e0b' : '#ec4899';
+      ctx.fillStyle = isRoommate ? '#dcfce7' : (prog.stage === 0 ? '#fffbeb' : '#ffffff');
+      ctx.strokeStyle = isRoommate ? '#10b981' : (prog.stage === 0 ? '#f59e0b' : '#ec4899');
       ctx.lineWidth = 1.6;
       ctx.beginPath();
       ctx.roundRect(p.townX - bw / 2, p.townY + 8, bw, 18, [9]);
       ctx.fill();
       ctx.stroke();
-      ctx.fillStyle = prog.stage === 0 ? '#92400e' : '#831843';
+      ctx.fillStyle = isRoommate ? '#166534' : (prog.stage === 0 ? '#92400e' : '#831843');
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(badge, p.townX, p.townY + 17);
@@ -1490,6 +1531,12 @@ export function setupTownScreen(stateManager) {
   window.addEventListener('runner:coins-updated', () => {
     if (stateManager.getState() === 'TOWN') {
       updateCoinsUI();
+    }
+  });
+
+  window.addEventListener('runner:roommate-updated', () => {
+    if (stateManager.getState() === 'TOWN') {
+      talkPanel.refresh();
     }
   });
 

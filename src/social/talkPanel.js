@@ -5,7 +5,10 @@ export function mountTalkPanel({
   getTargets,
   onTalkPerson,
   onCommandPet,
-  onFocusTarget
+  onFocusTarget,
+  onMoveInRequest,
+  onMoveOutRequest,
+  onGoHome
 }) {
   if (!mountEl) {
     return { refresh: () => {}, selectTarget: () => {}, setStatusLine: () => {} };
@@ -16,7 +19,10 @@ export function mountTalkPanel({
     <div class="event-chat-top">
       <div class="talk-dock-header">
         <span class="talk-dock-title">💬 Mit allen reden &amp; 🐾 Tiere anleiten</span>
-        <span class="talk-dock-badge hidden" data-role="badge"></span>
+        <div class="talk-dock-header-right">
+          <span class="talk-dock-badge hidden" data-role="badge"></span>
+          <span data-role="moveinSlot"></span>
+        </div>
       </div>
       <div class="event-friend-pills" data-role="pills"></div>
       <div class="event-chat-line" data-role="line">💬 Wähle eine Person (auch zum Kennenlernen!) oder eines deiner Tiere aus!</div>
@@ -31,6 +37,7 @@ export function mountTalkPanel({
   const pillsEl = mountEl.querySelector('[data-role="pills"]');
   const lineEl = mountEl.querySelector('[data-role="line"]');
   const badgeEl = mountEl.querySelector('[data-role="badge"]');
+  const moveinSlotEl = mountEl.querySelector('[data-role="moveinSlot"]');
   const quickEl = mountEl.querySelector('[data-role="quick"]');
   const inputEl = mountEl.querySelector('[data-role="input"]');
   const sendBtn = mountEl.querySelector('[data-role="send"]');
@@ -51,8 +58,10 @@ export function mountTalkPanel({
   function refresh(forceLine = null) {
     const targets = getTargets() || [];
     const active = getResolvedTarget(targets);
+    const roommate = SocialManager.getRoommate();
 
     pillsEl.innerHTML = '';
+    if (moveinSlotEl) moveinSlotEl.innerHTML = '';
     if (targets.length === 0) {
       const emptyNote = document.createElement('span');
       emptyNote.className = 'talk-empty-note';
@@ -68,9 +77,14 @@ export function mountTalkPanel({
       const btn = document.createElement('button');
       btn.type = 'button';
       const isActive = active && active.id === t.id;
+      const isRoommate = roommate && roommate.id === t.id;
       const isNew = t.type === 'person' && t.isNewPerson && (SocialManager.getAcquaintanceProgress(t.id).stage === 0);
       btn.className = `event-friend-pill${t.type === 'pet' ? ' pet-cmd-pill' : ''}${isNew ? ' new-person-pill' : ''}${isActive ? ' active' : ''}`;
-      btn.textContent = isNew ? `🆕 ${t.name} kennenlernen` : `${t.icon || '💬'} ${t.name}`;
+      if (isRoommate) {
+        btn.textContent = `🏡 ${t.name} (WG)`;
+      } else {
+        btn.textContent = isNew ? `🆕 ${t.name} kennenlernen` : `${t.icon || '💬'} ${t.name}`;
+      }
       btn.addEventListener('click', () => {
         selectedTargetId = t.id;
         customLine = '';
@@ -86,10 +100,53 @@ export function mountTalkPanel({
 
     if (active) {
       if (active.type === 'person') {
+        const isRoommate = roommate && roommate.id === active.id;
         if (active.isNewPerson) {
           const prog = SocialManager.getAcquaintanceProgress(active.id);
-          badgeEl.textContent = SocialManager.getStageLabel(prog.stage);
-          badgeEl.className = `talk-dock-badge${prog.stage >= 3 ? ' friend' : ''}`;
+          if (isRoommate) {
+            badgeEl.textContent = '🏡 Wohnt bei dir';
+            badgeEl.className = 'talk-dock-badge roommate';
+            if (moveinSlotEl) {
+              if (onGoHome) {
+                const homeBtn = document.createElement('button');
+                homeBtn.type = 'button';
+                homeBtn.className = 'talk-movein-btn';
+                homeBtn.textContent = '🏡 Ins Haus';
+                homeBtn.addEventListener('click', () => onGoHome(active));
+                moveinSlotEl.appendChild(homeBtn);
+              }
+              const outBtn = document.createElement('button');
+              outBtn.type = 'button';
+              outBtn.className = 'talk-moveout-btn';
+              outBtn.textContent = '👋 Ausziehen';
+              outBtn.addEventListener('click', () => {
+                if (onMoveOutRequest) {
+                  onMoveOutRequest(active);
+                } else {
+                  SocialManager.moveOutRoommate();
+                  refresh(`👋 ${active.name} ist freundlich ausgezogen – ihr bleibt natürlich Freunde!`);
+                }
+              });
+              moveinSlotEl.appendChild(outBtn);
+            }
+          } else {
+            badgeEl.textContent = SocialManager.getStageLabel(prog.stage);
+            badgeEl.className = `talk-dock-badge${prog.stage >= 3 ? ' friend' : ''}`;
+            if (moveinSlotEl) {
+              const inviteBtn = document.createElement('button');
+              inviteBtn.type = 'button';
+              inviteBtn.className = 'talk-movein-btn';
+              inviteBtn.textContent = '🏡 Zusammenziehen fragen!';
+              inviteBtn.addEventListener('click', () => {
+                if (onMoveInRequest) {
+                  onMoveInRequest(active);
+                } else if (onTalkPerson) {
+                  onTalkPerson(active, 'Wollen wir zusammenziehen?');
+                }
+              });
+              moveinSlotEl.appendChild(inviteBtn);
+            }
+          }
         } else if (active.role) {
           badgeEl.textContent = active.role;
           badgeEl.className = 'talk-dock-badge';
@@ -99,14 +156,29 @@ export function mountTalkPanel({
 
         inputEl.placeholder = `Schreib etwas an ${active.name}...`;
         sendBtn.textContent = '💬 Sagen';
-        lineEl.textContent = customLine || `💬 Sprich mit ${active.name}${active.isNewPerson ? ' und lern sie/ihn besser kennen!' : '!'}`;
+        lineEl.textContent = customLine || (isRoommate
+          ? `🏡 ${active.name} wohnt mit dir zusammen! Plaudert oder setzt euch an den Tisch.`
+          : `💬 Sprich mit ${active.name}${active.isNewPerson ? ' – du kannst sie/ihn auch fragen, ob ihr zusammenzieht!' : '!'}`);
 
         quickEl.innerHTML = '';
-        const phrases = active.isNewPerson
-          ? (SocialManager.getAcquaintanceProgress(active.id).stage === 0
-              ? ['👋 Hallo! Ich stell mich vor!', '✨ Wollen wir uns kennenlernen?', '🎨 Was sind deine Hobbys?', '🍨 Welches Eis magst du?']
-              : ['🎨 Erzähl mir von deinem Hobby!', '💌 Wollen wir Freunde sein?', '😊 Wie geht es dir heute?', '⭐ Du bist super nett!'])
-          : ['👋 Hallo! Wie geht’s?', '🐾 Wie findest du meine Tiere?', '✨ Richtig schön hier!', '❤️ Danke dir!'];
+        let phrases;
+        if (isRoommate) {
+          phrases = [
+            '🏡 Wie gefällt es dir zuhause?',
+            '🍽️ Wollen wir zusammen essen?',
+            '🎨 Was wollen wir heute machen?',
+            '💛 Schön, dass wir zusammen wohnen!'
+          ];
+        } else if (active.isNewPerson) {
+          const prog = SocialManager.getAcquaintanceProgress(active.id);
+          if (prog.stage === 0) {
+            phrases = ['👋 Hallo! Ich stell mich vor!', '✨ Wollen wir uns kennenlernen?', '🏡 Wollen wir zusammenziehen?', '🎨 Was sind deine Hobbys?'];
+          } else {
+            phrases = ['🏡 Wollen wir zusammenziehen?', '🎨 Erzähl mir von deinem Hobby!', '💌 Wollen wir Freunde sein?', '⭐ Du bist super nett!'];
+          }
+        } else {
+          phrases = ['👋 Hallo! Wie geht’s?', '🐾 Wie findest du meine Tiere?', '✨ Richtig schön hier!', '❤️ Danke dir!'];
+        }
 
         phrases.forEach((phrase) => {
           const b = document.createElement('button');

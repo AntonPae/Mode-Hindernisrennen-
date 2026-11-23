@@ -1111,24 +1111,21 @@ body, html {
 /* ===================================================== */
 
 .home-layout {
+  width: min(1320px, 100%);
+  margin: 0 auto;
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 1.5rem;
-  max-width: 920px;
-  margin: 0 auto;
-  width: 100%;
   align-items: flex-start;
-  padding-bottom: 3rem;
+  gap: 1.15rem;
+  padding-bottom: 2.5rem;
 }
 
 .home-stage-column {
-  flex: 1;
-  width: 100%;
+  flex: 1.65;
   min-width: 320px;
   display: flex;
   flex-direction: column;
-  gap: 0.95rem;
+  gap: 0.85rem;
 }
 
 /* Room Navigation Tabs above the stage */
@@ -1220,15 +1217,16 @@ body, html {
   display: none;
 }
 
-/* Walk Control Pad below canvas */
+/* Walk Control Pad directly below canvas */
 .home-walk-pad {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.7rem;
-  padding: 0.6rem 1rem;
-  background: rgba(250, 245, 255, 0.9);
+  padding: 0.62rem 1rem;
+  background: linear-gradient(90deg, rgba(250, 245, 255, 0.96) 0%, rgba(253, 242, 248, 0.96) 100%);
   border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
 }
 
 .walk-pad-btn {
@@ -1896,7 +1894,9 @@ body, html {
 
 #iceCreamCanvas,
 #petSittingCanvas,
-#townCanvas {
+#townCanvas,
+#storeCanvas,
+#eventCanvas {
   width: 100%;
   height: auto;
   aspect-ratio: 860 / 470;
@@ -1904,9 +1904,27 @@ body, html {
   cursor: pointer;
 }
 
+@media (min-width: 961px) {
+  .home-stage-column,
+  .ice-stage-column {
+    position: sticky;
+    top: 0.35rem;
+    z-index: 6;
+  }
+
+  .ice-menu-column {
+    position: sticky;
+    top: 0.35rem;
+    max-height: calc(100vh - 1.2rem);
+    overflow-y: auto;
+  }
+}
+
 @media (max-width: 960px) {
+  .home-stage-column,
   .ice-stage-column {
     flex: 1 1 100%;
+    position: static;
   }
 
   .ice-menu-column {
@@ -1916,7 +1934,9 @@ body, html {
 
   #iceCreamCanvas,
   #petSittingCanvas,
-  #townCanvas {
+  #townCanvas,
+  #storeCanvas,
+  #eventCanvas {
     max-height: 42vh;
     width: auto;
     max-width: 100%;
@@ -1933,6 +1953,59 @@ body, html {
   padding: 0.7rem 1rem;
   background: #fff9fb;
   border-top: 1px solid var(--hairline);
+}
+
+/* Sidebar (am Rand) layout refinements */
+.ice-menu-column > .event-chat-box,
+.ice-menu-column > .talk-dock {
+  border-top: none;
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.72rem 0.9rem;
+}
+
+.ice-menu-column > .icecream-cone-bar {
+  border-top: none;
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.65rem 0.9rem;
+}
+
+.ice-menu-column > .home-pet-room-bar {
+  border-top: none;
+  border-bottom: 1px solid var(--hairline);
+  padding: 0.62rem 0.9rem;
+}
+
+.home-side-actions {
+  padding: 0.72rem 0.9rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.48rem;
+  background: #ffffff;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.home-side-actions .btn-care {
+  min-width: 0;
+  font-size: 0.8rem;
+  padding: 0.54rem 0.58rem;
+  min-height: 42px;
+}
+
+.home-side-needs {
+  padding: 0.7rem 0.9rem 0.95rem 0.9rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.48rem;
+  background: #ffffff;
+}
+
+.home-side-needs .need-card {
+  padding: 0.52rem 0.65rem;
+  border-radius: 14px;
+}
+
+.home-side-needs .need-label {
+  font-size: 0.76rem;
+  margin-bottom: 0.3rem;
 }
 
 .icecream-cone-label {
@@ -2504,6 +2577,72 @@ body, html {
   background: #e0f2fe;
   color: #0369a1;
   border-color: #7dd3fc;
+}
+
+.talk-dock-badge.roommate {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #4ade80;
+}
+
+.talk-dock-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.talk-movein-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 0.28rem 0.78rem;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #ffffff;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.26);
+  cursor: pointer;
+  touch-action: manipulation;
+  min-height: 30px;
+}
+
+.talk-movein-btn:hover {
+  filter: brightness(1.06);
+}
+
+.talk-moveout-btn {
+  border: 1px solid rgba(225, 29, 72, 0.3);
+  border-radius: 999px;
+  padding: 0.24rem 0.68rem;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #9f1239;
+  background: #fff1f2;
+  cursor: pointer;
+  touch-action: manipulation;
+  min-height: 28px;
+}
+
+.talk-movein-hint {
+  font-size: 0.74rem;
+  font-weight: 800;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: #fdf2f8;
+  color: #9d174d;
+  border: 1px dashed rgba(219, 39, 119, 0.35);
+}
+
+.supply-pill.roommate-pill {
+  background: #dcfce7;
+  color: #166534;
+  border-color: rgba(16, 185, 129, 0.45);
+}
+
+.supply-pill.roommate-pill.hidden {
+  display: none;
 }
 
 .event-friend-pill.new-person-pill {

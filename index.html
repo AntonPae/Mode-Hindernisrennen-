@@ -169,7 +169,6 @@
               <span id="townStatusText">Lauf durch die Traumstadt! Überall offene Eingänge – außer beim Garten mit Gartentor.</span>
             </div>
             <canvas id="townCanvas" width="860" height="470"></canvas>
-            <div id="townTalkMount"></div>
             <div class="home-walk-pad">
               <button type="button" id="townWalkLeftBtn" class="walk-pad-btn" aria-label="Nach links gehen">◀ Links</button>
               <button type="button" id="townWalkUpBtn" class="walk-pad-btn" aria-label="Nach hinten gehen">▲ Hoch</button>
@@ -186,6 +185,7 @@
         </div>
 
         <aside class="ice-menu-column">
+          <div id="townTalkMount"></div>
           <div class="ice-menu-header">
             <h2>🗺️ Orte &amp; Geschäfte</h2>
             <span>Tippe auf eine Straße oder ein Geschäft, um direkt dorthin zu laufen!</span>
@@ -215,17 +215,6 @@
               <span id="storeStatusText">Willkommen im Laden! Tippe auf ein Regal oder lauf direkt durch die Gänge.</span>
             </div>
             <canvas id="storeCanvas" width="860" height="470"></canvas>
-            <div class="icecream-cone-bar store-basket-bar">
-              <div class="icecream-cone-label">
-                <strong>🛒 Korb:</strong>
-                <div id="storeBasketSlots" class="ice-cone-slots"></div>
-              </div>
-              <div class="ice-cone-slots">
-                <button type="button" id="storePayBtn" class="btn btn-small btn-primary" disabled>💳 Zur Kasse</button>
-                <button type="button" id="storeClearBasketBtn" class="btn btn-small btn-secondary" disabled>🗑️ Leeren</button>
-              </div>
-            </div>
-            <div id="storeTalkMount"></div>
             <div class="home-walk-pad">
               <button type="button" id="storeWalkLeftBtn" class="walk-pad-btn" aria-label="Nach links gehen">◀ Links</button>
               <button type="button" id="storeWalkUpBtn" class="walk-pad-btn" aria-label="Zu den Regalen gehen">▲ Regale</button>
@@ -243,6 +232,17 @@
         </div>
 
         <aside class="ice-menu-column">
+          <div id="storeTalkMount"></div>
+          <div class="icecream-cone-bar store-basket-bar">
+            <div class="icecream-cone-label">
+              <strong>🛒 Korb:</strong>
+              <div id="storeBasketSlots" class="ice-cone-slots"></div>
+            </div>
+            <div class="ice-cone-slots">
+              <button type="button" id="storePayBtn" class="btn btn-small btn-primary" disabled>💳 Zur Kasse</button>
+              <button type="button" id="storeClearBasketBtn" class="btn btn-small btn-secondary" disabled>🗑️ Leeren</button>
+            </div>
+          </div>
           <div class="ice-menu-header">
             <h2 id="storeShelfTitle">🛍️ Regal im Laden</h2>
             <span id="storeShelfHint">Lauf zu einem Regal im Bild oder wähle hier eine Abteilung!</span>
@@ -255,7 +255,7 @@
 
     <!-- State: Home & Garden Container Overlay -->
     <div id="home-screen" class="screen-overlay hidden">
-      <header class="app-header">
+      <header class="app-header ice-compact-header">
         <h1>🏡 Mein Haus &amp; Garten</h1>
         <p>Baue dein Zuhause aus, kümmere dich um Tiere, Küche, Wohnung &amp; Garten!</p>
         <div class="coin-wallet-bar">
@@ -265,6 +265,7 @@
           <span class="supply-pill">🦴 Tierfutter: <strong id="petFoodCountVal">3</strong></span>
           <span class="supply-pill">🩺 Medizin: <strong id="homeMedCountVal">4</strong></span>
           <span id="homeHealthPill" class="supply-pill health-pill">❤️ Fit &amp; Gesund</span>
+          <span id="homeRoommatePill" class="supply-pill roommate-pill hidden">🏡 Mitbewohner/in</span>
           <button type="button" id="openEarnHomeBtn" class="btn btn-earn">💰 Geld verdienen</button>
           <button type="button" id="homeMailboxBtn" class="btn btn-mailbox">📬 Briefkasten</button>
         </div>
@@ -282,19 +283,6 @@
               <button type="button" id="homeStirBtn" class="btn btn-small btn-primary hidden">🥄 Rühren!</button>
             </div>
             <canvas id="homeCanvas" width="760" height="390"></canvas>
-            <div id="homePetRoomBar" class="home-pet-room-bar hidden">
-              <button type="button" id="homePickAllPetsBtn" class="btn btn-small btn-primary">🐾 Alle Tiere abholen</button>
-              <button type="button" id="homeLeaveAllPetsBtn" class="btn btn-small btn-secondary">🏠 Alle im Tierzimmer lassen</button>
-              <button type="button" id="homeOpenPetShopBtn" class="btn btn-small btn-home">🐾 Zur Tierhandlung (Stadt)</button>
-            </div>
-            <div id="homeFridgeBar" class="home-pet-room-bar hidden">
-              <span id="homeFridgeStockSummary" class="fridge-stock-pill"></span>
-              <button type="button" id="homeFridgeEatSnackBtn" class="btn btn-small btn-primary">🍓 Snack aus Kühlschrank</button>
-              <button type="button" id="homeFridgeCookBtn" class="btn btn-small btn-secondary">🍳 Zum Herd &amp; Kochen</button>
-              <button type="button" id="homeFridgeMarketBtn" class="btn btn-small btn-home">🛒 Zum Supermarkt (Stadt)</button>
-              <button type="button" id="homeFridgeCloseBtn" class="btn btn-small btn-secondary">✖ Zu</button>
-            </div>
-            <div id="homeTalkMount"></div>
             <div class="home-walk-pad">
               <button type="button" id="homeWalkLeftBtn" class="walk-pad-btn" aria-label="Nach links gehen">◀ Links</button>
               <button type="button" id="homeJumpBtn" class="walk-pad-btn" aria-label="Hüpfen">▲ Hüpfen</button>
@@ -302,34 +290,35 @@
             </div>
           </div>
 
-          <div class="home-needs-grid">
-            <div class="need-card">
-              <div class="need-label"><span>🧹 Sauberkeit</span><strong id="cleanPct">75%</strong></div>
-              <div class="need-track"><div id="cleanBar" class="need-fill"></div></div>
-            </div>
-            <div class="need-card">
-              <div class="need-label"><span>🍲 Sättigung (Kochen)</span><strong id="hungerPct">70%</strong></div>
-              <div class="need-track"><div id="hungerBar" class="need-fill"></div></div>
-            </div>
-            <div class="need-card">
-              <div class="need-label"><span>😴 Energie (Schlaf)</span><strong id="energyPct">88%</strong></div>
-              <div class="need-track"><div id="energyBar" class="need-fill"></div></div>
-            </div>
-            <div class="need-card">
-              <div class="need-label"><span>🐾 Tier-Wohl</span><strong id="petPct">80%</strong></div>
-              <div class="need-track"><div id="petBar" class="need-fill"></div></div>
-            </div>
-            <div class="need-card">
-              <div class="need-label"><span>💤 Tier-Energie</span><strong id="petEnergyPct">88%</strong></div>
-              <div class="need-track"><div id="petEnergyBar" class="need-fill"></div></div>
-            </div>
-            <div class="need-card">
-              <div class="need-label"><span>🌱 Garten-Wachstum</span><strong id="gardenPct">40%</strong></div>
-              <div class="need-track"><div id="gardenBar" class="need-fill"></div></div>
-            </div>
+          <div class="home-nav-row">
+            <button type="button" id="homeToTownBtn" class="btn btn-town">🛍️ Geschäfte in der Stadt</button>
+            <button type="button" id="homeToEditorBtn" class="btn btn-secondary">👗 Charakter &amp; Kleiderschrank</button>
+            <button type="button" id="homeToPetSitBtn" class="btn btn-petsit">🐾 Zu den Nachbarn (Hundesitting)</button>
+            <button type="button" id="homeToIceCreamBtn" class="btn btn-icecream">🍦 Beruf: Café &amp; Eisdiele</button>
+            <button type="button" id="homeToGameBtn" class="btn btn-primary">🏃 Rennen starten &amp; Geld verdienen</button>
+          </div>
+        </div>
+
+        <aside class="ice-menu-column home-side-column">
+          <div id="homeTalkMount"></div>
+          <div id="homePetRoomBar" class="home-pet-room-bar hidden">
+            <button type="button" id="homePickAllPetsBtn" class="btn btn-small btn-primary">🐾 Alle Tiere abholen</button>
+            <button type="button" id="homeLeaveAllPetsBtn" class="btn btn-small btn-secondary">🏠 Alle im Tierzimmer lassen</button>
+            <button type="button" id="homeOpenPetShopBtn" class="btn btn-small btn-home">🐾 Zur Tierhandlung (Stadt)</button>
+          </div>
+          <div id="homeFridgeBar" class="home-pet-room-bar hidden">
+            <span id="homeFridgeStockSummary" class="fridge-stock-pill"></span>
+            <button type="button" id="homeFridgeEatSnackBtn" class="btn btn-small btn-primary">🍓 Snack aus Kühlschrank</button>
+            <button type="button" id="homeFridgeCookBtn" class="btn btn-small btn-secondary">🍳 Zum Herd &amp; Kochen</button>
+            <button type="button" id="homeFridgeMarketBtn" class="btn btn-small btn-home">🛒 Zum Supermarkt (Stadt)</button>
+            <button type="button" id="homeFridgeCloseBtn" class="btn btn-small btn-secondary">✖ Zu</button>
           </div>
 
-          <div class="home-actions-bar">
+          <div class="ice-menu-header">
+            <h2>⚡ Aktionen im Haus</h2>
+            <span>Kochen, Putzen, Sitzen, Schlafen &amp; Tierpflege</span>
+          </div>
+          <div class="home-actions-bar home-side-actions">
             <button type="button" id="cookBtn" class="btn btn-care">🍳 Kochen starten</button>
             <button type="button" id="cleanBtn" class="btn btn-care">🧹 Zimmer putzen</button>
             <button type="button" id="sitTableBtn" class="btn btn-care">🪑 Am Tisch sitzen</button>
@@ -341,14 +330,37 @@
             <button type="button" id="homeLeashAllBtn" class="btn btn-care">🐕 Alle an Leine</button>
           </div>
 
-          <div class="home-nav-row">
-            <button type="button" id="homeToTownBtn" class="btn btn-town">🛍️ Geschäfte in der Stadt</button>
-            <button type="button" id="homeToEditorBtn" class="btn btn-secondary">👗 Charakter &amp; Kleiderschrank</button>
-            <button type="button" id="homeToPetSitBtn" class="btn btn-petsit">🐾 Zu den Nachbarn (Hundesitting)</button>
-            <button type="button" id="homeToIceCreamBtn" class="btn btn-icecream">🍦 Beruf: Café &amp; Eisdiele</button>
-            <button type="button" id="homeToGameBtn" class="btn btn-primary">🏃 Rennen starten &amp; Geld verdienen</button>
+          <div class="ice-menu-header home-needs-header">
+            <h2>📊 Werte &amp; Pflege</h2>
+            <span>Alles im Blick am Rand</span>
           </div>
-        </div>
+          <div class="home-needs-grid home-side-needs">
+            <div class="need-card">
+              <div class="need-label"><span>🧹 Sauberkeit</span><strong id="cleanPct">75%</strong></div>
+              <div class="need-track"><div id="cleanBar" class="need-fill"></div></div>
+            </div>
+            <div class="need-card">
+              <div class="need-label"><span>🍲 Sättigung</span><strong id="hungerPct">70%</strong></div>
+              <div class="need-track"><div id="hungerBar" class="need-fill"></div></div>
+            </div>
+            <div class="need-card">
+              <div class="need-label"><span>😴 Energie</span><strong id="energyPct">88%</strong></div>
+              <div class="need-track"><div id="energyBar" class="need-fill"></div></div>
+            </div>
+            <div class="need-card">
+              <div class="need-label"><span>🐾 Tier-Wohl</span><strong id="petPct">80%</strong></div>
+              <div class="need-track"><div id="petBar" class="need-fill"></div></div>
+            </div>
+            <div class="need-card">
+              <div class="need-label"><span>💤 Tier-Energie</span><strong id="petEnergyPct">88%</strong></div>
+              <div class="need-track"><div id="petEnergyBar" class="need-fill"></div></div>
+            </div>
+            <div class="need-card">
+              <div class="need-label"><span>🌱 Garten</span><strong id="gardenPct">40%</strong></div>
+              <div class="need-track"><div id="gardenBar" class="need-fill"></div></div>
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
 
@@ -374,17 +386,6 @@
               <span id="iceStatusText">Hole Eis, Waffeln, Essen &amp; Trinken hinter der Theke und bring sie an die Tische!</span>
             </div>
             <canvas id="iceCreamCanvas" width="860" height="470"></canvas>
-            <div class="icecream-cone-bar">
-              <div class="icecream-cone-label">
-                <strong>🍽️ Dein Tablett:</strong>
-                <div id="iceConeSlots" class="ice-cone-slots"></div>
-              </div>
-              <div class="ice-cone-slots">
-                <button type="button" id="iceInviteGuestBtn" class="btn btn-small btn-primary">🔔 Gast rufen</button>
-                <button type="button" id="iceClearConeBtn" class="btn btn-small btn-secondary">🗑️ Tablett leeren</button>
-              </div>
-            </div>
-            <div id="iceTalkMount"></div>
             <div class="home-walk-pad">
               <button type="button" id="iceWalkLeftBtn" class="walk-pad-btn" aria-label="Nach links gehen">◀ Links</button>
               <button type="button" id="iceWalkUpBtn" class="walk-pad-btn" aria-label="Nach hinten zur Theke gehen">▲ Theke</button>
@@ -402,6 +403,17 @@
         </div>
 
         <aside class="ice-menu-column">
+          <div id="iceTalkMount"></div>
+          <div class="icecream-cone-bar">
+            <div class="icecream-cone-label">
+              <strong>🍽️ Dein Tablett:</strong>
+              <div id="iceConeSlots" class="ice-cone-slots"></div>
+            </div>
+            <div class="ice-cone-slots">
+              <button type="button" id="iceInviteGuestBtn" class="btn btn-small btn-primary">🔔 Gast rufen</button>
+              <button type="button" id="iceClearConeBtn" class="btn btn-small btn-secondary">🗑️ Tablett leeren</button>
+            </div>
+          </div>
           <div class="ice-menu-header">
             <h2>🍽️ Speisekarte</h2>
             <span>Tippe auf Essen oder Trinken – deine Figur holt es sofort!</span>
@@ -434,18 +446,6 @@
               <span id="petStatusText">Du stehst vor deinem Haus! Lauf zu einem Nachbarn, hol dir Geld &amp; Auftrag und pass auf sein Tier auf.</span>
             </div>
             <canvas id="petSittingCanvas" width="860" height="470"></canvas>
-            <div class="icecream-cone-bar">
-              <div class="icecream-cone-label">
-                <strong>🐾 Nachbarschaft:</strong>
-                <div id="petActiveTargetBar" class="ice-cone-slots"></div>
-              </div>
-              <div class="ice-cone-slots">
-                <button type="button" id="petLeashAllBtn" class="btn btn-small btn-primary">🐕 Alle an die Leine!</button>
-                <button type="button" id="petUnleashAllBtn" class="btn btn-small btn-secondary hidden">✅ Gassi fertig / Leinen ab</button>
-                <button type="button" id="petCallNeighborBtn" class="btn btn-small btn-secondary">🔔 Nachbar rufen</button>
-              </div>
-            </div>
-            <div id="petTalkMount"></div>
             <div class="home-walk-pad">
               <button type="button" id="petWalkLeftBtn" class="walk-pad-btn" aria-label="Nach links gehen">◀ Links</button>
               <button type="button" id="petWalkUpBtn" class="walk-pad-btn" aria-label="Zu den Nachbarn gehen">▲ Nachbarn</button>
@@ -463,6 +463,18 @@
         </div>
 
         <aside class="ice-menu-column">
+          <div id="petTalkMount"></div>
+          <div class="icecream-cone-bar">
+            <div class="icecream-cone-label">
+              <strong>🐾 Nachbarschaft:</strong>
+              <div id="petActiveTargetBar" class="ice-cone-slots"></div>
+            </div>
+            <div class="ice-cone-slots">
+              <button type="button" id="petLeashAllBtn" class="btn btn-small btn-primary">🐕 Alle an die Leine!</button>
+              <button type="button" id="petUnleashAllBtn" class="btn btn-small btn-secondary hidden">✅ Gassi fertig / Leinen ab</button>
+              <button type="button" id="petCallNeighborBtn" class="btn btn-small btn-secondary">🔔 Nachbar rufen</button>
+            </div>
+          </div>
           <div class="ice-menu-header">
             <h2>🦴 Nachbarn &amp; Tier-Pflege</h2>
             <span>Erst beim Nachbarn Geld &amp; Tier abholen, dann auf das Tier aufpassen!</span>
@@ -493,23 +505,6 @@
               <span id="eventStatusText">Tippe ins Bild oder benutze die Aktions-Buttons rechts!</span>
             </div>
             <canvas id="eventCanvas" width="860" height="470"></canvas>
-            <div class="icecream-cone-bar">
-              <div class="icecream-cone-label">
-                <strong>🎯 Aufgabe:</strong>
-                <div id="eventGoalChips" class="ice-cone-slots"></div>
-              </div>
-            </div>
-            <div id="eventChatBox" class="event-chat-box">
-              <div class="event-chat-top">
-                <div id="eventFriendPills" class="event-friend-pills"></div>
-                <div id="eventChatReplyLine" class="event-chat-line">💬 Tippe auf einen Freund im Bild oder wähle oben jemanden zum Sprechen!</div>
-              </div>
-              <div id="eventQuickChatRow" class="event-quick-chat-row"></div>
-              <div class="event-chat-input-row">
-                <input type="text" id="eventChatInput" class="event-chat-input" placeholder="Schreibe hier etwas an deine Freunde..." maxlength="90" />
-                <button type="button" id="eventChatSendBtn" class="btn btn-small btn-primary">💬 Sagen</button>
-              </div>
-            </div>
             <div class="home-walk-pad">
               <button type="button" id="eventWalkLeftBtn" class="walk-pad-btn" aria-label="Nach links gehen">◀ Links</button>
               <button type="button" id="eventWalkUpBtn" class="walk-pad-btn" aria-label="Nach hinten gehen">▲ Hoch</button>
@@ -527,6 +522,26 @@
         </div>
 
         <aside class="ice-menu-column">
+          <div id="eventChatBox" class="event-chat-box">
+            <div class="event-chat-top">
+              <div class="talk-dock-header">
+                <span class="talk-dock-title">💬 Mit allen reden &amp; kennenlernen</span>
+              </div>
+              <div id="eventFriendPills" class="event-friend-pills"></div>
+              <div id="eventChatReplyLine" class="event-chat-line">💬 Tippe auf einen Freund im Bild oder wähle oben jemanden zum Sprechen!</div>
+            </div>
+            <div id="eventQuickChatRow" class="event-quick-chat-row"></div>
+            <div class="event-chat-input-row">
+              <input type="text" id="eventChatInput" class="event-chat-input" placeholder="Schreibe hier etwas an deine Freunde..." maxlength="90" />
+              <button type="button" id="eventChatSendBtn" class="btn btn-small btn-primary">💬 Sagen</button>
+            </div>
+          </div>
+          <div class="icecream-cone-bar">
+            <div class="icecream-cone-label">
+              <strong>🎯 Aufgabe:</strong>
+              <div id="eventGoalChips" class="ice-cone-slots"></div>
+            </div>
+          </div>
           <div class="ice-menu-header">
             <h2>✨ Aktionen beim Event</h2>
             <span>Tippe direkt auf die großen Buttons oder ins Spielbild!</span>
