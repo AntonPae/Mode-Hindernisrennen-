@@ -402,7 +402,7 @@ export function setupEventScreen(stateManager) {
     const activeTemplates = [
       ...allTemplates.filter((tpl) => !tpl.isNewPerson),
       ...metOrSenderNew,
-      ...unmetNew.slice(0, 2)
+      ...unmetNew
     ];
 
     const chosenTemplates = kind === 'hide_and_seek'
@@ -617,9 +617,13 @@ export function setupEventScreen(stateManager) {
     };
 
     if (walkOver && currentEvent?.kind !== 'race') {
+      triggerGreeting();
       const standX = Math.max(40, Math.min(820, f.x + (player.x < f.x ? -52 : 52)));
       const standY = Math.max(210, Math.min(440, f.y + 4));
-      navigateToPoint(standX, standY, triggerGreeting);
+      navigateToPoint(standX, standY, () => {
+        f.facing = player.x < f.x ? -1 : 1;
+        player.facing = f.x >= player.x ? 1 : -1;
+      });
     } else {
       triggerGreeting();
     }

@@ -506,33 +506,29 @@ export function setupStoreScreen(stateManager) {
     mountEl: document.getElementById('storeTalkMount'),
     getTargets: getStoreTalkTargets,
     onTalkPerson: (target, phrase) => {
-      const doChat = () => {
-        player.speechText = phrase;
-        player.speechTimer = 135;
-        player.pose = 'pet';
-        player.poseTimer = 20;
-        const res = generatePersonReply(target, phrase, { scene: 'store', shopId: activeShopId });
-        if (target.kind === 'cashier') {
-          player.facing = 1;
-          cashierBubble = res.bubble;
-          cashierBubbleTimer = 175;
-        } else {
-          const shopper = STORE_SHOPPERS.find((s) => s.id === target.id);
-          if (shopper) {
-            player.facing = shopper.x >= player.x ? 1 : -1;
-            shopper.speechText = res.bubble;
-            shopper.speechTimer = 175;
-            shopper.pauseTimer = 140;
-          }
+      player.speechText = phrase;
+      player.speechTimer = 135;
+      player.pose = 'pet';
+      player.poseTimer = 20;
+      const res = generatePersonReply(target, phrase, { scene: 'store', shopId: activeShopId });
+      if (target.kind === 'cashier') {
+        player.facing = 1;
+        cashierBubble = res.bubble;
+        cashierBubbleTimer = 175;
+        if (player.x < 640) {
+          navigateInStore(700, 292, () => { player.facing = 1; });
         }
-        talkPanel.refresh(`${target.icon} ${target.name}: „${res.reply}“`);
-        if (statusEl) statusEl.textContent = `💬 ${target.name}: „${res.reply}“`;
-      };
-      if (target.kind === 'cashier' && player.x < 640) {
-        navigateInStore(700, 292, doChat);
       } else {
-        doChat();
+        const shopper = STORE_SHOPPERS.find((s) => s.id === target.id);
+        if (shopper) {
+          player.facing = shopper.x >= player.x ? 1 : -1;
+          shopper.speechText = res.bubble;
+          shopper.speechTimer = 175;
+          shopper.pauseTimer = 140;
+        }
       }
+      talkPanel.refresh(`${target.icon} ${target.name}: „${res.reply}“`);
+      if (statusEl) statusEl.textContent = `💬 ${target.name}: „${res.reply}“`;
     },
     onCommandPet: (target, payload) => {
       const firstPet = petFollowers.followers[0];

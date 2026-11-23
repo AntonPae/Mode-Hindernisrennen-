@@ -282,21 +282,19 @@ export function setupPetSittingScreen(stateManager) {
     onTalkPerson: (target, phrase) => {
       const h = NEIGHBOR_HOUSES[target.houseIdx];
       if (!h) return;
-      const runChat = () => {
-        player.facing = h.neighborX >= player.x ? 1 : -1;
-        player.speechText = phrase;
-        player.speechTimer = 135;
-        player.pose = 'pet';
-        player.poseTimer = 20;
-        const res = generatePersonReply(target, phrase, { scene: 'petsitting' });
-        setNeighborSpeech(target.houseIdx, res.bubble, 175);
-        talkPanel.refresh(`${target.icon} ${target.name}: „${res.reply}“`);
-        setStatus(`💬 ${target.name}: „${res.reply}“`);
-      };
+      player.facing = h.neighborX >= player.x ? 1 : -1;
+      player.speechText = phrase;
+      player.speechTimer = 135;
+      player.pose = 'pet';
+      player.poseTimer = 20;
+      const res = generatePersonReply(target, phrase, { scene: 'petsitting' });
+      setNeighborSpeech(target.houseIdx, res.bubble, 175);
+      talkPanel.refresh(`${target.icon} ${target.name}: „${res.reply}“`);
+      setStatus(`💬 ${target.name}: „${res.reply}“`);
       if (Math.hypot(player.x - h.neighborX, player.y - NEIGHBOR_STAND_Y) > 130) {
-        navigateToPoint(h.neighborX + 14, 266, null, runChat);
-      } else {
-        runChat();
+        navigateToPoint(h.neighborX + 14, 266, null, () => {
+          player.facing = h.neighborX >= player.x ? 1 : -1;
+        });
       }
     },
     onCommandPet: (target, payload) => {

@@ -280,51 +280,47 @@ export function setupTownScreen(stateManager) {
     onTalkPerson: (target, phrase) => {
       const standX = target.x + (player.x < target.x ? -44 : 44);
       const standY = target.y >= LOWER_WALK_MIN_Y ? target.y : 268;
-      const runChat = () => {
-        player.facing = target.x >= player.x ? 1 : -1;
-        player.speechText = phrase;
-        player.speechTimer = 135;
-        player.pose = 'pet';
-        player.poseTimer = 20;
-        const res = generatePersonReply(target, phrase, { scene: 'town' });
-        setNpcSpeech(target.id, res.bubble, 185);
-        talkPanel.refresh(`${target.icon} ${target.name}: „${res.reply}“`);
-        if (res.movedIn) {
-          if (statusEl) {
-            statusEl.textContent = `🏡 Hurra! ${target.name} wohnt jetzt mit dir zusammen! Klick unten auf „🏡 Direkt ins Haus“!`;
-          }
-        } else if (statusEl) {
-          statusEl.textContent = `💬 ${target.name}: „${res.reply}“`;
+      player.facing = target.x >= player.x ? 1 : -1;
+      player.speechText = phrase;
+      player.speechTimer = 135;
+      player.pose = 'pet';
+      player.poseTimer = 20;
+      const res = generatePersonReply(target, phrase, { scene: 'town' });
+      setNpcSpeech(target.id, res.bubble, 200);
+      talkPanel.refresh(`${target.icon} ${target.name}: „${res.reply}“`);
+      if (res.movedIn) {
+        if (statusEl) {
+          statusEl.textContent = `🏡 Hurra! ${target.name} wohnt jetzt mit dir zusammen! Klick unten auf „🏡 Direkt ins Haus“!`;
         }
-      };
+      } else if (statusEl) {
+        statusEl.textContent = `💬 ${target.name}: „${res.reply}“`;
+      }
       if (Math.hypot(player.x - target.x, player.y - target.y) > 130) {
-        navigateInTown(standX, standY, null, runChat);
-      } else {
-        runChat();
+        navigateInTown(standX, standY, null, () => {
+          player.facing = target.x >= player.x ? 1 : -1;
+        });
       }
     },
     onMoveInRequest: (target) => {
       const standX = target.x + (player.x < target.x ? -44 : 44);
       const standY = target.y >= LOWER_WALK_MIN_Y ? target.y : 268;
-      const askMoveIn = () => {
-        player.facing = target.x >= player.x ? 1 : -1;
-        player.speechText = 'Wollen wir zusammenziehen? 🏡';
-        player.speechTimer = 140;
-        player.pose = 'pet';
-        player.poseTimer = 24;
-        const res = generatePersonReply(target, 'Wollen wir zusammenziehen?', { scene: 'town' });
-        setNpcSpeech(target.id, res.bubble, 200);
-        talkPanel.refresh(`${target.icon} ${target.name}: „${res.reply}“`);
-        if (statusEl) {
-          statusEl.textContent = res.movedIn
-            ? `🏡 Hurra! ${target.name} ist bei dir eingezogen! Geh ins Haus („🏡 Direkt ins Haus“), um zusammen zu wohnen!`
-            : `💬 ${target.name}: „${res.reply}“`;
-        }
-      };
+      player.facing = target.x >= player.x ? 1 : -1;
+      player.speechText = 'Wollen wir zusammenziehen? 🏡';
+      player.speechTimer = 140;
+      player.pose = 'pet';
+      player.poseTimer = 24;
+      const res = generatePersonReply(target, 'Wollen wir zusammenziehen?', { scene: 'town' });
+      setNpcSpeech(target.id, res.bubble, 210);
+      talkPanel.refresh(`${target.icon} ${target.name}: „${res.reply}“`);
+      if (statusEl) {
+        statusEl.textContent = res.movedIn
+          ? `🏡 Hurra! ${target.name} ist bei dir eingezogen! Geh ins Haus („🏡 Direkt ins Haus“), um zusammen zu wohnen!`
+          : `💬 ${target.name}: „${res.reply}“`;
+      }
       if (Math.hypot(player.x - target.x, player.y - target.y) > 130) {
-        navigateInTown(standX, standY, null, askMoveIn);
-      } else {
-        askMoveIn();
+        navigateInTown(standX, standY, null, () => {
+          player.facing = target.x >= player.x ? 1 : -1;
+        });
       }
     },
     onMoveOutRequest: (target) => {
@@ -562,21 +558,24 @@ export function setupTownScreen(stateManager) {
 
       // Click on any Neighbor or New Meetable Person on the street!
       for (const person of townPeople) {
-        if (Math.hypot(worldX - person.x, worldY - (person.y - 36)) <= 42) {
+        if (Math.abs(worldX - person.x) <= 44 && worldY >= person.y - 98 && worldY <= person.y + 30) {
           const standX = person.x + (player.x < person.x ? -44 : 44);
           const standY = person.y >= LOWER_WALK_MIN_Y ? person.y : 268;
-          navigateInTown(standX, standY, null, () => {
-            player.facing = person.x >= player.x ? 1 : -1;
-            const greetText = person.isNewPerson && SocialManager.getAcquaintanceProgress(person.id).stage === 0
-              ? 'Hallo! Wollen wir uns kennenlernen?'
-              : `Hallo ${person.name}!`;
-            player.speechText = greetText;
-            player.speechTimer = 125;
-            const res = generatePersonReply(person, greetText, { scene: 'town' });
-            setNpcSpeech(person.id, res.bubble, 175);
-            talkPanel.selectTarget(person.id, `${person.icon} ${person.name}: „${res.reply}“`);
-            if (statusEl) statusEl.textContent = `💬 ${person.name}: „${res.reply}“`;
-          });
+          const greetText = person.isNewPerson && SocialManager.getAcquaintanceProgress(person.id).stage === 0
+            ? 'Hallo! Wollen wir uns kennenlernen?'
+            : `Hallo ${person.name}!`;
+          player.facing = person.x >= player.x ? 1 : -1;
+          player.speechText = greetText;
+          player.speechTimer = 125;
+          const res = generatePersonReply(person, greetText, { scene: 'town' });
+          setNpcSpeech(person.id, res.bubble, 190);
+          talkPanel.selectTarget(person.id, `${person.icon} ${person.name}: „${res.reply}“`);
+          if (statusEl) statusEl.textContent = `💬 ${person.name}: „${res.reply}“`;
+          if (Math.hypot(player.x - person.x, player.y - person.y) > 110) {
+            navigateInTown(standX, standY, null, () => {
+              player.facing = person.x >= player.x ? 1 : -1;
+            });
+          }
           return;
         }
       }

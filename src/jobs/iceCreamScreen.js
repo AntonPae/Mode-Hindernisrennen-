@@ -217,22 +217,20 @@ export function setupIceCreamScreen(stateManager) {
         talkPanel.refresh('💬 Dieser Gast ist gerade gegangen – lade gern einen neuen Gast ein!');
         return;
       }
-      const runChat = () => {
-        player.facing = tb.guestX >= player.x ? 1 : -1;
-        player.speechText = phrase;
-        player.speechTimer = 135;
-        player.pose = 'pet';
-        player.poseTimer = 20;
-        const res = generatePersonReply({ id: target.rawName, name: target.rawName, kind: 'guest' }, phrase, { scene: 'icecream' });
-        c.chatText = res.bubble;
-        c.chatTimer = 185;
-        talkPanel.refresh(`🍨 ${target.rawName}: „${res.reply}“`);
-        setStatus(`💬 ${target.rawName}: „${res.reply}“`);
-      };
+      player.facing = tb.guestX >= player.x ? 1 : -1;
+      player.speechText = phrase;
+      player.speechTimer = 135;
+      player.pose = 'pet';
+      player.poseTimer = 20;
+      const res = generatePersonReply({ id: target.rawName, name: target.rawName, kind: 'guest' }, phrase, { scene: 'icecream' });
+      c.chatText = res.bubble;
+      c.chatTimer = 185;
+      talkPanel.refresh(`🍨 ${target.rawName}: „${res.reply}“`);
+      setStatus(`💬 ${target.rawName}: „${res.reply}“`);
       if (player.y < 205 || Math.hypot(player.x - tb.guestX, player.y - tb.y) > 140) {
-        navigateToPoint(tb.standX, tb.standY, null, runChat);
-      } else {
-        runChat();
+        navigateToPoint(tb.standX, tb.standY, null, () => {
+          player.facing = tb.guestX >= player.x ? 1 : -1;
+        });
       }
     },
     onCommandPet: (target, payload) => {

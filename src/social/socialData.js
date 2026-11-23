@@ -468,6 +468,13 @@ export const SocialManager = {
   }
 };
 
+const FAVORITE_COLORS = {
+  mila: 'Sonnengelb und Türkis',
+  tom: 'Apfelgrün und Himmelblau',
+  lina: 'Rosa, Flieder und Himmelblau für meine Aquarelle',
+  jonas: 'Violett und Goldgelb'
+};
+
 export function generatePersonReply(target, playerText = '', sceneContext = {}) {
   const text = (playerText || '').trim();
   const q = text.toLowerCase();
@@ -477,7 +484,7 @@ export function generatePersonReply(target, playerText = '', sceneContext = {}) 
   // Advance acquaintance/talk counter
   const progress = SocialManager.recordTalk(id);
 
-  // 1. New Acquaintances (Mila, Tom, Lina) have rich Kennenlernen & Zusammenziehen replies!
+  // 1. New Acquaintances (Mila, Tom, Lina, Jonas) have rich Kennenlernen, Q&A & Zusammenziehen replies!
   const newPerson = NEW_ACQUAINTANCES.find((p) => p.id === id);
   if (newPerson) {
     let reply = '';
@@ -501,30 +508,59 @@ export function generatePersonReply(target, playerText = '', sceneContext = {}) 
       };
     }
 
-    if (progress && progress.prevStage === 0) {
-      reply = newPerson.introLine;
+    const introMatch = text.match(/(?:ich heiße|ich bin|mein name ist)\s+([A-ZÄÖÜa-zäöüß-]{2,20})/i);
+    const nonNames = new Set(['müde', 'glücklich', 'traurig', 'krank', 'gesund', 'fertig', 'bereit', 'hier', 'da', 'neu', 'gut', 'super', 'lieb', 'nett', 'cool', 'groß', 'klein', 'froh', 'allein', 'wach']);
+    const introducedName = introMatch && !nonNames.has(introMatch[1].toLowerCase()) ? introMatch[1] : null;
+
+    if (introducedName) {
+      reply = `Oh, ${introducedName} ist so ein schöner Name! 🥰 Freut mich riesig, dich kennenzulernen – ich bin ${newPerson.name}!`;
+    } else if (/(wie\s*geht|alles\s*(gut|klar|okay|ok)|wie\s*fühlst)/i.test(q)) {
+      reply = `Mir geht es richtig gut, danke der Nachfrage! 😊 Ich genieße den Tag in der Traumstadt – und wie geht es dir heute?`;
+    } else if (/(wie\s*alt|\balter\b|geburtstag)/i.test(q)) {
+      reply = `Ich bin genau im perfekten Alter zum Malen, Entdecken und für viele Abenteuer in der Traumstadt! ✨`;
+    } else if (/(wo\s*(wohnst|lebst|bist|kommst)|woher\s*kommst|dein\s*haus|deine\s*wohnung)/i.test(q)) {
+      reply = isRoommateNow
+        ? `Ich wohne doch schon glücklich mit dir zusammen in deinem Traumhaus! 🏡💛`
+        : `Normalerweise findest du mich hier (${newPerson.spotLabel}) – aber wenn du magst, ziehe ich total gern zu dir ins Haus! 🏡`;
+    } else if (/(tier|hund|katze|hase|papagei|fuchs|einhorn|welpe|haustier)/i.test(q)) {
+      reply = `Ich liebe Tiere über alles! 🐾 Deine Tiere sehen so niedlich und fröhlich aus – wie viele hast du denn schon?`;
+    } else if (/(lieblingsfarbe|welche\s*farbe|farbe\s*magst)/i.test(q)) {
+      const col = FAVORITE_COLORS[id] || 'Rosa, Türkis und Sonnengelb';
+      reply = `Meine Lieblingsfarbe ist ${col}! 🎨 Welche Farbe magst du am liebsten?`;
+    } else if (/(essen|trinken|kakao|eis|pizza|kuchen|waffel|apfel|liebling|hunger|durst|schmeckt|snack)/i.test(q)) {
+      reply = `Am allerliebsten mag ich ${newPerson.favoriteFood}! Und was isst du am liebsten? 😊`;
+    } else if (/(hobby|was\s*machst|was\s*malst|malst|zeichn|skizzen|buch|lesen|beruf|arbeit|foto|skaten|garten|gitarre|musik)/i.test(q)) {
+      reply = `Am liebsten beschäftige ich mich damit: ${newPerson.hobby}! 😊 Und was machst du gerne in deiner Freizeit?`;
+    } else if (/(müde|schlaf|bett|krank|gesund|wetter|sonne|regen)/i.test(q)) {
+      if (/(krank|gesund)/i.test(q)) {
+        reply = `Mir geht es super und ich bin kerngesund! Hoffentlich sind du und deine Tiere auch fit! ❤️`;
+      } else if (/(müde|schlaf|bett)/i.test(q)) {
+        reply = `Ein kleines Päuschen tut immer gut! Zuhause im Bett oder am Tisch kann man sich prima erholen. 😴`;
+      } else {
+        reply = `Das Wetter in der Traumstadt ist heute einfach zauberhaft – perfekt zum Spazieren und Plaudern! ☀️`;
+      }
+    } else if (/(spiel|spazier|unternehm|treffen|café|eisdiele|stadt|ausflug|party|lust)/i.test(q)) {
+      reply = `Oh ja, voll gerne! 🥳 Lass uns zusammen losziehen, ins Café schauen oder eine Party feiern!`;
+    } else if (/(freund|einlad|brief)/i.test(q)) {
+      reply = `Ja, total gerne! Du findest mich ab jetzt in deinem Briefkasten – und wenn du willst, können wir sogar zusammenziehen! 🏡💌`;
+    } else if (/(wie\s*heißt|dein\s*name|wer\s*bist|vorstellen)/i.test(q)) {
+      reply = `Ich bin ${newPerson.name} (${newPerson.role})! ${newPerson.icon} Schön, dass wir miteinander reden!`;
+    } else if (/(kleid|outfit|hose|schuh|frisur|haar|hübsch|schön|süß|toll|cool|super|nett|lieb|mag\s*dich|danke)/i.test(q)) {
+      reply = `Aww, danke dir! 💕 Du bist richtig nett – und dein Look sieht heute auch super aus!`;
     } else if (sceneContext.scene === 'home' && isRoommateNow) {
       if (/\b(kochen|essen|tisch|küche|kühlschrank|hunger)\b/.test(q)) {
         reply = `Komm, wir setzen uns zusammen an den Küchentisch oder holen was Leckeres aus dem Kühlschrank! 🍽️`;
-      } else if (/\b(schlaf|müde|bett|nacht|ausruh)\b/.test(q)) {
-        reply = `Wenn du schlafen gehst, ruhe ich mich direkt neben dir mit aus! Gute Erholung! 😴💤`;
-      } else if (/\b(garten|blumen|pflanzen|gießen|tier|hund|katze)\b/.test(q)) {
-        reply = `Ich liebe unseren Garten und deine süßen Tiere hier zuhause! 🌸🐾`;
       } else {
         const pool = newPerson.homeLines || newPerson.facts;
         const idx = (SocialManager.getAcquaintanceProgress(id).talks || 0) % pool.length;
         reply = pool[idx];
       }
-    } else if (/\b(hobby|machst|beruf|arbeit|foto|mal|skaten|garten)\b/.test(q)) {
-      reply = `Mein Hobby ist: ${newPerson.hobby}! Und was machst du am liebsten? 😊`;
-    } else if (/\b(essen|eis|liebling|trinken|snack)\b/.test(q)) {
-      reply = `Ich liebe ${newPerson.favoriteFood}! Gehen wir da bald zusammen hin?`;
-    } else if (/\b(freund|einlad|treffen|brief)\b/.test(q)) {
-      reply = `Ja total gerne! Du findest mich ab jetzt auch in deinem Briefkasten – und wenn du willst, können wir sogar zusammenziehen! 🏡💌`;
-    } else if (/\b(hallo|hi|hey|guten|servus|moin|name|heißt|vorstellen)\b/.test(q)) {
-      reply = `Hallo! Freut mich riesig, dich kennenzulernen! Ich bin ${newPerson.name} (${newPerson.role}).`;
-    } else if (/\b(toll|cool|schön|super|nett|lieb|danke)\b/.test(q)) {
-      reply = `Aww, danke! Du bist echt super sympathisch! ✨`;
+    } else if (progress && progress.prevStage === 0 && (!q || /(hallo|hi|hey|guten|servus|moin|kennenlernen)/i.test(q))) {
+      reply = newPerson.introLine;
+    } else if (q.includes('?') || /\b(was|warum|wieso|weshalb|wann|wer|wie|wo|welche|welcher|welches|kannst|hast|willst|möchtest|darf|bist|magst|gibt)\b/i.test(q)) {
+      reply = `Gute Frage! 😊 Ich bin ${newPerson.name} und liebe ${newPerson.hobby}. Am liebsten genieße ich ${newPerson.favoriteFood} – frag mich gern alles oder ob wir zusammenziehen!`;
+    } else if (/(hallo|hi|hey|guten|servus|moin)/i.test(q)) {
+      reply = `Hallo! Schön, dass du mit mir redest! Wie geht es dir heute? 😊`;
     } else {
       const idx = (SocialManager.getAcquaintanceProgress(id).talks || 0) % newPerson.facts.length;
       reply = newPerson.facts[idx];
@@ -543,6 +579,21 @@ export function generatePersonReply(target, playerText = '', sceneContext = {}) 
   }
 
   // 2. Keyword-matched replies for any neighbor, cashier, shopper, café guest, or friend
+  if (/(wie\s*heißt|dein\s*name|wer\s*bist)/i.test(q)) {
+    const r = `Ich bin ${name}! Schön, dass wir hier zusammen plaudern! 😊`;
+    return { reply: r, bubble: r };
+  }
+
+  if (/(wie\s*geht|alles\s*(gut|klar|okay|ok)|wie\s*fühlst)/i.test(q)) {
+    const r = `Mir geht es prima, danke der Nachfrage! Und dir und deinen Tieren hoffentlich auch! 🌞`;
+    return { reply: r, bubble: r };
+  }
+
+  if (/(wo\s*(wohnst|lebst|kommst)|wie\s*alt|lieblingsfarbe|hobby|was\s*machst)/i.test(q)) {
+    const r = `Ich lebe hier in unserer schönen Traumstadt, liebe gute Gespräche und freue mich immer, dich zu sehen! ✨`;
+    return { reply: r, bubble: 'Ich wohne hier in der Traumstadt! ✨' };
+  }
+
   if (/\b(hallo|hi|hey|guten|morgen|tag|abend)\b/.test(q)) {
     const greets = [
       `Hallo! Wie schön, dass du kurz vorbeischaust! 😊`,
@@ -550,11 +601,6 @@ export function generatePersonReply(target, playerText = '', sceneContext = {}) 
       `Hallo! Schönes Wetter heute in unserer Traumstadt!`
     ];
     const r = greets[Math.floor(Math.random() * greets.length)];
-    return { reply: r, bubble: r };
-  }
-
-  if (/\b(wie geht|alles gut|alles klar)\b/.test(q)) {
-    const r = `Mir geht es prima, danke der Nachfrage! Und deinen Tieren hoffentlich auch! 🌞`;
     return { reply: r, bubble: r };
   }
 
@@ -608,6 +654,8 @@ export function generatePersonReply(target, playerText = '', sceneContext = {}) 
     return { reply: r, bubble: 'Es schmeckt fantastisch! 🍨' };
   }
 
-  const fallback = `Das ist ja spannend! Schön, mit dir zu plaudern, ${name} hört dir gern zu! 💬`;
+  const fallback = q.includes('?')
+    ? `Klar, ${name} antwortet dir gern! Hier in der Traumstadt passiert heute so viel Schönes! 😊`
+    : `Das ist ja spannend! Schön, mit dir zu plaudern, ${name} hört dir gern zu! 💬`;
   return { reply: fallback, bubble: `Schön mit dir zu reden! 💬` };
 }
