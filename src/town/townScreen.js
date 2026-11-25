@@ -12,8 +12,9 @@ import {
 } from '../social/socialData.js';
 import { drawCanvasSpeechBubble } from '../social/canvasSpeech.js';
 import { mountTalkPanel } from '../social/talkPanel.js';
+import { drawPlayerWithTransport, getTransportMeta } from './transportRenderer.js';
 
-const WORLD_WIDTH = 3420;
+const WORLD_WIDTH = 3740;
 const GARDEN_LEFT_X = 280;
 const GARDEN_RIGHT_X = 560;
 const LEFT_GATE_X = 280;
@@ -26,7 +27,7 @@ const LOWER_WALK_MIN_Y = 400;
 const LOWER_WALK_MAX_Y = 434;
 const GARDEN_PATH_MIN_Y = 286;
 const GARDEN_PATH_MAX_Y = 376;
-const CROSSWALK_XS = [1350, 1665, 1980, 2295, 2610, 2925];
+const CROSSWALK_XS = [1350, 1665, 1980, 2295, 2610, 2925, 3240];
 const CROSSWALK_HALF_W = 26;
 const RESIDENTIAL_NEIGHBORS = [
   {
@@ -156,14 +157,24 @@ export const TOWN_PLACES = [
     x: 2610,
     y: 266,
     shopId: 'petshop',
-    badge: 'Tiere & Futter',
+    badge: 'Tiere & Reittiere',
     color: '#0ea5e9',
-    desc: 'Haustiere, Tiersachen fürs Tierzimmer & Tierfutter'
+    desc: 'Haustiere, Reittiere (Pony, Pferd, Einhorn), Stall-Zubehör & Futter'
+  },
+  {
+    id: 'vehicles',
+    label: '🚗 Fahrzeug-Haus',
+    x: 2925,
+    y: 266,
+    shopId: 'vehicles',
+    badge: 'Gefährte',
+    color: '#0284c7',
+    desc: 'Skateboards, Roller, Fahrräder, Motorräder & Autos – Sparziele fürs echte Leben!'
   },
   {
     id: 'cafe',
     label: '🍦 Café & Eisdiele',
-    x: 2925,
+    x: 3240,
     y: 266,
     targetState: 'ICECREAM',
     badge: 'Arbeiten',
@@ -173,7 +184,7 @@ export const TOWN_PLACES = [
   {
     id: 'stadium',
     label: '🏃 Renn-Stadion',
-    x: 3240,
+    x: 3555,
     y: 266,
     targetState: 'BACKGROUND_SELECT',
     badge: 'Rennen starten',
@@ -190,6 +201,7 @@ export function setupTownScreen(stateManager) {
   const levelValEl = document.getElementById('townLevelVal');
   const statusEl = document.getElementById('townStatusText');
   const districtBarEl = document.getElementById('townDistrictBar');
+  const transportBarEl = document.getElementById('townTransportBar');
   const enterPlaceBtn = document.getElementById('townEnterBtn');
 
   const walkLeftBtn = document.getElementById('townWalkLeftBtn');
@@ -429,6 +441,11 @@ export function setupTownScreen(stateManager) {
     return CROSSWALK_XS.some((cx) => Math.abs(x - cx) <= CROSSWALK_HALF_W);
   }
 
+  function canDriveStreetRoad() {
+    const tr = getTransportMeta(HomeManager.getActiveTransport());
+    return Boolean(tr?.allowRoad);
+  }
+
   function snapToTownPath(tx, ty) {
     let x = Math.max(48, Math.min(WORLD_WIDTH - 48, tx));
     let y = Math.max(SIDEWALK_MIN_Y, Math.min(LOWER_WALK_MAX_Y, ty));
@@ -451,6 +468,11 @@ export function setupTownScreen(stateManager) {
     }
 
     if (x >= STREET_START_X) {
+      // Motorized street vehicles can drive directly along the asphalt road as well as sidewalks!
+      if (canDriveStreetRoad()) {
+        y = Math.max(SIDEWALK_MIN_Y, Math.min(LOWER_WALK_MAX_Y, y));
+        return { x, y };
+      }
       // Shopping street: upper sidewalk, crosswalks, or lower promenade
       if (y > SIDEWALK_MAX_Y && y < LOWER_WALK_MIN_Y) {
         if (isPointOnCrosswalk(x)) {
@@ -478,18 +500,19 @@ export function setupTownScreen(stateManager) {
     const startInGarden = player.x > GARDEN_LEFT_X + 6 && player.x < GARDEN_RIGHT_X - 6 && player.y > SIDEWALK_MAX_Y;
     const endInGarden = clampedX > GARDEN_LEFT_X + 6 && clampedX < GARDEN_RIGHT_X - 6 && clampedY > SIDEWALK_MAX_Y;
     const waypoints = [];
+    const onStreetVehicle = canDriveStreetRoad() && player.x >= STREET_START_X && clampedX >= STREET_START_X;
 
     const gateY = 304;
-    // Handle lower promenade <-> upper sidewalk via nearest Zebrastreifen!
+    // Handle lower promenade <-> upper sidewalk via nearest Zebrastreifen (unless driving a road vehicle on the street!)
     const startOnLower = player.x >= STREET_START_X && player.y >= LOWER_WALK_MIN_Y - 4;
     const endOnLower = clampedX >= STREET_START_X && clampedY >= LOWER_WALK_MIN_Y - 4;
     const startOnCross = player.x >= STREET_START_X && player.y > SIDEWALK_MAX_Y && player.y < LOWER_WALK_MIN_Y;
 
-    if (startOnLower && !endOnLower) {
+    if (!onStreetVehicle && startOnLower && !endOnLower) {
       const cwX = getNearestCrosswalkX(player.x);
       waypoints.push({ x: cwX, y: LOWER_WALK_MIN_Y + 10 });
       waypoints.push({ x: cwX, y: 270 });
-    } else if (!startOnLower && endOnLower) {
+    } else if (!onStreetVehicle && !startOnLower && endOnLower) {
       if (startInGarden) {
         const gateX = RIGHT_GATE_X;
         waypoints.push({ x: gateX - 24, y: gateY });
@@ -498,7 +521,7 @@ export function setupTownScreen(stateManager) {
       const cwX = getNearestCrosswalkX(clampedX);
       waypoints.push({ x: cwX, y: 270 });
       waypoints.push({ x: cwX, y: LOWER_WALK_MIN_Y + 10 });
-    } else if (startOnCross) {
+    } else if (!onStreetVehicle && startOnCross) {
       const cwX = getNearestCrosswalkX(player.x);
       waypoints.push({ x: cwX, y: clampedY >= 342 ? LOWER_WALK_MIN_Y + 10 : 270 });
     } else if (!startInGarden && endInGarden) {
@@ -519,6 +542,50 @@ export function setupTownScreen(stateManager) {
     player.waypoints = waypoints;
     player.pendingPlace = pendingPlace;
     player.pendingCallback = pendingCallback;
+  }
+
+  function renderTransportBar() {
+    if (!transportBarEl) return;
+    const mounts = HomeManager.getOwnedMounts();
+    const vehicles = HomeManager.getOwnedVehicles();
+    const active = HomeManager.getActiveTransport();
+
+    if (mounts.length === 0 && vehicles.length === 0) {
+      transportBarEl.innerHTML = `
+        <div class="transport-pill-title">🐴🚗 Reittiere & Gefährte</div>
+        <span style="font-size:0.78rem;color:#475569;font-weight:600;">Noch nichts gekauft – schau in der 🐾 Tierhandlung (Reittiere) oder im 🚗 Fahrzeug-Haus vorbei!</span>
+      `;
+      return;
+    }
+
+    transportBarEl.innerHTML = `<div class="transport-pill-title">🐴🚗 Unterwegs in Traumstadt</div>`;
+
+    const addBtn = (label, kind, id, isActive) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `transport-chip-btn${isActive ? ' active' : ''}`;
+      btn.textContent = label;
+      btn.addEventListener('click', () => {
+        if (!kind || isActive) {
+          HomeManager.setActiveTransport(null, null);
+          if (statusEl) statusEl.textContent = '🚶 Du bist jetzt wieder zu Fuß unterwegs.';
+        } else {
+          HomeManager.setActiveTransport(kind, id);
+          const meta = getTransportMeta({ kind, id });
+          if (statusEl) {
+            statusEl.textContent = meta?.allowRoad
+              ? `${label}: Du kannst jetzt sogar über die Einkaufsstraße düsen! 🛣️`
+              : `${label}: Du saust jetzt schneller durch Traumstadt!`;
+          }
+        }
+        renderTransportBar();
+      });
+      transportBarEl.appendChild(btn);
+    };
+
+    addBtn('🚶 Zu Fuß', null, null, !active);
+    mounts.forEach((m) => addBtn(`${m.icon} ${m.name}`, 'mount', m.id, active?.kind === 'mount' && active?.id === m.id));
+    vehicles.forEach((v) => addBtn(`${v.icon} ${v.name}`, 'vehicle', v.id, active?.kind === 'vehicle' && active?.id === v.id));
   }
 
   function renderDistrictBar() {
@@ -697,8 +764,9 @@ export function setupTownScreen(stateManager) {
     if ((Math.abs(x - LEFT_GATE_X) < 34 || Math.abs(x - RIGHT_GATE_X) < 34) && y >= SIDEWALK_MIN_Y && y <= 332) {
       return true;
     }
-    // Shopping street lower promenade & crosswalks ONLY
+    // Shopping street lower promenade, crosswalks, or asphalt road for road vehicles
     if (x >= STREET_START_X) {
+      if (canDriveStreetRoad() && y >= SIDEWALK_MIN_Y && y <= LOWER_WALK_MAX_Y) return true;
       if (y >= LOWER_WALK_MIN_Y && y <= LOWER_WALK_MAX_Y) return true;
       if (y > SIDEWALK_MAX_Y && y < LOWER_WALK_MIN_Y && isPointOnCrosswalk(x)) return true;
     }
@@ -741,7 +809,8 @@ export function setupTownScreen(stateManager) {
     if (keys.up || holdPad.up) moveY -= 1;
     if (keys.down || holdPad.down) moveY += 1;
 
-    const speed = 5.6;
+    const trMeta = getTransportMeta(HomeManager.getActiveTransport());
+    const speed = trMeta ? trMeta.speedTown : 5.6;
     if (moveX !== 0 || moveY !== 0) {
       const len = Math.hypot(moveX, moveY) || 1;
       moveWithGardenFence((moveX / len) * speed, (moveY / len) * speed);
@@ -994,7 +1063,7 @@ export function setupTownScreen(stateManager) {
     }
 
     // Crisp Crosswalks ("Zebrastreifen") in front of shops!
-    [1350, 1665, 1980, 2295, 2610, 2925].forEach((cx) => {
+    CROSSWALK_XS.forEach((cx) => {
       ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
       for (let sy = 296; sy <= 376; sy += 16) {
         ctx.fillRect(cx - 28, sy, 56, 8);
@@ -1391,9 +1460,21 @@ export function setupTownScreen(stateManager) {
       windowItems: ['🐶', '🐱', '🦴']
     });
 
-    // 6. Traum-Café & Eisdiele
+    // 6. Fahrzeug- & Gefährte-Haus (Skateboards, Roller, Fahrräder, Motorräder & Autos!)
     drawShoppingStreetStore({
       x: 2925,
+      wall: '#f0f9ff',
+      trim: '#0369a1',
+      awningA: '#0284c7',
+      awningB: '#ffffff',
+      signText: '🚗 FAHRZEUG-HAUS',
+      signColor: '#0c4a6e',
+      windowItems: ['🚗', '🏍️', '🚲']
+    });
+
+    // 7. Traum-Café & Eisdiele
+    drawShoppingStreetStore({
+      x: 3240,
       wall: '#fff1f2',
       trim: '#e11d48',
       awningA: '#f43f5e',
@@ -1403,27 +1484,27 @@ export function setupTownScreen(stateManager) {
       windowItems: ['🍦', '🧇', '🥤']
     });
 
-    // 7. Renn-Stadion Arch at end of Street
+    // 8. Renn-Stadion Arch at end of Street
     ctx.save();
     ctx.strokeStyle = '#f43f8e';
     ctx.lineWidth = 14;
     ctx.beginPath();
-    ctx.arc(3240, 222, 86, Math.PI, 0);
+    ctx.arc(3555, 222, 86, Math.PI, 0);
     ctx.stroke();
     ctx.strokeStyle = '#fbbf24';
     ctx.lineWidth = 6;
     ctx.beginPath();
-    ctx.arc(3240, 222, 76, Math.PI, 0);
+    ctx.arc(3555, 222, 76, Math.PI, 0);
     ctx.stroke();
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.roundRect(3150, 208, 180, 26, [13]);
+    ctx.roundRect(3465, 208, 180, 26, [13]);
     ctx.fill();
     ctx.font = '800 12px "Plus Jakarta Sans", sans-serif';
     ctx.fillStyle = '#be185d';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('🏃 Renn-Stadion (Start!)', 3240, 221);
+    ctx.fillText('🏃 Renn-Stadion (Start!)', 3555, 221);
     ctx.restore();
 
     // Animated city cars on the road (drawn behind player when player is in foreground, or nicely along lane)
@@ -1493,16 +1574,22 @@ export function setupTownScreen(stateManager) {
       facing: player.facing
     });
 
-    // Player Character
-    ctx.save();
-    ctx.translate(player.x, player.y);
-    ctx.scale(0.84, 0.84);
-    renderCharacter(ctx, 0, 0, PlayerConfig, {
-      frame: animFrame,
-      pose: player.pose,
-      facing: player.facing
-    });
-    ctx.restore();
+    // Player Character (on foot, riding a mount, or driving/riding a vehicle!)
+    const activeTransport = HomeManager.getActiveTransport();
+    const isMovingNow = player.pose === 'walk';
+    drawPlayerWithTransport(
+      ctx,
+      player.x,
+      player.y,
+      animFrame,
+      isMovingNow,
+      player.facing,
+      PlayerConfig,
+      player.pose,
+      false,
+      activeTransport,
+      0.84
+    );
 
     // Comic speech bubbles for NPCs & Player!
     townPeople.forEach((p) => {
@@ -1567,6 +1654,12 @@ export function setupTownScreen(stateManager) {
     }
   });
 
+  window.addEventListener('runner:transport-updated', () => {
+    if (stateManager.getState() === 'TOWN') {
+      renderTransportBar();
+    }
+  });
+
   stateManager.onStateChange((newState, payload) => {
     if (newState === 'TOWN') {
       if (payload && payload.openShop) {
@@ -1585,7 +1678,7 @@ export function setupTownScreen(stateManager) {
         player.x = 880;
         player.y = 274;
       } else if (payload && payload.from === 'ICECREAM') {
-        player.x = 2925;
+        player.x = 3240;
         player.y = 266;
       } else if (payload && payload.from === 'EDITOR') {
         player.x = 1980;
@@ -1603,6 +1696,7 @@ export function setupTownScreen(stateManager) {
       MailboxManager.ensureDailyMail();
       updateCoinsUI();
       renderDistrictBar();
+      renderTransportBar();
       talkPanel.refresh();
       startLoop();
     } else {

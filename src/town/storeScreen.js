@@ -1,8 +1,9 @@
 import { PlayerConfig } from '../editor/characterData.js';
 import { renderCharacter } from '../editor/characterRenderer.js';
 import { MYSTERY_BOX_PRICE, SHOP_CATALOG, ShopManager } from '../editor/shopData.js';
-import { HOME_CATALOG, HOME_MYSTERY_BOX_PRICE, HomeManager } from '../home/homeData.js';
+import { HOME_CATALOG, HOME_MYSTERY_BOX_PRICE, HomeManager, StoreRotationManager } from '../home/homeData.js';
 import { drawVectorPet, getPetMeta, PetFollowerController } from '../home/petCompanion.js';
+import { drawMountVector, drawVehicleVector } from './transportRenderer.js';
 import { MailboxManager } from '../mailbox/mailboxData.js';
 import {
   askPersonAI,
@@ -270,8 +271,8 @@ const STORE_CONFIG = {
   },
   petshop: {
     id: 'petshop',
-    title: '🐾 Tierhandlung',
-    subtitle: 'Besuche die süßen Tiere in ihren Gehegen, hol Tiersachen & geh zusammen zur Kasse!',
+    title: '🐾 Tierhandlung & Reithof',
+    subtitle: 'Besuche Haustiere & Reittiere, hol den Reit-Stall & Tiersachen und geh zur Kasse!',
     floorA: '#f0fdf4',
     floorB: '#dcfce7',
     wallA: '#f0f9ff',
@@ -287,7 +288,7 @@ const STORE_CONFIG = {
       }
     },
     freeSample: {
-      x: 595,
+      x: 646,
       y: 235,
       icon: '🦴',
       label: 'Gratis-Leckerli',
@@ -296,29 +297,114 @@ const STORE_CONFIG = {
     aisles: [
       {
         id: 'pets',
-        label: '🐾 Tier-Gehege',
-        x: 205,
+        label: '🐾 Kleintiere',
+        x: 162,
         color: '#ec4899',
-        hint: 'Alle niedlichen Tiere in ihren Gehegen — hol dir einen neuen Freund!',
-        sources: [{ kind: 'home', category: 'pets', tabLabel: '🐾 Tiere' }]
+        hint: 'Hunde, Katzen, Hasen & süße Begleiter – hol dir einen treuen Freund!',
+        sources: [{ kind: 'home', category: 'pets', tabLabel: '🐾 Haustiere' }]
+      },
+      {
+        id: 'mounts',
+        label: '🐴 Reittiere & Stall',
+        x: 304,
+        color: '#8b5cf6',
+        hint: 'Ponys, Pferde, Alpaka & Einhorn zum Draufreiten – plus der eigene Reit-Stall!',
+        sources: [
+          { kind: 'home', category: 'mounts', tabLabel: '🐴 Reittiere' },
+          { kind: 'home', category: 'expansions', tabLabel: '🏡 Reit-Stall', filter: (i) => i.id === 'stable' }
+        ]
       },
       {
         id: 'petItems',
-        label: '🧸 Tiersachen-Regal',
-        x: 365,
+        label: '🧸 Tiersachen',
+        x: 446,
         color: '#0ea5e9',
-        hint: 'Näpfe, Spielbälle, Kletterbäume, Laufrad & Hundehütte fürs Tierzimmer!',
+        hint: 'Näpfe, Heu-Raufe, Sattel-Ständer, Kletterbäume & Hundehütte!',
         sources: [{ kind: 'home', category: 'petItems', tabLabel: '🧸 Tiersachen' }]
       },
       {
         id: 'petFood',
-        label: '🦴 Futter & 💊 Medizin',
-        x: 510,
+        label: '🦴 Futter & 💊',
+        x: 572,
         color: '#f59e0b',
-        hint: 'Knuspriges Tierfutter, Leckerlis & Medizin für glückliche, gesunde Haustiere!',
+        hint: 'Tierfutter, Möhren & Hafer-Mix für Stalltiere sowie Tier-Medizin!',
         sources: [
           { kind: 'home', category: 'supplies', tabLabel: '🦴 Tierfutter', filter: (i) => i.key === 'petFood' },
           { kind: 'home', category: 'supplies', tabLabel: '💊 Tier-Medizin', filter: (i) => i.key === 'petMedicine' }
+        ]
+      }
+    ]
+  },
+  vehicles: {
+    id: 'vehicles',
+    title: '🚗 Fahrzeug- & Gefährte-Haus',
+    subtitle: 'Skateboards, Roller, Fahrräder, Motorräder & Traum-Autos – fleißig sparen wie im echten Leben!',
+    floorA: '#f1f5f9',
+    floorB: '#cbd5e1',
+    wallA: '#f0f9ff',
+    wallB: '#e0f2fe',
+    accent: '#0284c7',
+    cashierName: 'Meisterin Kati',
+    cashierConfig: {
+      body: { height: 1.0, width: 1.0, faceId: 'face_2', hairId: 'hair_2', hairColor: '#0f172a' },
+      clothes: {
+        top: { style: 'jacket', color: '#0284c7', stickers: [{ type: 'lightning', x: 0, y: 0.45, scale: 1 }] },
+        pants: { style: 'cargo', color: '#1e293b' },
+        shoes: { style: 'boots', color: '#0f172a' }
+      }
+    },
+    freeSample: {
+      x: 635,
+      y: 235,
+      icon: '🏁',
+      label: 'Spar-Bonus',
+      rewardCoins: 15,
+      rewardText: '🏁 +15 🪙 Spar-Zuschuss für dein erstes Traum-Gefährt!'
+    },
+    aisles: [
+      {
+        id: 'rollers',
+        label: '🛹 Boards & Räder',
+        x: 175,
+        color: '#ec4899',
+        hint: 'Skateboards, Rollschuhe, City-Roller, Fahrräder & E-Scooter zum Sparpreis!',
+        sources: [
+          {
+            kind: 'home',
+            category: 'vehicles',
+            tabLabel: '🛹 Boards, Roller & Räder',
+            filter: (i) => ['skateboard', 'skates', 'scooter', 'bike', 'roadbike', 'escooter'].includes(i.id)
+          }
+        ]
+      },
+      {
+        id: 'moto',
+        label: '🏍️ Mopeds & Bikes',
+        x: 350,
+        color: '#f97316',
+        hint: 'Flotte Mopeds, Abenteuer-Quads & Sport-Motorräder für Straße und Promenade!',
+        sources: [
+          {
+            kind: 'home',
+            category: 'vehicles',
+            tabLabel: '🏍️ Mopeds & Motorräder',
+            filter: (i) => ['moped', 'quad', 'motorcycle'].includes(i.id)
+          }
+        ]
+      },
+      {
+        id: 'cars',
+        label: '🚗 Autos & Flitzer',
+        x: 525,
+        color: '#2563eb',
+        hint: 'City-Kleinwagen, Cabrio, SUV, Camper & Traum-Sportwagen – echte Langzeit-Sparziele!',
+        sources: [
+          {
+            kind: 'home',
+            category: 'vehicles',
+            tabLabel: '🚗 Traum-Autos',
+            filter: (i) => ['compact_car', 'convertible', 'suv', 'camper', 'sportscar'].includes(i.id)
+          }
         ]
       }
     ]
@@ -430,6 +516,7 @@ export function setupStoreScreen(stateManager) {
   const shelfHintEl = document.getElementById('storeShelfHint');
   const aisleTabsEl = document.getElementById('storeAisleTabs');
   const shelfItemsEl = document.getElementById('storeShelfItems');
+  const refreshDeliveryBtn = document.getElementById('storeRefreshDeliveryBtn');
 
   let activeShopId = 'supermarket';
   let activeAisleId = null;
@@ -695,6 +782,9 @@ export function setupStoreScreen(stateManager) {
     const purchasedSnapshot = [...basket];
     let hasFridgeGoods = false;
     let hasPet = false;
+    let hasMount = false;
+    let hasVehicle = false;
+    let hasStable = false;
 
     purchasedSnapshot.forEach((entry) => {
       if (entry.kind === 'shop') {
@@ -720,6 +810,9 @@ export function setupStoreScreen(stateManager) {
           boughtNames.push(`${entry.item.icon || ''} ${entry.item.name}`);
           if (entry.item.key === 'food' || entry.item.key === 'fridgeSnacks' || entry.item.key === 'drinks') hasFridgeGoods = true;
           if (entry.category === 'pets') hasPet = true;
+          if (entry.category === 'mounts') hasMount = true;
+          if (entry.category === 'vehicles') hasVehicle = true;
+          if (entry.item.id === 'stable') hasStable = true;
           if (entry.item.id === 'mailbox' || entry.item.id === 'gold_mailbox') {
             MailboxManager.ensureDailyMail();
             window.dispatchEvent(new CustomEvent('runner:mailbox-updated'));
@@ -757,6 +850,9 @@ export function setupStoreScreen(stateManager) {
     let msg = `🧾 Kassenbon: ${boughtNames.join(', ')} bezahlt!`;
     if (hasFridgeGoods) msg += ' Alles direkt in deinen Kühlschrank geräumt!';
     if (hasPet) msg += ' Dein neues Haustier wartet im Tierzimmer (oder an der Leine)!';
+    if (hasMount) msg += ' Dein neues Reittier ist bereit zum Draufreiten & für den Stall!';
+    if (hasVehicle) msg += ' Dein neues Gefährt wartet draußen auf der Straße auf dich!';
+    if (hasStable) msg += ' Dein eigener Reit-Stall steht ab sofort bei dir Zuhause!';
     if (loyaltyBonus > 0) msg += ` (+${loyaltyBonus} 🪙 Einkaufs-Bonus!)`;
     showToast(msg, 'success');
     if (statusEl) statusEl.textContent = `💳 *BEEP!* Bezahlt: ${boughtNames.join(', ')} — danke für deinen Einkauf!`;
@@ -904,7 +1000,7 @@ export function setupStoreScreen(stateManager) {
       salonDyes.forEach((dye) => {
         const isCurrent = (PlayerConfig.body.hairColor || '').toLowerCase() === dye.hex.toLowerCase();
         const card = document.createElement('div');
-        card.className = `store-shelf-item${isCurrent ? ' owned' : ''}`;
+        card.className = `store-shelf-item clickable-card${isCurrent ? ' owned' : ''}`;
         card.innerHTML = `
           <div class="store-shelf-item-head">
             <span class="store-shelf-item-icon" style="background:${dye.hex};border:2px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.18);width:36px;height:36px;border-radius:50%;display:inline-flex;"></span>
@@ -919,13 +1015,18 @@ export function setupStoreScreen(stateManager) {
             </button>
           </div>
         `;
-        card.querySelector('.salon-dye-btn').addEventListener('click', () => {
+        const applyDye = () => {
           PlayerConfig.body.hairColor = dye.hex;
           if (savedConfigBeforeTryOn) savedConfigBeforeTryOn.body.hairColor = dye.hex;
           ShopManager.savePlayerConfig(PlayerConfig);
           spawnFX(dye.hex, player.x, player.y - 60, 12);
           showToast(`💇✨ Deine Haare wurden wunderschön in „${dye.name}“ gefärbt!`, 'success');
           renderShelfInspector();
+        };
+        card.querySelector('.salon-dye-btn').addEventListener('click', applyDye);
+        card.addEventListener('click', (e) => {
+          if (e.target.closest('button, input, label, select')) return;
+          applyDye();
         });
         shelfItemsEl.appendChild(card);
       });
@@ -945,9 +1046,10 @@ export function setupStoreScreen(stateManager) {
         const isDeal = !unlocked && levelOk && ShopManager.isDailyDeal(source.category, item.id);
         const inBasket = isInBasket('shop', source.category, item.id, false);
         const canAfford = levelOk && coins >= price;
+        const cardClickable = levelOk && !(unlocked && source.category === 'background');
 
         const card = document.createElement('div');
-        card.className = `store-shelf-item${unlocked ? ' owned' : ''}${inBasket ? ' in-basket' : ''}${!levelOk ? ' level-locked' : ''}`;
+        card.className = `store-shelf-item${cardClickable ? ' clickable-card' : ''}${unlocked ? ' owned' : ''}${inBasket ? ' in-basket' : ''}${!levelOk ? ' level-locked' : ''}`;
 
         const badgeHtml = !unlocked && isDeal
           ? '<span class="home-inline-tag deal">🔥 -30%</span>'
@@ -997,44 +1099,52 @@ export function setupStoreScreen(stateManager) {
         }
 
         const pickBtn = card.querySelector('.store-pick-btn');
-        if (pickBtn && levelOk) {
-          pickBtn.addEventListener('click', () => {
-            if (unlocked) {
-              if (source.category !== 'background') {
-                equipCharacterItem(source.category, item.id);
-                if (savedConfigBeforeTryOn) {
-                  if (source.category === 'face') savedConfigBeforeTryOn.body.faceId = item.id;
-                  if (source.category === 'hair') savedConfigBeforeTryOn.body.hairId = item.id;
-                  if (source.category === 'top') savedConfigBeforeTryOn.clothes.top.style = item.id;
-                  if (source.category === 'pants') savedConfigBeforeTryOn.clothes.pants.style = item.id;
-                  if (source.category === 'shoes') savedConfigBeforeTryOn.clothes.shoes.style = item.id;
-                  if (source.category === 'ability') savedConfigBeforeTryOn.ability = item.id;
-                }
-                ShopManager.savePlayerConfig(PlayerConfig);
-                renderShelfInspector();
-                showToast(`👗 "${item.name}" angezogen!`, 'success');
+        const handlePick = () => {
+          if (!levelOk) return;
+          if (unlocked) {
+            if (source.category !== 'background') {
+              equipCharacterItem(source.category, item.id);
+              if (savedConfigBeforeTryOn) {
+                if (source.category === 'face') savedConfigBeforeTryOn.body.faceId = item.id;
+                if (source.category === 'hair') savedConfigBeforeTryOn.body.hairId = item.id;
+                if (source.category === 'top') savedConfigBeforeTryOn.clothes.top.style = item.id;
+                if (source.category === 'pants') savedConfigBeforeTryOn.clothes.pants.style = item.id;
+                if (source.category === 'shoes') savedConfigBeforeTryOn.clothes.shoes.style = item.id;
+                if (source.category === 'ability') savedConfigBeforeTryOn.ability = item.id;
               }
-              return;
-            }
-            if (inBasket) {
-              basket = basket.filter((b) => !(b.kind === 'shop' && b.category === source.category && b.item.id === item.id));
-              updateHeaderStats();
-              renderBasketBar();
+              ShopManager.savePlayerConfig(PlayerConfig);
               renderShelfInspector();
-              return;
+              showToast(`👗 "${item.name}" angezogen!`, 'success');
             }
-            basket.push({
-              key: `shop_${source.category}_${item.id}_${Date.now()}`,
-              kind: 'shop',
-              category: source.category,
-              item,
-              price
-            });
-            spawnFX('#ec4899', aisle.x, 195, 6);
+            return;
+          }
+          if (inBasket) {
+            basket = basket.filter((b) => !(b.kind === 'shop' && b.category === source.category && b.item.id === item.id));
             updateHeaderStats();
             renderBasketBar();
             renderShelfInspector();
-            showToast(`🛒 "${item.name}" in deinen Einkaufskorb gelegt! Geh zur Kasse zum Bezahlen.`, 'info');
+            return;
+          }
+          basket.push({
+            key: `shop_${source.category}_${item.id}_${Date.now()}`,
+            kind: 'shop',
+            category: source.category,
+            item,
+            price
+          });
+          spawnFX('#ec4899', aisle.x, 195, 6);
+          updateHeaderStats();
+          renderBasketBar();
+          renderShelfInspector();
+          showToast(`🛒 "${item.name}" in deinen Einkaufskorb gelegt! Geh zur Kasse zum Bezahlen.`, 'info');
+        };
+        if (pickBtn && levelOk) {
+          pickBtn.addEventListener('click', handlePick);
+        }
+        if (cardClickable) {
+          card.addEventListener('click', (e) => {
+            if (e.target.closest('button, input, label, select')) return;
+            handlePick();
           });
         }
 
@@ -1043,57 +1153,78 @@ export function setupStoreScreen(stateManager) {
       return;
     }
 
-    // Home catalog shelf
+    // Home catalog shelf (with dynamic StoreRotationManager filtering for continuously arriving items!)
     const rawList = HOME_CATALOG[source.category] || [];
-    const list = source.filter ? rawList.filter(source.filter) : rawList;
+    const filteredByTab = source.filter ? rawList.filter(source.filter) : rawList;
+    const list = filteredByTab.filter((item) => StoreRotationManager.isVisibleInShelf(source.category, item));
+
+    const activeTr = HomeManager.getActiveTransport();
 
     list.forEach((item) => {
       const owned = !item.isConsumable && HomeManager.hasItem(source.category, item.id);
       const levelOk = HomeManager.isLevelUnlocked(item);
       const price = HomeManager.getEffectivePrice(source.category, item);
       const isDeal = !owned && !item.isConsumable && HomeManager.isDailyDeal(source.category, item.id);
+      const isDelivery = item.rotatingBatch !== undefined;
       const inBasket = isInBasket('home', source.category, item.id, Boolean(item.isConsumable));
       const isPetTab = source.category === 'pets';
+      const isMountTab = source.category === 'mounts';
+      const isVehicleTab = source.category === 'vehicles';
       const isComingAlong = owned && isPetTab && HomeManager.isCompanionPet(item.id);
+      const isActiveRide = owned && ((isMountTab && activeTr?.kind === 'mount' && activeTr?.id === item.id) ||
+        (isVehicleTab && activeTr?.kind === 'vehicle' && activeTr?.id === item.id));
       const canAfford = levelOk && coins >= price;
+      const missingCoins = Math.max(0, price - coins);
+      const cardClickable = levelOk && (!owned || isPetTab || isMountTab || isVehicleTab);
 
       const card = document.createElement('div');
-      card.className = `store-shelf-item${owned ? ' owned' : ''}${inBasket ? ' in-basket' : ''}${!levelOk ? ' level-locked' : ''}`;
+      card.className = `store-shelf-item${cardClickable ? ' clickable-card' : ''}${owned ? ' owned' : ''}${inBasket ? ' in-basket' : ''}${!levelOk ? ' level-locked' : ''}`;
 
       const badgeHtml = !owned && isDeal
         ? '<span class="home-inline-tag deal">🔥 -30%</span>'
-        : !owned && item.isNew
-          ? '<span class="home-inline-tag new">✨ NEU</span>'
-          : '';
+        : !owned && isDelivery
+          ? '<span class="home-inline-tag delivery">🚚 Neu eingetroffen</span>'
+          : !owned && item.isNew
+            ? '<span class="home-inline-tag new">✨ NEU</span>'
+            : '';
+
+      const savingsBadge = !owned && levelOk && !canAfford && price >= 180
+        ? ` <span class="home-inline-tag savings">💰 Sparziel (noch ${missingCoins} 🪙)</span>`
+        : '';
 
       const btnLabel = owned
         ? (isPetTab
             ? (isComingAlong ? '🎒 Kommt mit' : '🐾 Mitnehmen')
-            : '✓ Gehört dir')
+            : isMountTab
+              ? (isActiveRide ? '🐴 Aktiv aufgesessen' : '🐴 Drauf reiten')
+              : isVehicleTab
+                ? (isActiveRide ? '🚗 Aktiv ausgewählt' : '🚗 Auswählen')
+                : '✓ Gehört dir')
         : !levelOk
           ? `🔒 Ab Level ${item.unlockLevel}`
           : inBasket
             ? '🛒 Im Korb ✓'
-            : `🛒 In den Korb (${price} 🪙)`;
+            : `🛒 In den Korb (${price.toLocaleString('de-DE')} 🪙)`;
 
       card.innerHTML = `
         <div class="store-shelf-item-head">
           <span class="store-shelf-item-icon">${item.icon}</span>
           <div class="store-shelf-item-meta">
-            <strong>${item.name} ${badgeHtml}</strong>
+            <strong>${item.name} ${badgeHtml}${savingsBadge}</strong>
             <p>${item.desc}</p>
           </div>
         </div>
         <div class="store-shelf-item-actions">
-          <button type="button" class="btn btn-small ${inBasket ? 'btn-home' : owned ? (isComingAlong ? 'btn-home' : 'btn-secondary') : canAfford ? 'btn-primary' : 'btn-secondary'} store-pick-btn" ${(owned && !isPetTab) || !levelOk ? 'disabled' : ''}>
+          <button type="button" class="btn btn-small ${inBasket ? 'btn-home' : owned ? ((isComingAlong || isActiveRide) ? 'btn-home' : 'btn-secondary') : canAfford ? 'btn-primary' : 'btn-secondary'} store-pick-btn" ${(owned && !isPetTab && !isMountTab && !isVehicleTab) || !levelOk ? 'disabled' : ''}>
             ${btnLabel}
           </button>
         </div>
       `;
 
       const pickBtn = card.querySelector('.store-pick-btn');
-      if (pickBtn && owned && isPetTab) {
-        pickBtn.addEventListener('click', () => {
+      const handlePick = () => {
+        if (!levelOk) return;
+        if (owned && isPetTab) {
           const res = HomeManager.toggleCompanionPet(item.id);
           if (res.ok) {
             petFollowers.reset(player.x, player.y + 4);
@@ -1105,28 +1236,51 @@ export function setupStoreScreen(stateManager) {
               res.active ? 'success' : 'info'
             );
           }
-        });
-      } else if (pickBtn && !owned && levelOk) {
-        pickBtn.addEventListener('click', () => {
-          if (!item.isConsumable && inBasket) {
-            basket = basket.filter((b) => !(b.kind === 'home' && b.category === source.category && b.item.id === item.id));
-            updateHeaderStats();
-            renderBasketBar();
-            renderShelfInspector();
-            return;
+          return;
+        }
+        if (owned && (isMountTab || isVehicleTab)) {
+          const kind = isMountTab ? 'mount' : 'vehicle';
+          if (isActiveRide) {
+            HomeManager.setActiveTransport(null, null);
+            showToast(`🚶 Du bist wieder zu Fuß unterwegs.`, 'info');
+          } else {
+            HomeManager.setActiveTransport(kind, item.id);
+            showToast(`${item.icon} „${item.name}“ ausgewählt – draußen in Traumstadt direkt losdüsen!`, 'success');
           }
-          basket.push({
-            key: `home_${source.category}_${item.id}_${Date.now()}_${Math.random()}`,
-            kind: 'home',
-            category: source.category,
-            item,
-            price
-          });
-          spawnFX('#10b981', aisle.x, 195, 6);
+          renderShelfInspector();
+          return;
+        }
+        if (owned) return;
+
+        if (!item.isConsumable && inBasket) {
+          basket = basket.filter((b) => !(b.kind === 'home' && b.category === source.category && b.item.id === item.id));
           updateHeaderStats();
           renderBasketBar();
           renderShelfInspector();
-          showToast(`🛒 "${item.name}" in den Einkaufskorb gelegt! Geh nach rechts zur Kasse.`, 'info');
+          return;
+        }
+        basket.push({
+          key: `home_${source.category}_${item.id}_${Date.now()}_${Math.random()}`,
+          kind: 'home',
+          category: source.category,
+          item,
+          price
+        });
+        spawnFX('#10b981', aisle.x, 195, 6);
+        updateHeaderStats();
+        renderBasketBar();
+        renderShelfInspector();
+        const extraHint = !canAfford ? ` (Sparziel: dir fehlen noch ${missingCoins} 🪙)` : ' Geh nach rechts zur Kasse.';
+        showToast(`🛒 "${item.name}" in den Einkaufskorb gelegt!${extraHint}`, 'info');
+      };
+
+      if (pickBtn) {
+        pickBtn.addEventListener('click', handlePick);
+      }
+      if (cardClickable) {
+        card.addEventListener('click', (e) => {
+          if (e.target.closest('button, input, label, select')) return;
+          handlePick();
         });
       }
 
@@ -1204,6 +1358,9 @@ export function setupStoreScreen(stateManager) {
       HomeManager.addSupply('fridgeSnacks', 1);
     } else if (activeShopId === 'petshop') {
       HomeManager.addSupply('petFood', 1);
+    } else if (activeShopId === 'vehicles') {
+      ShopManager.addCoins(store.freeSample.rewardCoins || 15);
+      updateHeaderStats();
     } else if (activeShopId === 'salon') {
       ShopManager.addCoins(8);
       updateHeaderStats();
@@ -1809,26 +1966,42 @@ export function setupStoreScreen(stateManager) {
       // Live Playpen Habitats with Real Animated Pets!
       ctx.fillStyle = '#fffbeb';
       ctx.beginPath();
-      ctx.roundRect(x - 74, 92, 148, 142, [14]);
+      ctx.roundRect(x - 62, 92, 124, 142, [14]);
       ctx.fill();
       ctx.strokeStyle = isActive ? '#ec4899' : '#34d399';
       ctx.lineWidth = isActive ? 4 : 2.5;
       ctx.stroke();
 
-      // Playpen glass rail
       ctx.fillStyle = 'rgba(186, 230, 253, 0.42)';
-      ctx.fillRect(x - 68, 178, 136, 46);
+      ctx.fillRect(x - 56, 178, 112, 46);
 
-      // Draw 3 adorable animated sample pets inside the store habitat!
       const hop = Math.abs(Math.sin(animFrame * 0.08)) * 5;
-      drawVectorPet(ctx, x - 40, 214 - hop, 'dog', animFrame, 1, 0.92);
-      drawVectorPet(ctx, x, 214, 'cat', animFrame + 18, -1, 0.92);
-      drawVectorPet(ctx, x + 40, 214 - Math.abs(Math.cos(animFrame * 0.09)) * 6, 'bunny', animFrame + 32, -1, 0.92);
+      drawVectorPet(ctx, x - 34, 214 - hop, 'dog', animFrame, 1, 0.86);
+      drawVectorPet(ctx, x, 214, 'cat', animFrame + 18, -1, 0.86);
+      drawVectorPet(ctx, x + 34, 214 - Math.abs(Math.cos(animFrame * 0.09)) * 6, 'bunny', animFrame + 32, -1, 0.86);
 
-      ctx.font = '18px sans-serif';
+      ctx.font = '16px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('🐢  🦜  🦊  🦄', x, 132);
+      ctx.fillText('🐢 🦜 🦊 🦄', x, 132);
     } else if (idx === 1) {
+      // Rideable Mounts & Stall Paddock Display!
+      ctx.fillStyle = '#fefce8';
+      ctx.beginPath();
+      ctx.roundRect(x - 64, 92, 128, 142, [14]);
+      ctx.fill();
+      ctx.strokeStyle = isActive ? '#8b5cf6' : '#f59e0b';
+      ctx.lineWidth = isActive ? 4 : 2.5;
+      ctx.stroke();
+
+      // Barn beam trim & hay floor
+      ctx.fillStyle = '#d97706';
+      ctx.fillRect(x - 58, 216, 116, 14);
+      drawMountVector(ctx, 'pony', x - 22, 212, animFrame, false, 1, 0.72);
+      drawMountVector(ctx, 'mount_unicorn', x + 26, 212, animFrame + 24, false, -1, 0.68);
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🐴 Stall & Reittiere', x, 122);
+    } else if (idx === 2) {
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
       ctx.roundRect(x - 54, 92, 108, 142, [12]);
@@ -1836,22 +2009,67 @@ export function setupStoreScreen(stateManager) {
       ctx.strokeStyle = isActive ? aisle.color : '#bae6fd';
       ctx.lineWidth = isActive ? 4 : 2;
       ctx.stroke();
-      ctx.font = '22px sans-serif';
+      ctx.font = '21px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('🥣  ⚽  🧺', x, 138);
-      ctx.fillText('🎡  🪵  🛁', x, 194);
+      ctx.fillText('🌾  🐎  🛁', x, 194);
     } else {
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.roundRect(x - 50, 96, 100, 138, [12]);
+      ctx.roundRect(x - 48, 96, 96, 138, [12]);
       ctx.fill();
       ctx.strokeStyle = isActive ? aisle.color : '#fde68a';
       ctx.lineWidth = isActive ? 4 : 2;
       ctx.stroke();
-      ctx.font = '22px sans-serif';
+      ctx.font = '21px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('🦴  🐾  🦴', x, 140);
-      ctx.fillText('🥫  🦴  🍖', x, 194);
+      ctx.fillText('🦴  🥕  🥣', x, 140);
+      ctx.fillText('💊  🦴  🍖', x, 194);
+    }
+
+    drawAisleSign(aisle, x, 58, isActive);
+    ctx.restore();
+  }
+
+  function drawVehiclesShelf(aisle, idx) {
+    const x = aisle.x;
+    const isActive = aisle.id === activeAisleId;
+    ctx.save();
+
+    // Showroom Podium Display
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.roundRect(x - 66, 92, 132, 142, [14]);
+    ctx.fill();
+    ctx.strokeStyle = isActive ? aisle.color : '#bae6fd';
+    ctx.lineWidth = isActive ? 4 : 2.5;
+    ctx.stroke();
+
+    // Showroom floor platform
+    ctx.fillStyle = '#e2e8f0';
+    ctx.beginPath();
+    ctx.roundRect(x - 56, 206, 112, 18, [8]);
+    ctx.fill();
+
+    if (idx === 0) {
+      drawVehicleVector(ctx, 'skateboard', x - 34, 208, animFrame, false, 1, 0.72);
+      drawVehicleVector(ctx, 'scooter', x + 2, 208, animFrame, false, 1, 0.72);
+      drawVehicleVector(ctx, 'bike', x + 36, 208, animFrame, false, -1, 0.74);
+      ctx.font = '15px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🛹  🛴  🚲  ⚡', x, 126);
+    } else if (idx === 1) {
+      drawVehicleVector(ctx, 'moped', x - 26, 208, animFrame, false, 1, 0.85);
+      drawVehicleVector(ctx, 'motorcycle', x + 28, 208, animFrame, false, -1, 0.85);
+      ctx.font = '15px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🛵  🏍️  🛺', x, 126);
+    } else {
+      drawVehicleVector(ctx, 'compact_car', x - 24, 208, animFrame, false, 1, 0.64);
+      drawVehicleVector(ctx, 'sportscar', x + 26, 208, animFrame, false, -1, 0.64);
+      ctx.font = '15px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🚗  🚙  🏎️', x, 126);
     }
 
     drawAisleSign(aisle, x, 58, isActive);
@@ -2134,6 +2352,7 @@ export function setupStoreScreen(stateManager) {
       else if (activeShopId === 'salon') drawSalonShelf(aisle, idx);
       else if (activeShopId === 'boutique') drawBoutiqueShelf(aisle, idx);
       else if (activeShopId === 'furniture') drawFurnitureShelf(aisle, idx);
+      else if (activeShopId === 'vehicles') drawVehiclesShelf(aisle, idx);
       else drawPetshopShelf(aisle, idx);
     });
 
@@ -2253,12 +2472,18 @@ export function setupStoreScreen(stateManager) {
   }
 
   function enterStore({ shopId = 'supermarket', aisle = null } = {}) {
+    StoreRotationManager.checkAutoRotate();
     activeShopId = STORE_CONFIG[shopId] ? shopId : 'supermarket';
     const store = getStore();
     activeAisleId = aisle && store.aisles.some((a) => a.id === aisle)
       ? aisle
       : store.aisles[0].id;
     activeSourceIdx = 0;
+
+    if (refreshDeliveryBtn) {
+      const supportsRotation = ['supermarket', 'furniture', 'petshop', 'vehicles'].includes(activeShopId);
+      refreshDeliveryBtn.classList.toggle('hidden', !supportsRotation);
+    }
 
     basket = [];
     visitSampleClaimed = false;
@@ -2285,7 +2510,7 @@ export function setupStoreScreen(stateManager) {
 
     if (titleEl) titleEl.textContent = store.title;
     if (subtitleEl) subtitleEl.textContent = store.subtitle;
-    if (statusEl) statusEl.textContent = `Willkommen! Lauf zu den Regalen, leg Sachen in den Korb & bezahl rechts an der Kasse!`;
+    if (statusEl) statusEl.textContent = `Willkommen! Klicke rechts auf Produkte für deinen Korb & bezahl an der Kasse!`;
     if (toastEl) toastEl.classList.add('hidden');
 
     updateHeaderStats();
@@ -2293,6 +2518,15 @@ export function setupStoreScreen(stateManager) {
     renderAisleTabs();
     renderShelfInspector();
     talkPanel.refresh();
+  }
+
+  if (refreshDeliveryBtn) {
+    refreshDeliveryBtn.addEventListener('click', () => {
+      StoreRotationManager.advanceBatch();
+      spawnFX('#f59e0b', 420, 180, 12);
+      renderShelfInspector();
+      showToast('🚚 Neue Lieferung ausgepackt! Frische Artikel stehen jetzt im Regal!', 'success');
+    });
   }
 
   function startLoop() {
@@ -2309,6 +2543,12 @@ export function setupStoreScreen(stateManager) {
   window.addEventListener('runner:coins-updated', () => {
     if (stateManager.getState() === 'STORE') {
       updateHeaderStats();
+      renderShelfInspector();
+    }
+  });
+
+  window.addEventListener('runner:store-rotated', () => {
+    if (stateManager.getState() === 'STORE') {
       renderShelfInspector();
     }
   });

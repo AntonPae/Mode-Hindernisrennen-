@@ -189,6 +189,7 @@
 
         <aside class="ice-menu-column">
           <div id="townTalkMount"></div>
+          <div id="townTransportBar" class="transport-pill-bar"></div>
           <div class="ice-menu-header">
             <h2>🗺️ Orte &amp; Geschäfte</h2>
             <span>Tippe auf eine Straße oder ein Geschäft, um direkt dorthin zu laufen!</span>
@@ -247,8 +248,11 @@
             </div>
           </div>
           <div class="ice-menu-header">
-            <h2 id="storeShelfTitle">🛍️ Regal im Laden</h2>
-            <span id="storeShelfHint">Lauf zu einem Regal im Bild oder wähle hier eine Abteilung!</span>
+            <div class="store-shelf-header-row">
+              <h2 id="storeShelfTitle">🛍️ Regal im Laden</h2>
+              <button type="button" id="storeRefreshDeliveryBtn" class="btn btn-small btn-earn" title="Frische Artikel aus dem Lager holen">🚚 Neue Lieferung</button>
+            </div>
+            <span id="storeShelfHint">Klicke rechts direkt auf ein Produkt, um es in deinen Einkaufskorb zu legen!</span>
           </div>
           <div id="storeAisleTabs" class="ice-station-tabs"></div>
           <div id="storeShelfItems" class="store-shelf-items"></div>
@@ -305,6 +309,7 @@
 
         <aside class="ice-menu-column home-side-column">
           <div id="homeTalkMount"></div>
+          <div id="homeTransportBar" class="transport-pill-bar hidden"></div>
           <div id="homePetRoomBar" class="home-pet-room-bar hidden">
             <button type="button" id="homePickAllPetsBtn" class="btn btn-small btn-primary">🐾 Alle Tiere abholen</button>
             <button type="button" id="homeLeaveAllPetsBtn" class="btn btn-small btn-secondary">🏠 Alle im Tierzimmer lassen</button>

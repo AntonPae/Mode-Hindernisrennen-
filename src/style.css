@@ -2839,6 +2839,90 @@ body, html {
   flex-direction: column;
   gap: 0.5rem;
   box-shadow: 0 4px 10px rgba(88, 28, 135, 0.05);
+  transition: transform 0.12s ease, border-color 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+}
+
+.store-shelf-item.clickable-card {
+  cursor: pointer;
+}
+
+.store-shelf-item.clickable-card:hover {
+  border-color: #ec4899;
+  box-shadow: 0 6px 16px rgba(236, 72, 153, 0.14);
+  transform: translateY(-1px);
+}
+
+.store-shelf-item.clickable-card:active {
+  transform: scale(0.99);
+}
+
+.store-shelf-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.store-shelf-header-row h2 {
+  margin-bottom: 0;
+}
+
+.home-inline-tag.delivery {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.home-inline-tag.savings {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.transport-pill-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.36rem;
+  padding: 0.55rem 0.9rem;
+  background: linear-gradient(90deg, #f0f9ff 0%, #fefce8 100%);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.transport-pill-bar.hidden {
+  display: none;
+}
+
+.transport-pill-title {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #0369a1;
+  margin-right: 0.15rem;
+}
+
+.transport-chip-btn {
+  border: 1.5px solid rgba(14, 165, 233, 0.35);
+  background: #ffffff;
+  color: #0c4a6e;
+  border-radius: 12px;
+  padding: 0.32rem 0.58rem;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.76rem;
+  font-weight: 800;
+  cursor: pointer;
+  min-height: 32px;
+  touch-action: manipulation;
+  transition: transform 0.1s ease, background 0.14s ease, border-color 0.14s ease;
+}
+
+.transport-chip-btn:hover {
+  border-color: #0284c7;
+  background: #e0f2fe;
+}
+
+.transport-chip-btn.active {
+  background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+  color: #ffffff;
+  border-color: transparent;
 }
 
 .store-shelf-item.in-basket {

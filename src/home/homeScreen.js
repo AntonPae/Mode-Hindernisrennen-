@@ -7,6 +7,7 @@ import { drawVectorPet, getPetMeta, PetFollowerController } from './petCompanion
 import { PetCommandStore, SocialManager, askPersonAI, parsePetCommand } from '../social/socialData.js';
 import { drawCanvasSpeechBubble } from '../social/canvasSpeech.js';
 import { mountTalkPanel } from '../social/talkPanel.js';
+import { drawMountVector, drawPlayerWithTransport, getTransportMeta } from '../town/transportRenderer.js';
 
 const ROOMS = [
   { id: 'living_room', label: '🛋️ Wohnzimmer', alwaysUnlocked: true },
@@ -15,7 +16,8 @@ const ROOMS = [
   { id: 'bedroom', label: '🛏️ Schlafzimmer', unlockItem: 'bedroom' },
   { id: 'roommate_room', label: '🛏️ WG-Zimmer', unlockItem: 'roommate_room' },
   { id: 'conservatory', label: '🪴 Wintergarten', unlockItem: 'conservatory' },
-  { id: 'garden', label: '🌳 Garten', alwaysUnlocked: true }
+  { id: 'garden', label: '🌳 Garten', alwaysUnlocked: true },
+  { id: 'stable', label: '🐴 Stall', unlockItem: 'stable' }
 ];
 
 export function setupHomeScreen(stateManager) {
@@ -34,6 +36,7 @@ export function setupHomeScreen(stateManager) {
   const jumpBtn = document.getElementById('homeJumpBtn');
 
   const petRoomBar = document.getElementById('homePetRoomBar');
+  const transportBar = document.getElementById('homeTransportBar');
   const pickAllPetsBtn = document.getElementById('homePickAllPetsBtn');
   const leaveAllPetsBtn = document.getElementById('homeLeaveAllPetsBtn');
   const openPetShopBtn = document.getElementById('homeOpenPetShopBtn');
@@ -129,6 +132,7 @@ export function setupHomeScreen(stateManager) {
   let activeTask = null;
   let doorHotspots = [];
   let petHotspots = [];
+  let mountHotspots = [];
   let seatHotspots = [];
   let sleepHotspots = [];
   let fridgeHotspot = null;
@@ -408,6 +412,8 @@ export function setupHomeScreen(stateManager) {
     const rm = SocialManager.getRoommate();
     if (activeRoom === 'pet_room') {
       setTaskBanner('🐾 Tierzimmer: Hier bleiben deine Tiere! Tippe ein Tier an, um es abzuholen & mitzunehmen!', false);
+    } else if (activeRoom === 'stable') {
+      setTaskBanner('🐴 Reit-Stall: Tippe ein Reittier an, um direkt aufzusitzen & in den Garten oder die Stadt zu reiten!', false);
     } else if (activeRoom === 'kitchen') {
       setTaskBanner('🍳 Küche: Essen & Getränke im 🧊 Kühlschrank · Tippe auf den 🪑 Esstisch, um Platz zu nehmen!', false);
     } else if (activeRoom === 'bedroom') {
@@ -607,6 +613,57 @@ export function setupHomeScreen(stateManager) {
         gardenBtn.classList.remove('btn-harvest-ready');
       }
     }
+
+    renderHomeTransportBar();
+  }
+
+  function renderHomeTransportBar() {
+    if (!transportBar) return;
+    const isOutdoor = activeRoom === 'garden' || activeRoom === 'stable';
+    const mounts = HomeManager.getOwnedMounts();
+    const gardenVehicles = HomeManager.getOwnedVehicles().filter((v) => {
+      const m = getTransportMeta({ kind: 'vehicle', id: v.id });
+      return Boolean(m?.allowInGarden);
+    });
+    const allVehicles = HomeManager.getOwnedVehicles();
+    if (!isOutdoor || (mounts.length === 0 && allVehicles.length === 0)) {
+      transportBar.classList.add('hidden');
+      return;
+    }
+
+    transportBar.classList.remove('hidden');
+    transportBar.innerHTML = `<div class="transport-pill-title">🐴 Reiten & Fahren (${activeRoom === 'stable' ? 'Im Stall' : 'Im Garten'})</div>`;
+    const active = HomeManager.getActiveTransport();
+
+    if (mounts.length === 0 && gardenVehicles.length === 0) {
+      const note = document.createElement('span');
+      note.style.cssText = 'font-size:0.78rem;color:#475569;font-weight:600;';
+      note.textContent = '🚗 Autos & Motorräder fahren draußen auf der Straße in Traumstadt!';
+      transportBar.appendChild(note);
+      return;
+    }
+
+    const addChip = (label, kind, id, isActive) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `transport-chip-btn${isActive ? ' active' : ''}`;
+      btn.textContent = label;
+      btn.addEventListener('click', () => {
+        if (!kind || isActive) {
+          HomeManager.setActiveTransport(null, null);
+          showToast('🚶 Abgestiegen – du läufst wieder zu Fuß.', 'info');
+        } else {
+          HomeManager.setActiveTransport(kind, id);
+          showToast(`${label} ausgewählt!`, 'success');
+        }
+        renderHomeTransportBar();
+      });
+      transportBar.appendChild(btn);
+    };
+
+    addChip('🚶 Zu Fuß', null, null, !active);
+    mounts.forEach((m) => addChip(`${m.icon} ${m.name}`, 'mount', m.id, active?.kind === 'mount' && active?.id === m.id));
+    gardenVehicles.forEach((v) => addChip(`${v.icon} ${v.name}`, 'vehicle', v.id, active?.kind === 'vehicle' && active?.id === v.id));
   }
 
   function notifyMoneyOrMissionChange() {
@@ -1240,6 +1297,29 @@ export function setupHomeScreen(stateManager) {
         }
       }
 
+      // 2c-0. Tap directly on a Mount inside the Reit-Stall to mount / dismount!
+      if (activeRoom === 'stable') {
+        for (let i = mountHotspots.length - 1; i >= 0; i--) {
+          const mh = mountHotspots[i];
+          if (Math.hypot(cx - mh.x, cy - mh.y) <= mh.r) {
+            const cur = HomeManager.getActiveTransport();
+            const isRidingThis = cur?.kind === 'mount' && cur?.id === mh.mountId;
+            if (isRidingThis) {
+              HomeManager.setActiveTransport(null, null);
+              showToast(`🚶 Du bist von ${mh.item.name} abgestiegen.`, 'info');
+            } else {
+              HomeManager.setActiveTransport('mount', mh.mountId);
+              player.pose = 'pet';
+              player.poseTimer = 20;
+              spawnFX('heart', mh.x, mh.y - 16, 8);
+              showToast(`${mh.item.icon} Auf „${mh.item.name}“ aufgesessen! Du kannst jetzt im Stall, Garten & Traumstadt reiten!`, 'success');
+            }
+            renderHomeTransportBar();
+            return;
+          }
+        }
+      }
+
       // 2c. Tap directly on a Pet: heal if sick & medicine available, otherwise take with you / leave in Tierzimmer!
       for (let i = petHotspots.length - 1; i >= 0; i--) {
         const ph = petHotspots[i];
@@ -1443,7 +1523,10 @@ export function setupHomeScreen(stateManager) {
     const w = canvas.width;
     let vx = 0;
     let vz = 0;
-    const speed = 3.6;
+    const isOutdoor = activeRoom === 'garden' || activeRoom === 'stable';
+    const outdoorTr = isOutdoor ? getTransportMeta(HomeManager.getActiveTransport()) : null;
+    const isMountedOutdoors = Boolean(outdoorTr && (outdoorTr.kind === 'mount' || outdoorTr.allowInGarden));
+    const speed = isMountedOutdoors ? outdoorTr.speedHome : 3.6;
     if (edgeCooldown > 0) edgeCooldown--;
 
     if (keys.left || holdPad.left) vx -= speed;
@@ -1534,6 +1617,11 @@ export function setupHomeScreen(stateManager) {
       if (activeRoom === 'garden' && player.x <= 125 && vx < 0) {
         edgeCooldown = 36;
         switchRoom('living_room', w - 130);
+        return;
+      }
+      if (activeRoom === 'stable' && player.x <= 52 && vx < 0) {
+        edgeCooldown = 36;
+        switchRoom('garden', w - 175);
         return;
       }
     }
@@ -1844,6 +1932,8 @@ export function setupHomeScreen(stateManager) {
       drawConservatoryRoom(ctx, w, h, floorY, state);
     } else if (activeRoom === 'garden') {
       drawGardenScene(ctx, w, h, floorY, state);
+    } else if (activeRoom === 'stable') {
+      drawStableRoom(ctx, w, h, floorY, state);
     } else {
       drawLivingRoom(ctx, w, h, floorY, state);
     }
@@ -1954,16 +2044,36 @@ export function setupHomeScreen(stateManager) {
       }
     }
 
-    ctx.save();
-    ctx.translate(charX, charY);
-    ctx.scale(0.86, 0.86);
-    renderCharacter(ctx, 0, 0, PlayerConfig, {
-      frame: animFrame,
-      pose: player.pose,
-      facing: charFacing,
-      isSick: isPlayerSick
-    });
-    ctx.restore();
+    const activeTr = (activeRoom === 'garden' || activeRoom === 'stable') ? HomeManager.getActiveTransport() : null;
+    const activeTrMeta = getTransportMeta(activeTr);
+    const showOutdoorsTransport = Boolean(!player.sleepingAt && !player.sittingAt && activeTrMeta && (activeTrMeta.kind === 'mount' || activeTrMeta.allowInGarden));
+
+    if (showOutdoorsTransport) {
+      drawPlayerWithTransport(
+        ctx,
+        charX,
+        charY,
+        animFrame,
+        player.pose === 'walk',
+        charFacing,
+        PlayerConfig,
+        player.pose,
+        isPlayerSick,
+        activeTr,
+        0.86
+      );
+    } else {
+      ctx.save();
+      ctx.translate(charX, charY);
+      ctx.scale(0.86, 0.86);
+      renderCharacter(ctx, 0, 0, PlayerConfig, {
+        frame: animFrame,
+        pose: player.pose,
+        facing: charFacing,
+        isSick: isPlayerSick
+      });
+      ctx.restore();
+    }
 
     // Foreground Dining Tabletop overlay when either player or roommate sits in Kitchen so knees tuck neatly under table!
     if (activeRoom === 'kitchen' && (player.sittingAt || (activeRoommate && roommateAgent.sitting))) {
@@ -3679,8 +3789,148 @@ export function setupHomeScreen(stateManager) {
       ctx.restore();
     }
 
+    // Cozy Reit-Stall entrance inside Garden when built!
+    if (HomeManager.hasStable()) {
+      ctx.save();
+      ctx.fillStyle = '#b45309';
+      ctx.beginPath();
+      ctx.roundRect(w - 172, floorY - 118, 72, 118, [10, 10, 0, 0]);
+      ctx.fill();
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath();
+      ctx.moveTo(w - 180, floorY - 114);
+      ctx.lineTo(w - 136, floorY - 144);
+      ctx.lineTo(w - 92, floorY - 114);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      drawDoorPortal(ctx, w - 166, floorY - 110, 60, 110, '🐴 Stall', 'stable', 120, 'arch');
+    }
+
     // Neighbor Gartentor on the right side of the Garden!
     drawDoorPortal(ctx, w - 92, floorY - 138, 72, 138, 'Nachbarn 🐾 ▶', 'state:PETSITTING', 140, 'gate');
+  }
+
+  function drawStableRoom(ctx, w, h, floorY, state) {
+    mountHotspots = [];
+    // Sunny sky visible outside barn rafters
+    const skyG = ctx.createLinearGradient(0, 0, 0, floorY);
+    skyG.addColorStop(0, '#fef3c7');
+    skyG.addColorStop(1, '#fde68a');
+    ctx.fillStyle = skyG;
+    ctx.fillRect(0, 0, w, floorY);
+
+    // Timber barn wall planks & roof beams
+    ctx.fillStyle = '#fef3c7';
+    ctx.fillRect(0, 54, w, floorY - 54);
+    ctx.strokeStyle = 'rgba(180, 83, 9, 0.16)';
+    ctx.lineWidth = 2;
+    for (let px = 60; px < w; px += 72) {
+      ctx.beginPath();
+      ctx.moveTo(px, 54);
+      ctx.lineTo(px, floorY);
+      ctx.stroke();
+    }
+
+    // Warm dark wood barn roof & beams
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(0, 0, w, 56);
+    ctx.fillStyle = '#b45309';
+    [130, 320, 510, 690].forEach((bx) => {
+      ctx.fillRect(bx - 10, 56, 20, floorY - 56);
+    });
+
+    // Golden Straw & Cobble Floor
+    const floorGrad = ctx.createLinearGradient(0, floorY, 0, h);
+    floorGrad.addColorStop(0, '#f59e0b');
+    floorGrad.addColorStop(0.35, '#fbbf24');
+    floorGrad.addColorStop(1, '#d97706');
+    ctx.fillStyle = floorGrad;
+    ctx.fillRect(0, floorY, w, h - floorY);
+    // Wispy golden straw tufts
+    ctx.strokeStyle = '#fef08a';
+    ctx.lineWidth = 2.5;
+    for (let sx = 95; sx < w - 50; sx += 44) {
+      ctx.beginPath();
+      ctx.moveTo(sx, floorY + 10);
+      ctx.lineTo(sx + 16, floorY + 16);
+      ctx.moveTo(sx + 10, floorY + 26);
+      ctx.lineTo(sx + 24, floorY + 22);
+      ctx.stroke();
+    }
+
+    // Wooden Horse Stall Partitions (3 cozy boxes along the back!)
+    [155, 345, 535].forEach((sx, idx) => {
+      ctx.fillStyle = '#d97706';
+      ctx.beginPath();
+      ctx.roundRect(sx, floorY - 88, 152, 88, [8, 8, 0, 0]);
+      ctx.fill();
+      ctx.fillStyle = '#fef9c3';
+      ctx.fillRect(sx + 10, floorY - 78, 132, 34);
+      ctx.strokeStyle = '#92400e';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(sx + 10, floorY - 78, 132, 34);
+      // Stall number badge
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.roundRect(sx + 54, floorY - 108, 44, 18, [9]);
+      ctx.fill();
+      ctx.font = '800 10px "Plus Jakarta Sans", sans-serif';
+      ctx.fillStyle = '#92400e';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`Box ${idx + 1}`, sx + 76, floorY - 99);
+    });
+
+    // Optional Hay Rack (Heuraufe) if bought
+    if (HomeManager.hasItem('petItems', 'hay_rack')) {
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(102, floorY - 74, 34, 42);
+      ctx.fillStyle = '#fde047';
+      ctx.beginPath();
+      ctx.ellipse(119, floorY - 70, 16, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Optional Saddle Stand if bought
+    if (HomeManager.hasItem('petItems', 'saddle_stand')) {
+      ctx.fillStyle = '#92400e';
+      ctx.fillRect(708, floorY - 46, 10, 46);
+      ctx.fillStyle = '#b45309';
+      ctx.beginPath();
+      ctx.roundRect(692, floorY - 58, 42, 18, [9]);
+      ctx.fill();
+    }
+
+    // Render all Owned Rideable Animals inside their Stall Boxes!
+    const ownedMounts = HomeManager.getOwnedMounts();
+    const activeTr = HomeManager.getActiveTransport();
+    if (ownedMounts.length === 0) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
+      ctx.beginPath();
+      ctx.roundRect(190, floorY - 140, 390, 36, [18]);
+      ctx.fill();
+      ctx.font = '800 12px "Plus Jakarta Sans", sans-serif';
+      ctx.fillStyle = '#92400e';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🐴 Kauf Reittiere (Pony, Pferd, Einhorn...) in der 🐾 Tierhandlung!', 385, floorY - 122);
+      ctx.restore();
+    } else {
+      ownedMounts.forEach((m, idx) => {
+        const isRiding = activeTr?.kind === 'mount' && activeTr?.id === m.id;
+        if (isRiding) return; // Player is currently riding it!
+        const mx = 228 + (idx % 3) * 190 + Math.floor(idx / 3) * 28;
+        const my = floorY + 8 + (idx >= 3 ? 12 : 0);
+        const bob = Math.sin(animFrame * 0.06 + idx * 1.4) * 1.5;
+        drawMountVector(ctx, m.id, mx, my + bob, 1, animFrame + idx * 15, false, 1.05);
+        mountHotspots.push({ mountId: m.id, item: m, x: mx, y: my - 22, r: 44 });
+        drawFloatingHint(ctx, mx, my - 72, `${m.icon} ${m.name} · Aufsitzen`, '#d97706');
+      });
+    }
+
+    drawDoorPortal(ctx, 18, floorY - 144, 68, 144, '◀ Garten', 'garden', w - 175, 'arch');
   }
 
   function drawActiveTaskTargets(ctx, floorY) {
@@ -3957,6 +4207,12 @@ export function setupHomeScreen(stateManager) {
     if (stateManager.getState() === 'HOME') {
       updateUI();
       renderRoomTabs();
+    }
+  });
+
+  window.addEventListener('runner:transport-updated', () => {
+    if (stateManager.getState() === 'HOME') {
+      renderHomeTransportBar();
     }
   });
 

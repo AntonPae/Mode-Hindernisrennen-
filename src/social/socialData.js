@@ -71,7 +71,7 @@ export const NEW_ACQUAINTANCES = [
     jobCoins: 15,
     hobby: 'Aquarell-Bilder malen & gemütlich im Café lesen',
     favoriteFood: 'Erdbeer-Shake & Kakao ☕',
-    townX: 2795,
+    townX: 3095,
     townY: 266,
     spotLabel: 'Vor dem Traum-Café',
     introLine: 'Hallo du! Ich bin Lina und suche schöne Motive für mein neues Skizzenbuch. Wie heißt du denn?',
