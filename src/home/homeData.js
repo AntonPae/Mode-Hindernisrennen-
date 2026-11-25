@@ -251,6 +251,7 @@ function getDefaultHomeState() {
       ticksSinceSickCheck: 0
     },
     activeTransport: null,
+    raceMountId: null,
     companionPets: [],
     sittingCompanions: [],
     lastDailyBonusDate: '',
@@ -279,6 +280,9 @@ export const HomeManager = {
           sickPets: { ...(parsed.health?.sickPets || {}) }
         },
         activeTransport: parsed.activeTransport && parsed.activeTransport.id ? parsed.activeTransport : null,
+        raceMountId: parsed.raceMountId !== undefined
+          ? (parsed.raceMountId || null)
+          : (parsed.activeTransport?.kind === 'mount' ? parsed.activeTransport.id : null),
         companionPets: Array.isArray(parsed.companionPets) ? parsed.companionPets : [],
         sittingCompanions: Array.isArray(parsed.sittingCompanions) ? parsed.sittingCompanions : [],
         lastDailyBonusDate: parsed.lastDailyBonusDate || '',
@@ -342,6 +346,7 @@ export const HomeManager = {
     const state = this.getState();
     if (!kind || !id) {
       state.activeTransport = null;
+      state.raceMountId = null;
       this.saveState(state);
       window.dispatchEvent(new CustomEvent('runner:transport-updated', { detail: null }));
       return null;
@@ -349,9 +354,39 @@ export const HomeManager = {
     const cat = kind === 'mount' ? 'mounts' : 'vehicles';
     if (!this.hasItem(cat, id)) return state.activeTransport;
     state.activeTransport = { kind, id };
+    if (kind === 'mount') {
+      state.raceMountId = id;
+    }
     this.saveState(state);
     window.dispatchEvent(new CustomEvent('runner:transport-updated', { detail: state.activeTransport }));
     return state.activeTransport;
+  },
+
+  getRaceMountId() {
+    const state = this.getState();
+    if (state.raceMountId && this.hasItem('mounts', state.raceMountId)) {
+      return state.raceMountId;
+    }
+    return null;
+  },
+
+  setRaceMountId(mountId) {
+    const state = this.getState();
+    if (!mountId) {
+      state.raceMountId = null;
+      if (state.activeTransport?.kind === 'mount') {
+        state.activeTransport = null;
+      }
+      this.saveState(state);
+      window.dispatchEvent(new CustomEvent('runner:transport-updated', { detail: state.activeTransport }));
+      return null;
+    }
+    if (!this.hasItem('mounts', mountId)) return this.getRaceMountId();
+    state.raceMountId = mountId;
+    state.activeTransport = { kind: 'mount', id: mountId };
+    this.saveState(state);
+    window.dispatchEvent(new CustomEvent('runner:transport-updated', { detail: state.activeTransport }));
+    return mountId;
   },
 
   getCompanionPets() {
@@ -612,6 +647,7 @@ export const HomeManager = {
 
     if (category === 'mounts') {
       state.activeTransport = { kind: 'mount', id: itemId };
+      state.raceMountId = itemId;
     } else if (category === 'vehicles') {
       state.activeTransport = { kind: 'vehicle', id: itemId };
     }

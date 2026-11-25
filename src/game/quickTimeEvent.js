@@ -311,7 +311,7 @@ export class QuickTimeEventManager {
     this.options = [];
     this.wrongIndices = new Set();
     this.usedRiddles = new Set();
-    this.nextSpawnDistance = 150;
+    this.nextSpawnDistance = 420;
 
     this.containerEl = document.getElementById('qte-overlay');
     this.promptEl = document.getElementById('qte-prompt');
@@ -329,7 +329,7 @@ export class QuickTimeEventManager {
     this.currentRiddle = null;
     this.options = [];
     this.wrongIndices.clear();
-    this.nextSpawnDistance = 150;
+    this.nextSpawnDistance = 420;
     this.hideOverlay();
   }
 
@@ -457,7 +457,7 @@ export class QuickTimeEventManager {
   update(currentScore, canStartStop = true) {
     if (!this.active && canStartStop && currentScore >= this.nextSpawnDistance) {
       this.triggerPuzzleStop();
-      this.nextSpawnDistance = currentScore + 220 + Math.floor(Math.random() * 70);
+      this.nextSpawnDistance = currentScore + 550 + Math.floor(Math.random() * 150);
       return;
     }
 

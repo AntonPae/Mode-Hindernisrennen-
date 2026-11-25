@@ -80,9 +80,9 @@ document.addEventListener('DOMContentLoaded', () => {
     mailboxUI.refreshMailboxButtons();
   });
 
-  stateManager.onStateChange((newState) => {
+  stateManager.onStateChange((newState, payload) => {
     if (newState === State.GAME) {
-      runnerEngine.start();
+      runnerEngine.start(payload || {});
     } else {
       runnerEngine.stop();
     }

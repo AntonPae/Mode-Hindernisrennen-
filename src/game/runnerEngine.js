@@ -9,6 +9,7 @@ import { ObstacleManager, CoinManager } from './obstacles.js';
 import { QuickTimeEventManager } from './quickTimeEvent.js';
 import { HighscoreManager } from './highscoreData.js';
 import { drawVectorPet, getPetMeta } from '../home/petCompanion.js';
+import { drawPlayerWithTransport, MOUNT_META } from '../town/transportRenderer.js';
 
 class SoundManager {
   constructor() {
@@ -195,6 +196,7 @@ export class RunnerEngine {
     this.scoreValEl = document.getElementById('scoreVal');
     this.runCoinsValEl = document.getElementById('runCoinsVal');
     this.highScoreValEl = document.getElementById('highScoreVal');
+    this.runMountPillEl = document.getElementById('runMountPill');
     this.finalScoreEl = document.getElementById('finalScore');
     this.earnedCoinsValEl = document.getElementById('earnedCoinsVal');
     this.totalCoinsValEl = document.getElementById('totalCoinsVal');
@@ -225,6 +227,8 @@ export class RunnerEngine {
     this.scrollX = 0;
     this.baseSpeed = 5;
     this.currentSpeed = this.baseSpeed;
+    this.activeMount = null;
+    this.activeMountMeta = null;
 
     // Dynamic Biome / Background switching
     this.currentBiome = 'meadow';
@@ -385,7 +389,7 @@ export class RunnerEngine {
     return Math.min(this.displayHeight * 0.72, Math.max(180, this.displayHeight - 115));
   }
 
-  start() {
+  start(payload = {}) {
     this.sounds.init();
     this.resizeCanvas();
 
@@ -402,10 +406,36 @@ export class RunnerEngine {
     this.coinRainTimer = 0;
     this.shieldActive = false;
     this.shieldCooldown = 0;
-    this.currentBiome = GameConfig.background || 'meadow';
+    this.currentBiome = (payload && payload.background) || GameConfig.background || 'meadow';
     this.biomeStartIndex = Math.max(0, this.biomeList.indexOf(this.currentBiome));
+
+    const requestedMountId = (payload && payload.mountId !== undefined)
+      ? payload.mountId
+      : HomeManager.getRaceMountId();
+    const validMountId = (requestedMountId && HomeManager.hasItem('mounts', requestedMountId))
+      ? requestedMountId
+      : null;
+    this.activeMount = validMountId ? { kind: 'mount', id: validMountId } : null;
+    this.activeMountMeta = validMountId ? (MOUNT_META[validMountId] || null) : null;
+
+    if (this.runMountPillEl) {
+      if (this.activeMountMeta) {
+        this.runMountPillEl.textContent = `${this.activeMountMeta.icon} ${this.activeMountMeta.name}`;
+        this.runMountPillEl.classList.remove('hidden');
+      } else {
+        this.runMountPillEl.classList.add('hidden');
+      }
+    }
+
+    this.baseSpeed = this.activeMountMeta
+      ? 5.4 + Math.max(0, ((this.activeMountMeta.speedTown || 7.4) - 7.0) * 0.25)
+      : 5;
+    this.player.jumpForce = this.activeMountMeta ? -14.2 : -13.5;
+
     this.zoneNotificationTimer = 120; // 2 seconds banner at start
-    this.zoneNotificationText = this.getBiomeName(this.currentBiome);
+    this.zoneNotificationText = this.activeMountMeta
+      ? `${this.getBiomeName(this.currentBiome)} • ${this.activeMountMeta.icon}`
+      : this.getBiomeName(this.currentBiome);
     this.scrollX = 0;
     this.currentSpeed = this.baseSpeed;
     this.particles = [];
@@ -808,7 +838,7 @@ export class RunnerEngine {
       });
     });
 
-    // Draw Player
+    // Draw Player (or Rider + Riding Animal)
     let pose = 'run';
     if (this.qte.isEventActive()) {
       pose = 'idle';
@@ -823,11 +853,48 @@ export class RunnerEngine {
       this.ctx.shadowColor = '#fbbf24';
     }
 
-    renderCharacter(this.ctx, this.player.x, this.player.y, PlayerConfig, {
-      frame: this.player.animFrame,
-      pose: pose,
-      facing: 1
-    });
+    if (this.activeMount) {
+      const isGalloping = !this.qte.isEventActive();
+      if (this.player.isDucking) {
+        this.ctx.save();
+        this.ctx.translate(this.player.x, this.player.y);
+        this.ctx.scale(1.06, 0.56);
+        drawPlayerWithTransport(
+          this.ctx,
+          0,
+          0,
+          this.player.animFrame,
+          isGalloping,
+          1,
+          PlayerConfig,
+          'duck',
+          false,
+          this.activeMount,
+          0.95
+        );
+        this.ctx.restore();
+      } else {
+        drawPlayerWithTransport(
+          this.ctx,
+          this.player.x,
+          this.player.y,
+          this.player.animFrame,
+          isGalloping,
+          1,
+          PlayerConfig,
+          pose,
+          false,
+          this.activeMount,
+          0.95
+        );
+      }
+    } else {
+      renderCharacter(this.ctx, this.player.x, this.player.y, PlayerConfig, {
+        frame: this.player.animFrame,
+        pose: pose,
+        facing: 1
+      });
+    }
     this.ctx.restore();
 
     if (this.shieldActive) {
@@ -836,7 +903,7 @@ export class RunnerEngine {
       this.ctx.fillStyle = 'rgba(56, 189, 248, 0.18)';
       this.ctx.lineWidth = 3.5;
       this.ctx.beginPath();
-      this.ctx.arc(this.player.x, this.player.y - 60, 68, 0, Math.PI * 2);
+      this.ctx.arc(this.player.x, this.player.y - (this.activeMount ? 56 : 60), this.activeMount ? 74 : 68, 0, Math.PI * 2);
       this.ctx.fill();
       this.ctx.stroke();
       this.ctx.restore();
@@ -861,7 +928,7 @@ export class RunnerEngine {
   drawPuzzleBubble() {
     const scaleY = PlayerConfig.body.height || 1.0;
     const bubbleX = this.player.x + 28;
-    const bubbleY = this.player.y - 165 * scaleY;
+    const bubbleY = this.player.y - (this.activeMount ? 178 : 165) * scaleY;
 
     this.ctx.save();
     this.ctx.shadowColor = 'rgba(236, 72, 153, 0.35)';
@@ -1614,7 +1681,8 @@ export class RunnerEngine {
 
     if (this.gameOverRunnerMetaEl) {
       const rankLabel = hsRecord.rank ? `Platz #${hsRecord.rank} in der Liste` : 'Neu gestartet';
-      this.gameOverRunnerMetaEl.textContent = `🏃 Läufer: ${hsRecord.entry.name} • ${rankLabel} • ${hsRecord.entry.worldLabel}`;
+      const mountLabel = this.activeMountMeta ? ` • ${this.activeMountMeta.icon} ${this.activeMountMeta.name}` : '';
+      this.gameOverRunnerMetaEl.textContent = `🏃 Läufer: ${hsRecord.entry.name} • ${rankLabel} • ${hsRecord.entry.worldLabel}${mountLabel}`;
     }
 
     if (this.earnedCoinsValEl) this.earnedCoinsValEl.textContent = totalRunEarned;

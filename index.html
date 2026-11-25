@@ -148,6 +148,7 @@
           <label for="bgRunnerNameInput">🏃 Läufer-Name:</label>
           <input type="text" id="bgRunnerNameInput" class="hs-name-input" maxlength="22" placeholder="Dein Name (z. B. Mia)" />
         </div>
+        <div id="bgMountBar" class="bg-mount-bar"></div>
         <div id="bgToast" class="shop-toast hidden"></div>
       </header>
 
@@ -245,8 +246,7 @@
           </div>
         </div>
 
-        <aside class="ice-menu-column">
-          <div id="storeTalkMount"></div>
+        <aside class="ice-menu-column store-side-column">
           <div class="icecream-cone-bar store-basket-bar">
             <div class="icecream-cone-label">
               <strong>🛒 Korb:</strong>
@@ -255,6 +255,7 @@
             <div class="ice-cone-slots">
               <button type="button" id="storePayBtn" class="btn btn-small btn-primary" disabled>💳 Zur Kasse</button>
               <button type="button" id="storeClearBasketBtn" class="btn btn-small btn-secondary" disabled>🗑️ Leeren</button>
+              <button type="button" id="storeGoBankBtn" class="btn btn-small btn-earn hidden">🏦 Zur Bank</button>
             </div>
           </div>
           <div class="ice-menu-header">
@@ -262,10 +263,11 @@
               <h2 id="storeShelfTitle">🛍️ Regal im Laden</h2>
               <button type="button" id="storeRefreshDeliveryBtn" class="btn btn-small btn-earn" title="Frische Artikel aus dem Lager holen">🚚 Neue Lieferung</button>
             </div>
-            <span id="storeShelfHint">Klicke rechts direkt auf ein Produkt, um es in deinen Einkaufskorb zu legen!</span>
+            <span id="storeShelfHint">Tippe unten auf „🛒 In den Korb“ – das Produkt wandert sofort oben in deinen Korb!</span>
           </div>
           <div id="storeAisleTabs" class="ice-station-tabs"></div>
           <div id="storeShelfItems" class="store-shelf-items"></div>
+          <div id="storeTalkMount"></div>
         </aside>
       </div>
     </div>
@@ -709,6 +711,7 @@
           <span>Distanz: <strong id="scoreVal">0</strong> m</span>
           <span class="hud-coins">🪙 <strong id="runCoinsVal">0</strong></span>
           <span class="high-score">Highscore: <strong id="highScoreVal">0</strong> m</span>
+          <span id="runMountPill" class="hud-mount-pill hidden"></span>
         </div>
         <div class="top-hud-actions">
           <button id="gameHudHighscoreBtn" class="btn btn-small btn-secondary">🏆 Rangliste</button>

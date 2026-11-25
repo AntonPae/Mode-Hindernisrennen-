@@ -502,6 +502,8 @@ export function setupStoreScreen(stateManager) {
   const basketSlotsEl = document.getElementById('storeBasketSlots');
   const payBtn = document.getElementById('storePayBtn');
   const clearBasketBtn = document.getElementById('storeClearBasketBtn');
+  const goBankBtn = document.getElementById('storeGoBankBtn');
+  const talkMountEl = document.getElementById('storeTalkMount');
 
   const walkLeftBtn = document.getElementById('storeWalkLeftBtn');
   const walkRightBtn = document.getElementById('storeWalkRightBtn');
@@ -733,11 +735,12 @@ export function setupStoreScreen(stateManager) {
     if (!basketSlotsEl) return;
     basketSlotsEl.innerHTML = '';
     const total = getBasketTotal();
+    const coins = ShopManager.getCoins();
 
     if (basket.length === 0) {
       const empty = document.createElement('span');
       empty.className = 'store-basket-empty';
-      empty.textContent = 'Dein Einkaufskorb ist leer — tippe rechts oder auf ein Regal!';
+      empty.textContent = 'Dein Einkaufskorb ist leer — tippe unten auf „🛒 In den Korb“!';
       basketSlotsEl.appendChild(empty);
     } else {
       basket.forEach((entry, idx) => {
@@ -765,11 +768,19 @@ export function setupStoreScreen(stateManager) {
     if (clearBasketBtn) {
       clearBasketBtn.disabled = basket.length === 0;
     }
+    if (goBankBtn) {
+      const needBank = basket.length > 0 && coins < total;
+      goBankBtn.classList.toggle('hidden', !needBank);
+      if (needBank) {
+        goBankBtn.textContent = `🏦 Zur Bank (${BankManager.getBalance()} 🪙)`;
+      }
+    }
   }
 
   function performCheckout() {
     if (basket.length === 0) {
       showToast('🛒 Dein Einkaufskorb ist noch leer! Nimm erst etwas aus den Regalen.', 'info');
+      if (statusEl) statusEl.textContent = '🛒 Dein Einkaufskorb ist leer — wähle rechts erst ein Produkt aus!';
       return;
     }
     const total = getBasketTotal();
@@ -777,15 +788,17 @@ export function setupStoreScreen(stateManager) {
     if (coins < total) {
       const missing = total - coins;
       const bankBal = BankManager.getBalance();
-      if (bankBal >= missing) {
-        showToast(`🏦 Noch ${missing} 🪙 Bargeld nötig! Geh in der Stadt kurz zur 🏦 Traum-Bank & heb Geld ab (Konto: ${bankBal} 🪙)!`, 'warn');
-      } else {
-        showToast(`🔒 An der Kasse fehlen noch ${missing} 🪙 Bargeld! Heb auf der 🏦 Bank Geld ab oder arbeite im Café/Hundesitting.`, 'warn');
-      }
+      const warnMsg = bankBal >= missing
+        ? `🏦 Noch ${missing} 🪙 Bargeld nötig! Geh kurz zur 🏦 Traum-Bank & heb Geld ab (Konto: ${bankBal} 🪙)!`
+        : `🔒 An der Kasse fehlen noch ${missing} 🪙 Bargeld! Heb auf der 🏦 Bank Geld ab oder arbeite im Café/Hundesitting.`;
+      showToast(warnMsg, 'warn');
+      if (statusEl) statusEl.textContent = warnMsg;
+      renderBasketBar();
       return;
     }
 
     const boughtNames = [];
+    const remainingBasket = [];
     const purchasedSnapshot = [...basket];
     let hasFridgeGoods = false;
     let hasPet = false;
@@ -810,6 +823,8 @@ export function setupStoreScreen(stateManager) {
               if (entry.category === 'ability') savedConfigBeforeTryOn.ability = entry.item.id;
             }
           }
+        } else {
+          remainingBasket.push(entry);
         }
       } else {
         const res = HomeManager.buyItem(entry.category, entry.item.id);
@@ -824,18 +839,31 @@ export function setupStoreScreen(stateManager) {
             MailboxManager.ensureDailyMail();
             window.dispatchEvent(new CustomEvent('runner:mailbox-updated'));
           }
+        } else {
+          remainingBasket.push(entry);
         }
       }
     });
 
+    basket = remainingBasket;
+
+    if (boughtNames.length === 0) {
+      updateHeaderStats();
+      renderBasketBar();
+      renderShelfInspector();
+      const errMsg = '🔒 Konnte an der Kasse nicht bezahlt werden — prüfe bitte dein Bargeld oder Level!';
+      showToast(errMsg, 'warn');
+      if (statusEl) statusEl.textContent = errMsg;
+      return;
+    }
+
     ShopManager.savePlayerConfig(PlayerConfig);
     ShopManager.recordProgress(0, 1);
 
-    basket = [];
     tryingOnLabel = null;
     scannerBeamTimer = 46;
     receiptPopTimer = 110;
-    receiptText = `BEEP! ${purchasedSnapshot.length}x bezahlt!`;
+    receiptText = `BEEP! ${boughtNames.length}x bezahlt!`;
     cashierBubble = 'Vielen Dank & viel Freude damit!';
     cashierBubbleTimer = 120;
 
@@ -853,7 +881,6 @@ export function setupStoreScreen(stateManager) {
     if (hasMount) msg += ' Dein neues Reittier ist bereit zum Draufreiten & für den Stall!';
     if (hasVehicle) msg += ' Dein neues Gefährt wartet draußen auf der Straße auf dich!';
     if (hasStable) msg += ' Dein eigener Reit-Stall steht ab sofort bei dir Zuhause!';
-    if (loyaltyBonus > 0) msg += ` (+${loyaltyBonus} 🪙 Einkaufs-Bonus!)`;
     showToast(msg, 'success');
     if (statusEl) statusEl.textContent = `💳 *BEEP!* Bezahlt: ${boughtNames.join(', ')} — danke für deinen Einkauf!`;
   }
@@ -903,6 +930,24 @@ export function setupStoreScreen(stateManager) {
     }
   }
 
+  function focusShelfList(aisle) {
+    if (!shelfItemsEl) return;
+    shelfItemsEl.scrollTop = 0;
+    shelfItemsEl.classList.remove('shelf-highlight');
+    // Force reflow to restart highlight pulse cleanly
+    void shelfItemsEl.offsetWidth;
+    shelfItemsEl.classList.add('shelf-highlight');
+    setTimeout(() => {
+      shelfItemsEl.classList.remove('shelf-highlight');
+    }, 850);
+    if (window.innerWidth <= 960) {
+      shelfItemsEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    if (aisle && statusEl) {
+      statusEl.textContent = `👀 Regal „${aisle.label}“ geöffnet — tippe rechts auf „🛒 In den Korb“!`;
+    }
+  }
+
   function renderAisleTabs() {
     if (!aisleTabsEl) return;
     const store = getStore();
@@ -919,6 +964,7 @@ export function setupStoreScreen(stateManager) {
         walkToAisle(aisle);
         renderAisleTabs();
         renderShelfInspector();
+        if (shelfItemsEl) shelfItemsEl.scrollTop = 0;
       });
       aisleTabsEl.appendChild(btn);
     });
@@ -1136,7 +1182,9 @@ export function setupStoreScreen(stateManager) {
           updateHeaderStats();
           renderBasketBar();
           renderShelfInspector();
-          showToast(`🛒 "${item.name}" in deinen Einkaufskorb gelegt! Geh zur Kasse zum Bezahlen.`, 'info');
+          const msg = `🛒 "${item.name}" in deinen Einkaufskorb gelegt! Tippe oben auf „💳 An der Kasse bezahlen“.`;
+          showToast(msg, 'info');
+          if (statusEl) statusEl.textContent = msg;
         };
         if (pickBtn && levelOk) {
           pickBtn.addEventListener('click', handlePick);
@@ -1270,8 +1318,10 @@ export function setupStoreScreen(stateManager) {
         updateHeaderStats();
         renderBasketBar();
         renderShelfInspector();
-        const extraHint = !canAfford ? ` (Sparziel: dir fehlen noch ${missingCoins} 🪙)` : ' Geh nach rechts zur Kasse.';
-        showToast(`🛒 "${item.name}" in den Einkaufskorb gelegt!${extraHint}`, 'info');
+        const extraHint = !canAfford ? ` (Sparziel: dir fehlen noch ${missingCoins} 🪙 Bargeld)` : ' Tippe oben auf „💳 An der Kasse bezahlen“!';
+        const msg = `🛒 "${item.name}" in den Einkaufskorb gelegt!${extraHint}`;
+        showToast(msg, 'info');
+        if (statusEl) statusEl.textContent = msg;
       };
 
       if (pickBtn) {
@@ -1346,7 +1396,8 @@ export function setupStoreScreen(stateManager) {
       activeSourceIdx = 0;
       renderAisleTabs();
       renderShelfInspector();
-      showToast(`🛍️ Du schaust ins Regal "${nearAisle.label}"!`, 'info');
+      focusShelfList(nearAisle);
+      showToast(`🛍️ Regal „${nearAisle.label}“ geöffnet — tippe rechts auf „🛒 In den Korb“!`, 'info');
     }
   }
 
@@ -1423,6 +1474,7 @@ export function setupStoreScreen(stateManager) {
             npc.speechTimer = 165;
             npc.pauseTimer = 140;
             talkPanel.selectTarget(npc.id, `${npc.icon} ${npc.name}: „${res.reply}“`);
+            if (talkMountEl) talkMountEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
           });
           return;
         }
@@ -1488,6 +1540,7 @@ export function setupStoreScreen(stateManager) {
           renderAisleTabs();
           renderShelfInspector();
           walkToAisle(aisle);
+          focusShelfList(aisle);
           return;
         }
       }
@@ -1524,7 +1577,15 @@ export function setupStoreScreen(stateManager) {
 
   if (payBtn) {
     payBtn.addEventListener('click', () => {
-      navigateInStore(705, 290, performCheckout);
+      if (basket.length === 0) {
+        showToast('🛒 Dein Einkaufskorb ist noch leer!', 'info');
+        return;
+      }
+      if (player.x >= 680) {
+        performCheckout();
+      } else {
+        navigateInStore(705, 290, performCheckout);
+      }
     });
   }
   if (clearBasketBtn) {
@@ -1534,6 +1595,13 @@ export function setupStoreScreen(stateManager) {
       renderBasketBar();
       renderShelfInspector();
       showToast('🗑️ Einkaufskorb geleert.', 'info');
+      if (statusEl) statusEl.textContent = '🗑️ Einkaufskorb geleert — such dir rechts etwas Neues aus!';
+    });
+  }
+  if (goBankBtn) {
+    goBankBtn.addEventListener('click', () => {
+      restoreTryOnConfig();
+      stateManager.setState('BANK', { from: 'STORE' });
     });
   }
 
