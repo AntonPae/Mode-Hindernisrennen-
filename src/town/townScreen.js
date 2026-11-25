@@ -14,7 +14,7 @@ import { drawCanvasSpeechBubble } from '../social/canvasSpeech.js';
 import { mountTalkPanel } from '../social/talkPanel.js';
 import { drawPlayerWithTransport, getTransportMeta } from './transportRenderer.js';
 
-const WORLD_WIDTH = 3740;
+const WORLD_WIDTH = 4060;
 const GARDEN_LEFT_X = 280;
 const GARDEN_RIGHT_X = 560;
 const LEFT_GATE_X = 280;
@@ -27,7 +27,7 @@ const LOWER_WALK_MIN_Y = 400;
 const LOWER_WALK_MAX_Y = 434;
 const GARDEN_PATH_MIN_Y = 286;
 const GARDEN_PATH_MAX_Y = 376;
-const CROSSWALK_XS = [1350, 1665, 1980, 2295, 2610, 2925, 3240];
+const CROSSWALK_XS = [1350, 1665, 1980, 2295, 2610, 2925, 3240, 3555];
 const CROSSWALK_HALF_W = 26;
 const RESIDENTIAL_NEIGHBORS = [
   {
@@ -172,9 +172,19 @@ export const TOWN_PLACES = [
     desc: 'Skateboards, Roller, Fahrräder, Motorräder & Autos – Sparziele fürs echte Leben!'
   },
   {
+    id: 'bank',
+    label: '🏦 Traum-Bank',
+    x: 3240,
+    y: 266,
+    targetState: 'BANK',
+    badge: 'Geld abheben',
+    color: '#0369a1',
+    desc: 'Hier hebst du dein verdientes Geld vom Bankkonto als Bargeld ab!'
+  },
+  {
     id: 'cafe',
     label: '🍦 Café & Eisdiele',
-    x: 3240,
+    x: 3555,
     y: 266,
     targetState: 'ICECREAM',
     badge: 'Arbeiten',
@@ -184,7 +194,7 @@ export const TOWN_PLACES = [
   {
     id: 'stadium',
     label: '🏃 Renn-Stadion',
-    x: 3555,
+    x: 3870,
     y: 266,
     targetState: 'BACKGROUND_SELECT',
     badge: 'Rennen starten',
@@ -1472,9 +1482,21 @@ export function setupTownScreen(stateManager) {
       windowItems: ['🚗', '🏍️', '🚲']
     });
 
-    // 7. Traum-Café & Eisdiele
+    // 7. Traum-Bank (Geld abheben & Konto!)
     drawShoppingStreetStore({
       x: 3240,
+      wall: '#f0f9ff',
+      trim: '#0369a1',
+      awningA: '#0284c7',
+      awningB: '#fbbf24',
+      signText: '🏦 TRAUM-BANK',
+      signColor: '#0c4a6e',
+      windowItems: ['🏦', '🏧', '🪙']
+    });
+
+    // 8. Traum-Café & Eisdiele
+    drawShoppingStreetStore({
+      x: 3555,
       wall: '#fff1f2',
       trim: '#e11d48',
       awningA: '#f43f5e',
@@ -1484,27 +1506,27 @@ export function setupTownScreen(stateManager) {
       windowItems: ['🍦', '🧇', '🥤']
     });
 
-    // 8. Renn-Stadion Arch at end of Street
+    // 9. Renn-Stadion Arch at end of Street
     ctx.save();
     ctx.strokeStyle = '#f43f8e';
     ctx.lineWidth = 14;
     ctx.beginPath();
-    ctx.arc(3555, 222, 86, Math.PI, 0);
+    ctx.arc(3870, 222, 86, Math.PI, 0);
     ctx.stroke();
     ctx.strokeStyle = '#fbbf24';
     ctx.lineWidth = 6;
     ctx.beginPath();
-    ctx.arc(3555, 222, 76, Math.PI, 0);
+    ctx.arc(3870, 222, 76, Math.PI, 0);
     ctx.stroke();
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.roundRect(3465, 208, 180, 26, [13]);
+    ctx.roundRect(3780, 208, 180, 26, [13]);
     ctx.fill();
     ctx.font = '800 12px "Plus Jakarta Sans", sans-serif';
     ctx.fillStyle = '#be185d';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('🏃 Renn-Stadion (Start!)', 3555, 221);
+    ctx.fillText('🏃 Renn-Stadion (Start!)', 3870, 221);
     ctx.restore();
 
     // Animated city cars on the road (drawn behind player when player is in foreground, or nicely along lane)
@@ -1677,8 +1699,11 @@ export function setupTownScreen(stateManager) {
       } else if (payload && payload.from === 'PETSITTING') {
         player.x = 880;
         player.y = 274;
-      } else if (payload && payload.from === 'ICECREAM') {
+      } else if (payload && payload.from === 'BANK') {
         player.x = 3240;
+        player.y = 266;
+      } else if (payload && payload.from === 'ICECREAM') {
+        player.x = 3555;
         player.y = 266;
       } else if (payload && payload.from === 'EDITOR') {
         player.x = 1980;

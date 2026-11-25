@@ -1,5 +1,6 @@
 import { HomeManager } from '../home/homeData.js';
 import { ShopManager } from '../editor/shopData.js';
+import { BankManager } from '../economy/bankData.js';
 import { MailboxManager } from '../mailbox/mailboxData.js';
 
 const SOCIAL_KEY = 'runner_social_state';
@@ -12,7 +13,7 @@ export const NEW_ACQUAINTANCES = [
     role: 'Tierfotografin',
     jobTitle: 'Tierfotografin',
     jobPlace: 'Promenade & Tierhandlung',
-    jobCoins: 14,
+    jobCoins: 7,
     hobby: 'Fotos von Hunden, Katzen & Sonnenuntergängen machen',
     favoriteFood: 'Pistazien-Eis 🍨',
     townX: 2475,
@@ -40,7 +41,7 @@ export const NEW_ACQUAINTANCES = [
     role: 'Gärtner & Skater',
     jobTitle: 'Gärtner & Skater-Coach',
     jobPlace: 'Park & Supermarkt',
-    jobCoins: 14,
+    jobCoins: 7,
     hobby: 'Obstbäume pflegen & auf dem Board durch den Park rollen',
     favoriteFood: 'Frische Äpfel & Herzwaffeln 🧇',
     townX: 1515,
@@ -68,10 +69,10 @@ export const NEW_ACQUAINTANCES = [
     role: 'Malerin & Buchfreundin',
     jobTitle: 'Malerin im Traum-Café',
     jobPlace: 'Traum-Café & Atelier',
-    jobCoins: 15,
+    jobCoins: 8,
     hobby: 'Aquarell-Bilder malen & gemütlich im Café lesen',
     favoriteFood: 'Erdbeer-Shake & Kakao ☕',
-    townX: 3095,
+    townX: 3410,
     townY: 266,
     spotLabel: 'Vor dem Traum-Café',
     introLine: 'Hallo du! Ich bin Lina und suche schöne Motive für mein neues Skizzenbuch. Wie heißt du denn?',
@@ -96,7 +97,7 @@ export const NEW_ACQUAINTANCES = [
     role: 'Musiker & Hobbykoch',
     jobTitle: 'Musiker & Café-Koch',
     jobPlace: 'Traum-Café',
-    jobCoins: 15,
+    jobCoins: 8,
     hobby: 'Gitarre spielen & leckere Pfannkuchen backen',
     favoriteFood: 'Schoko-Waffeln & Kakao 🍫',
     townX: 2135,
@@ -331,13 +332,15 @@ export const SocialManager = {
     state.roommateId = personId;
     state.roommateLife = getDefaultRoommateLife();
 
+    // Clear pre-move-in chat history so the roommate never repeats "Hallo, ich bin Lina!"
+    npcChatHistories.delete(personId);
+
     let bonusCoins = 0;
     if (!state.movedInRewarded[personId]) {
       state.movedInRewarded[personId] = true;
-      bonusCoins = 25;
-      ShopManager.addCoins(bonusCoins);
-      ShopManager.recordProgress(0, 2);
-      window.dispatchEvent(new CustomEvent('runner:coins-updated'));
+      bonusCoins = 12;
+      BankManager.depositEarned(bonusCoins, `🏡 Einzugs-Bonus (${person.name})`);
+      ShopManager.recordProgress(0, 1);
     }
 
     MailboxManager.deliverCustomMail({
@@ -350,7 +353,7 @@ export const SocialManager = {
       title: `Ich bin bei dir eingezogen! 🏡 – ${person.name}`,
       body: `Hurra! Hier ist ${person.name}! Ich habe meine Koffer gepackt und wohne jetzt mit dir zusammen in deinem Haus & Garten. Wir können zusammen am Tisch sitzen, plaudern, essen, trinken, schlafen und sogar ein eigenes WG-Zimmer einrichten!`,
       isInvitation: false,
-      rewardCoins: 15
+      rewardCoins: 8
     });
     window.dispatchEvent(new CustomEvent('runner:mailbox-updated'));
 
@@ -384,7 +387,7 @@ export const SocialManager = {
     let changed = false;
 
     if (life.activity === 'working' && life.activityEndsAt > 0 && now >= life.activityEndsAt) {
-      const earned = person.jobCoins || 14;
+      const earned = person.jobCoins || 8;
       life.activity = 'idle';
       life.activityStartedAt = 0;
       life.activityEndsAt = 0;
@@ -395,8 +398,7 @@ export const SocialManager = {
       changed = true;
       state.roommateLife = life;
       this.saveState(state);
-      ShopManager.addCoins(earned);
-      window.dispatchEvent(new CustomEvent('runner:coins-updated'));
+      BankManager.depositEarned(earned, `💼 WG-Gehalt (${person.name})`);
       window.dispatchEvent(new CustomEvent('runner:roommate-event', {
         detail: { type: 'work_done', person, coins: earned }
       }));
@@ -650,9 +652,8 @@ export const SocialManager = {
     const latest = this.getState();
     latest.roommateLife = life;
     this.saveState(latest);
-    const bonusCoins = 8;
-    ShopManager.addCoins(bonusCoins);
-    window.dispatchEvent(new CustomEvent('runner:coins-updated'));
+    const bonusCoins = 3;
+    BankManager.depositEarned(bonusCoins, `🍵 Pflege-Dankeschön (${person.name})`);
     window.dispatchEvent(new CustomEvent('runner:roommate-life-updated', { detail: { life } }));
     return { ok: true, person, bonusCoins, remaining: homeState.inventory.medicine, life };
   },
@@ -697,17 +698,16 @@ export const SocialManager = {
     let unlockedMail = false;
 
     if (prevStage === 0 && cur.stage >= 1) {
-      coinsEarned += 10;
+      coinsEarned += 5;
       unlockedMail = true;
     }
     if (prevStage < 3 && cur.stage === 3) {
-      coinsEarned += 20;
+      coinsEarned += 10;
     }
 
     if (coinsEarned > 0) {
-      ShopManager.addCoins(coinsEarned);
+      BankManager.depositEarned(coinsEarned, `🌟 Freundschaft mit ${person.name}`);
       ShopManager.recordProgress(0, 1);
-      window.dispatchEvent(new CustomEvent('runner:coins-updated'));
     }
 
     // Deliver a friendly greeting letter into the Briefkasten once befriended (stage >= 2) if not sent yet
@@ -723,7 +723,7 @@ export const SocialManager = {
         title: `Schön, dich kennengelernt zu haben! – ${person.name}`,
         body: `Hallo! Hier ist ${person.name} (${person.role}). Es war so schön, mit dir zu plaudern! Schreib mir gern jederzeit oder lad mich zu einem Ausflug ein!`,
         isInvitation: false,
-        rewardCoins: 15
+        rewardCoins: 6
       });
       window.dispatchEvent(new CustomEvent('runner:mailbox-updated'));
     }
@@ -781,7 +781,10 @@ export async function askPersonAI(target, playerText = '', sceneContext = {}) {
   const petNames = (homeState.owned?.pets || []).slice(0, 6);
   const roommateLife = isRoommateNow ? SocialManager.getRoommateLife() : null;
 
-  const prevHistory = npcChatHistories.get(id) || [];
+  const rawHistory = npcChatHistories.get(id) || [];
+  const prevHistory = isRoommateNow
+    ? rawHistory.filter((entry) => !/\b(ich bin|mein name ist|kennenlernen|wie heißt du)\b/i.test(entry.text || ''))
+    : rawHistory;
 
   try {
     const resp = await fetch('/api/npc-chat', {
@@ -797,9 +800,9 @@ export async function askPersonAI(target, playerText = '', sceneContext = {}) {
           hobby: newPerson?.hobby || '',
           favoriteFood: newPerson?.favoriteFood || '',
           spotLabel: newPerson?.spotLabel || '',
-          facts: newPerson?.facts || [],
+          facts: isRoommateNow ? (newPerson?.facts || []).slice(0, 2) : (newPerson?.facts || []),
           jobTitle: newPerson?.jobTitle || '',
-          isNewPerson: Boolean(newPerson)
+          isNewPerson: Boolean(newPerson) && !isRoommateNow
         },
         message: text,
         history: prevHistory.slice(-8),
@@ -831,6 +834,12 @@ export async function askPersonAI(target, playerText = '', sceneContext = {}) {
     }
 
     let reply = String(data.reply).trim();
+    if (isRoommateNow) {
+      const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const introRe = new RegExp(`^(?:(?:hallo|hey|hi|huhu|oh)[\\s,!.]*)*(?:ich\\s+bin|mein\\s+name\\s+ist)\\s+${escapedName}\\b[^.!?]*[.!?]?\\s*`, 'i');
+      const cleaned = reply.replace(introRe, '').trim();
+      if (cleaned) reply = cleaned;
+    }
     const updatedHistory = [
       ...prevHistory,
       { role: 'user', text },
@@ -845,12 +854,12 @@ export async function askPersonAI(target, playerText = '', sceneContext = {}) {
     if (newPerson && !isRoommateNow && (data.agreesToMoveIn || explicitMoveIn)) {
       movedInResult = SocialManager.moveInWith(id);
       if (movedInResult?.ok && movedInResult.bonusCoins > 0) {
-        reply += ` (+${movedInResult.bonusCoins} 🪙 Einzugs-Bonus!)`;
+        reply += ` (+${movedInResult.bonusCoins} 🪙 auf dein 🏦 Bankkonto!)`;
       }
     } else if (progress && progress.prevStage < 3 && progress.stage === 3) {
-      reply += ' 🎉 Wir sind jetzt echte neue Freunde! (+20 🪙)';
+      reply += ' 🎉 Wir sind jetzt echte neue Freunde! (+10 🪙 auf die 🏦 Bank)';
     } else if (progress && progress.prevStage === 0 && progress.coinsEarned > 0) {
-      reply += ` (+${progress.coinsEarned} 🪙 Kennenlern-Bonus!)`;
+      reply += ` (+${progress.coinsEarned} 🪙 auf die 🏦 Bank!)`;
     }
 
     return {

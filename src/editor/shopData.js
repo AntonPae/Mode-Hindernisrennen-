@@ -177,7 +177,13 @@ function getDateSeed() {
   return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
 }
 
+let levelUpPayoutHandler = null;
+
 export const ShopManager = {
+  setLevelUpPayoutHandler(handler) {
+    levelUpPayoutHandler = typeof handler === 'function' ? handler : null;
+  },
+
   getCoins() {
     const raw = localStorage.getItem(COINS_KEY);
     if (raw === null) {
@@ -349,15 +355,19 @@ export const ShopManager = {
     stats.totalMeters += metersAdded;
     stats.riddlesSolved += riddlesAdded;
 
-    // Level up every 500 total meters or 5 points/riddles
-    const newLevel = 1 + Math.floor((stats.totalMeters / 500) + (stats.riddlesSolved / 5));
+    // Level up every 600 total meters or 8 points/riddles
+    const newLevel = 1 + Math.floor((stats.totalMeters / 600) + (stats.riddlesSolved / 8));
     let levelUpBonus = 0;
     const previousLevel = stats.level;
     if (newLevel > stats.level) {
       const gainedLevels = newLevel - stats.level;
-      levelUpBonus = gainedLevels * 30;
+      levelUpBonus = gainedLevels * 10;
       stats.level = newLevel;
-      this.addCoins(levelUpBonus);
+      if (levelUpPayoutHandler) {
+        levelUpPayoutHandler(levelUpBonus, stats.level);
+      } else {
+        this.addCoins(levelUpBonus);
+      }
     }
 
     localStorage.setItem(STATS_KEY, JSON.stringify(stats));

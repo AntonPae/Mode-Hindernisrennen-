@@ -64,7 +64,7 @@ function buildNpcSystemInstruction(target: any, context: any): string {
     facts ? `Hintergrund über dich: ${facts}` : '',
     `Aktueller Ort: Szene "${scene}" (dein Stammplatz in der Stadt: ${spotLabel}).`,
     isRoommate
-      ? `WICHTIG: Du wohnst BEREITS fest mit der Spielerin / dem Spieler in ihrem Traumhaus als Mitbewohner/in zusammen! Stell dich also NICHT nochmal mit „Ich bin ${name}“ vor, sondern rede wie ein eingespielter, lieber WG-Mitbewohner, der hier lebt, isst, trinkt, arbeitet, schläft und auch mal krank werden kann.`
+      ? `KRITISCHE REGEL: Du und der Spieler wohnen SCHON LANGE fest als WG-Mitbewohner/in zusammen im Traumhaus! Ihr kennt euch längst in- und auswendig. Stelle dich NIEMALS noch einmal vor! Sage NIEMALS „Ich bin ${name}“, „Hallo, ich bin ${name}“, „Schön, dich kennenzulernen“ oder „Wie heißt du?“. Antworte direkt als vertraute/r Mitbewohner/in auf die konkrete Frage.`
       : `Ihr seid euch in der Traumstadt / bei einem Ausflug begegnet und lernt euch kennen (oder seid schon Freunde). Wenn dich der Spieler fragt, ob ihr zusammenziehen wollt (oder in dein Haus einziehen), sag begeistert Ja (agreesToMoveIn: true)!`,
     `WICHTIGSTE REGEL: Lies die genaue Frage oder Nachricht des Spielers aufmerksam und antworte DIREKT, konkret und sinnvoll auf genau diese Frage! Weiche nicht auf allgemeine Floskeln aus. Wenn der Spieler etwas zu deinem Zimmer, Arbeit, Essen, Trinken, Schlafen, Gesundheit, Farben, Tieren oder Alltag fragt, gib eine passende, lebendige Antwort als ${name}.`,
     ...lifeLines
@@ -150,7 +150,19 @@ async function startServer() {
           parsed = { reply: rawText, agreesToMoveIn: false };
         }
 
-        const reply = (parsed.reply || '').trim();
+        let reply = (parsed.reply || '').trim();
+        if (reply && Boolean(context?.isRoommate)) {
+          const safeName = String(name || reqTarget?.name || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const introRegex = new RegExp(
+            `^(?:(?:hallo|hey|hi|huhu|guten\\s+tag|oh|na\\s+du)[\\s,!.]*)*(?:ich\\s+bin|mein\\s+name\\s+ist)\\s+${safeName}\\b[^.!?]*[.!?]?\\s*`,
+            'i'
+          );
+          const stripped = reply
+            .replace(introRegex, '')
+            .replace(/^(?:schön,?\s*dich\s*kennenzulernen|wollen\s*wir\s*uns\s*kennenlernen|wie\s*heißt\s*du)[^.!?]*[.!?]?\s*/gi, '')
+            .trim();
+          reply = stripped || 'Klar, worüber wollen wir reden? Hier zu Hause ist gerade alles gemütlich!';
+        }
         if (!reply) {
           lastError = new Error('Leere Antwort vom Sprachmodell erhalten.');
           continue;
@@ -158,7 +170,7 @@ async function startServer() {
 
         res.json({
           reply,
-          agreesToMoveIn: Boolean(parsed.agreesToMoveIn)
+          agreesToMoveIn: Boolean(context?.isRoommate) ? false : Boolean(parsed.agreesToMoveIn)
         });
         return;
       } catch (err: any) {

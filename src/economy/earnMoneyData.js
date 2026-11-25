@@ -1,19 +1,20 @@
 import { ShopManager } from '../editor/shopData.js';
+import { BankManager } from './bankData.js';
 
 const EARN_KEY = 'runner_earn_state';
 const WHEEL_REGEN_MS = 120000; // 2 minutes for passive ticket regen
 const QUIZ_REGEN_MS = 45000;   // 45 seconds per quiz energy
-const TREASURE_COOLDOWN_MS = 40000; // 40 seconds cooldown (or instant reset on run end)
+const TREASURE_COOLDOWN_MS = 45000; // 45 seconds cooldown (or instant reset on run end)
 
 export const WHEEL_SEGMENTS = [
-  { label: '+15 🪙', coins: 15, color: '#38bdf8', textColor: '#ffffff' },
-  { label: '+35 🪙', coins: 35, color: '#34d399', textColor: '#581c87' },
-  { label: '+20 🪙 + 🥘', coins: 20, supply: 'food', supplyLabel: '1x Koch-Zutaten', color: '#fbbf24', textColor: '#581c87' },
-  { label: '+60 🪙', coins: 60, color: '#a855f7', textColor: '#ffffff' },
-  { label: '+10 🪙', coins: 10, color: '#f472b6', textColor: '#ffffff' },
-  { label: '+45 🪙', coins: 45, color: '#ec4899', textColor: '#ffffff' },
-  { label: '+25 🪙 + 🦴', coins: 25, supply: 'petFood', supplyLabel: '1x Tierfutter', color: '#22d3ee', textColor: '#581c87' },
-  { label: '100 🪙!', coins: 100, jackpot: true, color: '#fde047', textColor: '#701a75' }
+  { label: '+5 🪙', coins: 5, color: '#38bdf8', textColor: '#ffffff' },
+  { label: '+10 🪙', coins: 10, color: '#34d399', textColor: '#581c87' },
+  { label: '+6 🪙 + 🥘', coins: 6, supply: 'food', supplyLabel: '1x Koch-Zutaten', color: '#fbbf24', textColor: '#581c87' },
+  { label: '+15 🪙', coins: 15, color: '#a855f7', textColor: '#ffffff' },
+  { label: '+4 🪙', coins: 4, color: '#f472b6', textColor: '#ffffff' },
+  { label: '+12 🪙', coins: 12, color: '#ec4899', textColor: '#ffffff' },
+  { label: '+6 🪙 + 🦴', coins: 6, supply: 'petFood', supplyLabel: '1x Tierfutter', color: '#22d3ee', textColor: '#581c87' },
+  { label: '25 🪙!', coins: 25, jackpot: true, color: '#fde047', textColor: '#701a75' }
 ];
 
 export const MISSION_DEFS = [
@@ -21,20 +22,20 @@ export const MISSION_DEFS = [
     id: 'run_meters',
     title: 'Lauf-Champion',
     icon: '🏃',
-    baseTarget: 200,
-    stepTarget: 150,
-    baseReward: 30,
-    stepReward: 15,
+    baseTarget: 250,
+    stepTarget: 175,
+    baseReward: 12,
+    stepReward: 5,
     describe: (target) => `Laufe insgesamt ${target} m im Rennen`
   },
   {
     id: 'solve_riddles',
     title: 'Rätsel-Fuchs',
     icon: '🧩',
-    baseTarget: 2,
-    stepTarget: 1,
-    baseReward: 35,
-    stepReward: 15,
+    baseTarget: 3,
+    stepTarget: 2,
+    baseReward: 14,
+    stepReward: 5,
     describe: (target) => `Löse ${target} Rätsel (im Lauf oder Blitz-Quiz)`
   },
   {
@@ -43,18 +44,18 @@ export const MISSION_DEFS = [
     icon: '🪙',
     baseTarget: 35,
     stepTarget: 25,
-    baseReward: 30,
-    stepReward: 15,
+    baseReward: 12,
+    stepReward: 5,
     describe: (target) => `Sammle ${target} 🪙 auf der Laufstrecke`
   },
   {
     id: 'home_care',
     title: 'Haus- & Tierfreund',
     icon: '🏡',
-    baseTarget: 3,
+    baseTarget: 4,
     stepTarget: 2,
-    baseReward: 35,
-    stepReward: 15,
+    baseReward: 12,
+    stepReward: 5,
     describe: (target) => `Erledige ${target} Pflege-Aktionen in Haus & Garten`
   },
   {
@@ -63,8 +64,8 @@ export const MISSION_DEFS = [
     icon: '🍽️',
     baseTarget: 3,
     stepTarget: 2,
-    baseReward: 40,
-    stepReward: 15,
+    baseReward: 15,
+    stepReward: 6,
     describe: (target) => `Bediene ${target} Tische in Café & Eisdiele`
   },
   {
@@ -73,8 +74,8 @@ export const MISSION_DEFS = [
     icon: '🐕',
     baseTarget: 3,
     stepTarget: 2,
-    baseReward: 40,
-    stepReward: 15,
+    baseReward: 15,
+    stepReward: 6,
     describe: (target) => `Passe auf ${target} Hunde & Tiere bei den Nachbarn auf`
   }
 ];
@@ -239,7 +240,7 @@ export const EarnMoneyManager = {
     state.missions[missionId] = entry;
     this.saveState(state);
 
-    ShopManager.addCoins(reward);
+    BankManager.depositEarned(reward, `📋 Mission: ${def.title}`);
     return { ok: true, reward, newTier: entry.tier };
   },
 
@@ -263,7 +264,7 @@ export const EarnMoneyManager = {
 
     const index = Math.floor(Math.random() * WHEEL_SEGMENTS.length);
     const segment = WHEEL_SEGMENTS[index];
-    ShopManager.addCoins(segment.coins);
+    BankManager.depositEarned(segment.coins, '🎡 Glücksrad-Gewinn');
 
     return { ok: true, index, segment, ticketsLeft: state.wheelTickets };
   },
@@ -281,9 +282,9 @@ export const EarnMoneyManager = {
 
   awardTreasureCoins(amount) {
     if (amount > 0) {
-      ShopManager.addCoins(amount);
+      BankManager.depositEarned(amount, '🪙 Schatzjagd-Beute');
     }
-    return ShopManager.getCoins();
+    return BankManager.getBalance();
   },
 
   answerQuiz(isCorrect) {
@@ -301,15 +302,15 @@ export const EarnMoneyManager = {
     let streakBonus = 0;
 
     if (isCorrect) {
-      coinsEarned = 15;
+      coinsEarned = 6;
       state.quizStreak = (state.quizStreak || 0) + 1;
       if (state.quizStreak % 3 === 0) {
-        streakBonus = 10;
+        streakBonus = 4;
       }
       if (state.missions.solve_riddles) {
         state.missions.solve_riddles.progress += 1;
       }
-      ShopManager.addCoins(coinsEarned + streakBonus);
+      BankManager.depositEarned(coinsEarned + streakBonus, '🧠 Blitz-Quiz');
     } else {
       state.quizStreak = 0;
     }

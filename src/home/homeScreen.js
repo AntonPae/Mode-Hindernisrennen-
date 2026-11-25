@@ -956,7 +956,7 @@ export function setupHomeScreen(stateManager) {
     updateUI();
     notifyMoneyOrMissionChange();
     if (res.usedStock) {
-      showToast(`🥤 Erfrischendes Getränk genossen! +36% Durst & +${res.bonusCoins} 🪙`, 'success');
+      showToast('🥤 Erfrischendes Getränk genossen! +36% Durst gestillt!', 'success');
     } else {
       showToast('🚰 Frisches Leitungswasser getrunken! +22% Durst (Getränke gibt’s im 🛒 Supermarkt!)', 'info');
     }
@@ -1265,12 +1265,12 @@ export function setupHomeScreen(stateManager) {
       if (activeFind && Math.hypot(cx - activeFind.x, cy - activeFind.y) <= 38) {
         const reward = activeFind.coins;
         ShopManager.addCoins(reward);
-        spawnFX('coin', activeFind.x, activeFind.y, 9);
+        spawnFX('coin', activeFind.x, activeFind.y, 7);
         activeFind = null;
-        nextFindTimer = 500 + Math.floor(Math.random() * 280);
+        nextFindTimer = 1100 + Math.floor(Math.random() * 500);
         updateUI();
         notifyMoneyOrMissionChange();
-        showToast(`✨ Glücksfund entdeckt! +${reward} 🪙 eingesammelt!`, 'success');
+        showToast(`✨ Kleingeld gefunden! +${reward} 🪙 direkt ins Portemonnaie!`, 'success');
         return;
       }
 
@@ -2110,9 +2110,9 @@ export function setupHomeScreen(stateManager) {
       nextFindTimer--;
       if (nextFindTimer <= 0) {
         const finds = [
-          { label: '+10 🪙', coins: 10 },
-          { label: '+14 🪙', coins: 14 },
-          { label: '+8 🪙', coins: 8 }
+          { label: '+2 🪙', coins: 2 },
+          { label: '+3 🪙', coins: 3 },
+          { label: '+4 🪙', coins: 4 }
         ];
         const pick = finds[Math.floor(Math.random() * finds.length)];
         activeFind = {

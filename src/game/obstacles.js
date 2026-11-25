@@ -473,7 +473,7 @@ export class CoinManager {
           x: startX + i * 42,
           y: groundY - 26,
           radius: 14,
-          value: 5,
+          value: 1,
           kind: 'gold'
         });
       }
@@ -485,26 +485,26 @@ export class CoinManager {
           x: startX + i * 44,
           y: groundY - 85 + offsets[i],
           radius: 14,
-          value: 5,
+          value: 1,
           kind: 'gold'
         });
       }
     } else if (pattern < 0.93) {
-      // Rare high diamond coin (+15)
+      // Rare high diamond coin (+4)
       this.coins.push({
         x: startX,
         y: groundY - 125,
         radius: 16,
-        value: 15,
+        value: 4,
         kind: 'gem'
       });
     } else {
-      // Super rare Golden Bonus Chest (+30)
+      // Super rare Golden Bonus Chest (+8)
       this.coins.push({
         x: startX,
         y: groundY - 95,
         radius: 18,
-        value: 30,
+        value: 8,
         kind: 'chest'
       });
     }
@@ -515,7 +515,7 @@ export class CoinManager {
       x,
       y,
       radius: 14,
-      value: 5,
+      value: 1,
       kind: 'gold'
     });
   }
@@ -565,7 +565,7 @@ export class CoinManager {
         ctx.font = 'bold 12px Plus Jakarta Sans, sans-serif';
         ctx.fillStyle = '#fef08a';
         ctx.textAlign = 'center';
-        ctx.fillText('+30', 0, -18);
+        ctx.fillText('+8', 0, -18);
       } else if (c.kind === 'gem') {
         const gemGrad = ctx.createRadialGradient(-3, -4, 1, 0, 0, 16);
         gemGrad.addColorStop(0, '#ffffff');

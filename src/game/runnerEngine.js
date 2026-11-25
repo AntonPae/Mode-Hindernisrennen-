@@ -1,11 +1,13 @@
 import { PlayerConfig, GameConfig } from '../editor/characterData.js';
 import { ShopManager } from '../editor/shopData.js';
+import { BankManager } from '../economy/bankData.js';
 import { HomeManager } from '../home/homeData.js';
 import { EarnMoneyManager } from '../economy/earnMoneyData.js';
 import { renderCharacter } from '../editor/characterRenderer.js';
 import { ControlsManager } from './controls.js';
 import { ObstacleManager, CoinManager } from './obstacles.js';
 import { QuickTimeEventManager } from './quickTimeEvent.js';
+import { HighscoreManager } from './highscoreData.js';
 import { drawVectorPet, getPetMeta } from '../home/petCompanion.js';
 
 class SoundManager {
@@ -196,9 +198,14 @@ export class RunnerEngine {
     this.finalScoreEl = document.getElementById('finalScore');
     this.earnedCoinsValEl = document.getElementById('earnedCoinsVal');
     this.totalCoinsValEl = document.getElementById('totalCoinsVal');
+    this.totalBankValEl = document.getElementById('totalBankVal');
+    this.gameOverRunnerMetaEl = document.getElementById('gameOverRunnerMeta');
     this.gameoverBonusBreakdownEl = document.getElementById('gameoverBonusBreakdown');
     this.gameOverModal = document.getElementById('game-over-modal');
 
+    this.pauseBtn = document.getElementById('pauseBtn');
+    this.hudHighscoreBtn = document.getElementById('gameHudHighscoreBtn');
+    this.gameOverHighscoreBtn = document.getElementById('gameOverHighscoreBtn');
     this.restartBtn = document.getElementById('restartBtn');
     this.editorReturnBtn = document.getElementById('editorReturnBtn');
     this.homeReturnBtn = document.getElementById('homeReturnBtn');
@@ -207,8 +214,8 @@ export class RunnerEngine {
     this.isPaused = false;
     this.score = 0;
     this.runCoins = 0;
-    this.highScore = parseInt(localStorage.getItem('runner_highscore') || '0', 10);
-    this.highScoreValEl.textContent = this.highScore;
+    this.highScore = HighscoreManager.getOverallBestScore();
+    if (this.highScoreValEl) this.highScoreValEl.textContent = this.highScore;
 
     this.magnetTimer = 0;
     this.coinRainTimer = 0;
@@ -262,6 +269,48 @@ export class RunnerEngine {
   }
 
   initUIEvents() {
+    if (this.pauseBtn) {
+      this.pauseBtn.addEventListener('click', () => {
+        if (!this.isRunning) return;
+        this.isPaused = !this.isPaused;
+        this.pauseBtn.textContent = this.isPaused ? '▶️ Weiter' : '⏸️ Pause';
+      });
+    }
+
+    if (this.hudHighscoreBtn) {
+      this.hudHighscoreBtn.addEventListener('click', () => {
+        const wasPaused = this.isPaused;
+        if (this.isRunning && !wasPaused) {
+          this.isPaused = true;
+          if (this.pauseBtn) this.pauseBtn.textContent = '▶️ Weiter';
+        }
+        window.dispatchEvent(new CustomEvent('runner:open-highscores', {
+          detail: {
+            tab: 'top',
+            onClose: () => {
+              if (this.isRunning && !wasPaused) {
+                this.isPaused = false;
+                if (this.pauseBtn) this.pauseBtn.textContent = '⏸️ Pause';
+              }
+            }
+          }
+        }));
+      });
+    }
+
+    if (this.gameOverHighscoreBtn) {
+      this.gameOverHighscoreBtn.addEventListener('click', () => {
+        window.dispatchEvent(new CustomEvent('runner:open-highscores', {
+          detail: { tab: 'top' }
+        }));
+      });
+    }
+
+    window.addEventListener('runner:highscores-updated', () => {
+      this.highScore = HighscoreManager.getOverallBestScore();
+      if (this.highScoreValEl) this.highScoreValEl.textContent = this.highScore;
+    });
+
     if (this.restartBtn) {
       this.restartBtn.addEventListener('click', () => {
         this.gameOverModal.classList.add('hidden');
@@ -342,8 +391,12 @@ export class RunnerEngine {
 
     this.isRunning = true;
     this.isPaused = false;
+    if (this.pauseBtn) this.pauseBtn.textContent = '⏸️ Pause';
     this.score = 0;
     this.runCoins = 0;
+    this.highScore = HighscoreManager.getOverallBestScore();
+    if (this.highScoreValEl) this.highScoreValEl.textContent = this.highScore;
+    if (this.scoreValEl) this.scoreValEl.textContent = '0';
     if (this.runCoinsValEl) this.runCoinsValEl.textContent = '0';
     this.magnetTimer = 0;
     this.coinRainTimer = 0;
@@ -1525,16 +1578,11 @@ export class RunnerEngine {
   gameOver() {
     this.isRunning = false;
     this.qte.hideOverlay();
-    const isNewHighscore = this.score > this.highScore && this.score >= 30;
-    if (this.score > this.highScore) {
-      this.highScore = this.score;
-      localStorage.setItem('runner_highscore', this.highScore.toString());
-      this.highScoreValEl.textContent = this.highScore;
-    }
 
-    // Distance bonus coins (+1 coin per 25m run) + Highscore bonus + Home/Pet pocket money + Level progress
-    const distanceBonusCoins = Math.floor(this.score / 25);
-    const highscoreBonus = isNewHighscore ? 25 : 0;
+    // Distance bonus (+1 per 50m) + Highscore bonus (+10) + Home pocket bonus (max 5)
+    const distanceBonusCoins = Math.floor(this.score / 50);
+    const isNewHighscore = this.score > this.highScore && this.score >= 30;
+    const highscoreBonus = isNewHighscore ? 10 : 0;
     const homeBonus = this.score >= 20 ? HomeManager.getRunPocketMoneyBonus() : 0;
 
     const prog = ShopManager.recordProgress(this.score, 0);
@@ -1547,10 +1595,31 @@ export class RunnerEngine {
 
     const extraCoins = this.runCoins + distanceBonusCoins + highscoreBonus + homeBonus;
     const totalRunEarned = extraCoins + prog.levelUpBonus;
-    const newBalance = ShopManager.addCoins(extraCoins);
+    const newBankBalance = BankManager.depositEarned(extraCoins, '🏃 Renn-Prämie');
+    const walletBalance = ShopManager.getCoins();
+
+    const hsRecord = HighscoreManager.recordRun({
+      score: this.score,
+      biome: this.currentBiome,
+      runCoins: totalRunEarned
+    });
+
+    if (this.score > this.highScore) {
+      this.highScore = this.score;
+      localStorage.setItem('runner_highscore', this.highScore.toString());
+    } else {
+      this.highScore = hsRecord.overallBest;
+    }
+    if (this.highScoreValEl) this.highScoreValEl.textContent = this.highScore;
+
+    if (this.gameOverRunnerMetaEl) {
+      const rankLabel = hsRecord.rank ? `Platz #${hsRecord.rank} in der Liste` : 'Neu gestartet';
+      this.gameOverRunnerMetaEl.textContent = `🏃 Läufer: ${hsRecord.entry.name} • ${rankLabel} • ${hsRecord.entry.worldLabel}`;
+    }
 
     if (this.earnedCoinsValEl) this.earnedCoinsValEl.textContent = totalRunEarned;
-    if (this.totalCoinsValEl) this.totalCoinsValEl.textContent = newBalance;
+    if (this.totalCoinsValEl) this.totalCoinsValEl.textContent = walletBalance;
+    if (this.totalBankValEl) this.totalBankValEl.textContent = newBankBalance;
 
     if (this.gameoverBonusBreakdownEl) {
       const notes = [];

@@ -3,6 +3,7 @@ export const State = {
   BACKGROUND_SELECT: 'BACKGROUND_SELECT',
   TOWN: 'TOWN',
   STORE: 'STORE',
+  BANK: 'BANK',
   HOME: 'HOME',
   ICECREAM: 'ICECREAM',
   PETSITTING: 'PETSITTING',
@@ -19,6 +20,7 @@ export class StateManager {
     this.bgSelectScreen = document.getElementById('bg-select-screen');
     this.townScreen = document.getElementById('town-screen');
     this.storeScreen = document.getElementById('store-screen');
+    this.bankScreen = document.getElementById('bank-screen');
     this.homeScreen = document.getElementById('home-screen');
     this.iceCreamScreen = document.getElementById('icecream-screen');
     this.petSittingScreen = document.getElementById('pet-sitting-screen');
@@ -49,6 +51,7 @@ export class StateManager {
     if (this.bgSelectScreen) this.bgSelectScreen.classList.add('hidden');
     if (this.townScreen) this.townScreen.classList.add('hidden');
     if (this.storeScreen) this.storeScreen.classList.add('hidden');
+    if (this.bankScreen) this.bankScreen.classList.add('hidden');
     if (this.homeScreen) this.homeScreen.classList.add('hidden');
     if (this.iceCreamScreen) this.iceCreamScreen.classList.add('hidden');
     if (this.petSittingScreen) this.petSittingScreen.classList.add('hidden');
@@ -59,6 +62,7 @@ export class StateManager {
     if (this.bgSelectScreen) this.bgSelectScreen.classList.remove('active');
     if (this.townScreen) this.townScreen.classList.remove('active');
     if (this.storeScreen) this.storeScreen.classList.remove('active');
+    if (this.bankScreen) this.bankScreen.classList.remove('active');
     if (this.homeScreen) this.homeScreen.classList.remove('active');
     if (this.iceCreamScreen) this.iceCreamScreen.classList.remove('active');
     if (this.petSittingScreen) this.petSittingScreen.classList.remove('active');
@@ -88,6 +92,12 @@ export class StateManager {
         if (this.storeScreen) {
           this.storeScreen.classList.remove('hidden');
           this.storeScreen.classList.add('active');
+        }
+        break;
+      case State.BANK:
+        if (this.bankScreen) {
+          this.bankScreen.classList.remove('hidden');
+          this.bankScreen.classList.add('active');
         }
         break;
       case State.HOME:

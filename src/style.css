@@ -2982,6 +2982,349 @@ body, html {
   font-size: 0.8rem;
 }
 
+/* =========================================
+   TRAUM-BANK & HIGHSCORE-LISTE STYLES
+   ========================================= */
+
+.bank-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  color: #0369a1;
+  border: 1.5px solid #38bdf8;
+  border-radius: 999px;
+  padding: 0.36rem 0.85rem;
+  font-size: 0.88rem;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.14);
+}
+
+.top-hud-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bg-runner-name-bar {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.65rem;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.45rem 0.9rem;
+  border-radius: 14px;
+  border: 1.5px solid rgba(236, 72, 153, 0.25);
+}
+
+.bg-runner-name-bar label {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: var(--ink-strong);
+}
+
+.hs-name-input {
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0.38rem 0.7rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--ink-strong);
+  background: #ffffff;
+  min-width: 170px;
+}
+
+#bankCanvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 16px;
+  border: 2px solid #bae6fd;
+  background: #f0f9ff;
+}
+
+.bank-side-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.bank-balances-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.bank-stat-card {
+  border-radius: 14px;
+  padding: 0.65rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  border: 1.5px solid transparent;
+}
+
+.bank-stat-card.is-bank {
+  background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+  border-color: #38bdf8;
+  color: #0369a1;
+}
+
+.bank-stat-card.is-wallet {
+  background: linear-gradient(135deg, #fef9c3 0%, #fffbeb 100%);
+  border-color: #fbbf24;
+  color: #92400e;
+}
+
+.bank-stat-card span {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.bank-stat-card strong {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.bank-action-box {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.bank-action-box h3 {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #0369a1;
+}
+
+.bank-quick-row,
+.bank-custom-row,
+.bank-deposit-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.bank-deposit-row span {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-body);
+}
+
+.bank-amount-input {
+  width: 82px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0.42rem 0.55rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ink-strong);
+}
+
+.bank-challenge-reset {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.bank-reset-confirm {
+  background: #fff1f2;
+  border: 1.5px solid #fda4af;
+  border-radius: 12px;
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #9f1239;
+}
+
+.bank-reset-actions {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.bank-tx-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.bank-tx-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.5rem 0.7rem;
+}
+
+.bank-tx-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.bank-tx-meta strong {
+  font-size: 0.8rem;
+  color: var(--ink-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bank-tx-meta span {
+  font-size: 0.72rem;
+  color: var(--ink-muted);
+}
+
+.bank-tx-amount {
+  font-weight: 800;
+  font-size: 0.86rem;
+  flex-shrink: 0;
+}
+
+.bank-tx-amount.is-in { color: #059669; }
+.bank-tx-amount.is-out { color: #0284c7; }
+.bank-tx-amount.is-reset { color: #d97706; }
+
+.bank-tx-empty {
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+  padding: 0.6rem;
+  text-align: center;
+}
+
+.gameover-runner-meta {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #7c3aed;
+  margin-bottom: 0.55rem;
+}
+
+.hs-modal-content {
+  max-width: 580px;
+}
+
+.hs-runner-editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.hs-runner-editor label {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--ink-strong);
+}
+
+.hs-list-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.48rem;
+  max-height: 330px;
+  overflow-y: auto;
+}
+
+.hs-entry-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.58rem 0.78rem;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+}
+
+.hs-entry-row.is-first {
+  background: linear-gradient(135deg, #fef9c3 0%, #fffbeb 100%);
+  border-color: #fbbf24;
+}
+
+.hs-rank-badge {
+  min-width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.92rem;
+  color: var(--ink-strong);
+  flex-shrink: 0;
+}
+
+.hs-entry-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.hs-entry-name {
+  font-size: 0.92rem;
+  color: var(--ink-strong);
+}
+
+.hs-entry-meta {
+  font-size: 0.75rem;
+  color: var(--ink-body);
+}
+
+.hs-entry-score {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+.hs-entry-score strong {
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: #db2777;
+}
+
+.hs-entry-score span {
+  font-size: 0.73rem;
+  font-weight: 700;
+  color: #b45309;
+}
+
+.hs-empty-state {
+  text-align: center;
+  padding: 1.4rem 0.8rem;
+  color: var(--ink-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.hs-footer-actions {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
 /* Focus & Reduced Motion */
 button:focus-visible,
 select:focus-visible,

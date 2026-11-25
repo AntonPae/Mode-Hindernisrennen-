@@ -1,10 +1,14 @@
 import { GameConfig } from '../editor/characterData.js';
 import { SHOP_CATALOG, ShopManager } from '../editor/shopData.js';
+import { HighscoreManager } from '../game/highscoreData.js';
 
 export function setupBackgroundSelectScreen(stateManager) {
   const container = document.getElementById('bgCardsContainer');
   const backToEditorBtn = document.getElementById('backToEditorBtn');
   const bgCoinsVal = document.getElementById('bgCoinsVal');
+  const bgHighscoreBestVal = document.getElementById('bgHighscoreBestVal');
+  const bgRunnerNameInput = document.getElementById('bgRunnerNameInput');
+  const bgHighscoreBtn = document.getElementById('bgHighscoreBtn');
   const bgToast = document.getElementById('bgToast');
   let toastTimer = null;
 
@@ -18,10 +22,20 @@ export function setupBackgroundSelectScreen(stateManager) {
     }, 2600);
   }
 
+  function syncRunnerControls() {
+    if (bgRunnerNameInput && document.activeElement !== bgRunnerNameInput) {
+      bgRunnerNameInput.value = HighscoreManager.getRunnerName();
+    }
+    if (bgHighscoreBestVal) {
+      bgHighscoreBestVal.textContent = HighscoreManager.getOverallBestScore();
+    }
+  }
+
   function renderBackgroundCards() {
     if (!container) return;
     const coins = ShopManager.getCoins();
     if (bgCoinsVal) bgCoinsVal.textContent = coins;
+    syncRunnerControls();
 
     container.innerHTML = '';
 
@@ -83,6 +97,22 @@ export function setupBackgroundSelectScreen(stateManager) {
     });
   }
 
+  if (bgRunnerNameInput) {
+    bgRunnerNameInput.addEventListener('change', () => {
+      HighscoreManager.setRunnerName(bgRunnerNameInput.value);
+      bgRunnerNameInput.value = HighscoreManager.getRunnerName();
+    });
+  }
+
+  if (bgHighscoreBtn) {
+    bgHighscoreBtn.addEventListener('click', () => {
+      if (bgRunnerNameInput) {
+        HighscoreManager.setRunnerName(bgRunnerNameInput.value);
+      }
+      window.dispatchEvent(new CustomEvent('runner:open-highscores', { detail: { tab: 'top' } }));
+    });
+  }
+
   if (backToEditorBtn) {
     backToEditorBtn.addEventListener('click', () => {
       stateManager.setState('EDITOR');
@@ -93,6 +123,10 @@ export function setupBackgroundSelectScreen(stateManager) {
     if (stateManager.getState() === 'BACKGROUND_SELECT') {
       renderBackgroundCards();
     }
+  });
+
+  window.addEventListener('runner:highscores-updated', () => {
+    syncRunnerControls();
   });
 
   stateManager.onStateChange((newState) => {

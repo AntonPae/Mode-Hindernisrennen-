@@ -1,6 +1,7 @@
 import { PlayerConfig } from '../editor/characterData.js';
 import { renderCharacter } from '../editor/characterRenderer.js';
 import { ShopManager } from '../editor/shopData.js';
+import { BankManager } from '../economy/bankData.js';
 import { EarnMoneyManager } from '../economy/earnMoneyData.js';
 import { HomeManager } from '../home/homeData.js';
 import { PetFollowerController, getPetMeta } from '../home/petCompanion.js';
@@ -9,11 +10,11 @@ import { drawCanvasSpeechBubble } from '../social/canvasSpeech.js';
 import { mountTalkPanel } from '../social/talkPanel.js';
 
 export const CARE_ACTIONS = [
-  { id: 'feed', icon: '🦴', label: 'Füttern', short: 'Futter 🦴', color: '#f59e0b', light: '#fef3c7', reward: 7 },
-  { id: 'water', icon: '💧', label: 'Wasser geben', short: 'Wasser 💧', color: '#0ea5e9', light: '#e0f2fe', reward: 6 },
-  { id: 'play', icon: '🎾', label: 'Ball spielen', short: 'Spielen 🎾', color: '#10b981', light: '#d1fae5', reward: 8 },
-  { id: 'brush', icon: '🤗', label: 'Streicheln & Bürsten', short: 'Kuscheln ❤️', color: '#ec4899', light: '#fce7f3', reward: 7 },
-  { id: 'walk', icon: '🐕', label: 'An die Leine & Gassi', short: 'Leine & Gassi 🐾', color: '#8b5cf6', light: '#ede9fe', reward: 12 }
+  { id: 'feed', icon: '🦴', label: 'Füttern', short: 'Futter 🦴', color: '#f59e0b', light: '#fef3c7', reward: 3 },
+  { id: 'water', icon: '💧', label: 'Wasser geben', short: 'Wasser 💧', color: '#0ea5e9', light: '#e0f2fe', reward: 2 },
+  { id: 'play', icon: '🎾', label: 'Ball spielen', short: 'Spielen 🎾', color: '#10b981', light: '#d1fae5', reward: 4 },
+  { id: 'brush', icon: '🤗', label: 'Streicheln & Bürsten', short: 'Kuscheln ❤️', color: '#ec4899', light: '#fce7f3', reward: 3 },
+  { id: 'walk', icon: '🐕', label: 'An die Leine & Gassi', short: 'Leine & Gassi 🐾', color: '#8b5cf6', light: '#ede9fe', reward: 5 }
 ];
 
 const CARE_BY_ID = Object.fromEntries(CARE_ACTIONS.map((a) => [a.id, a]));
@@ -106,13 +107,13 @@ export const NEIGHBOR_HOUSES = [
 ];
 
 const PET_CATALOG = [
-  { species: 'dog', name: 'Bello', badge: '🐕 Hund', body: '#d97706', accent: '#fde68a', ear: '#92400e', collar: '#ec4899', upfrontPay: 18 },
-  { species: 'dog', name: 'Flocke', badge: '🐩 Pudel', body: '#f8fafc', accent: '#ffffff', ear: '#cbd5e1', collar: '#8b5cf6', upfrontPay: 20 },
-  { species: 'dog', name: 'Keks', badge: '🐶 Dackel', body: '#9a3412', accent: '#fdba74', ear: '#451a03', collar: '#0ea5e9', upfrontPay: 18 },
-  { species: 'cat', name: 'Minka', badge: '🐱 Katze', body: '#f472b6', accent: '#fdf2f8', ear: '#be185d', collar: '#fde047', upfrontPay: 16 },
-  { species: 'bunny', name: 'Mümmel', badge: '🐰 Hase', body: '#e2e8f0', accent: '#ffffff', ear: '#f472b6', collar: '#10b981', upfrontPay: 15 },
-  { species: 'parrot', name: 'Sunny', badge: '🦜 Papagei', body: '#10b981', accent: '#fde047', ear: '#0284c7', collar: '#f43f5e', upfrontPay: 17 },
-  { species: 'turtle', name: 'Otto', badge: '🐢 Schildkröte', body: '#34d399', accent: '#a7f3d0', ear: '#047857', collar: '#f59e0b', upfrontPay: 15 }
+  { species: 'dog', name: 'Bello', badge: '🐕 Hund', body: '#d97706', accent: '#fde68a', ear: '#92400e', collar: '#ec4899', upfrontPay: 6 },
+  { species: 'dog', name: 'Flocke', badge: '🐩 Pudel', body: '#f8fafc', accent: '#ffffff', ear: '#cbd5e1', collar: '#8b5cf6', upfrontPay: 8 },
+  { species: 'dog', name: 'Keks', badge: '🐶 Dackel', body: '#9a3412', accent: '#fdba74', ear: '#451a03', collar: '#0ea5e9', upfrontPay: 6 },
+  { species: 'cat', name: 'Minka', badge: '🐱 Katze', body: '#f472b6', accent: '#fdf2f8', ear: '#be185d', collar: '#fde047', upfrontPay: 5 },
+  { species: 'bunny', name: 'Mümmel', badge: '🐰 Hase', body: '#e2e8f0', accent: '#ffffff', ear: '#f472b6', collar: '#10b981', upfrontPay: 5 },
+  { species: 'parrot', name: 'Sunny', badge: '🦜 Papagei', body: '#10b981', accent: '#fde047', ear: '#0284c7', collar: '#f43f5e', upfrontPay: 6 },
+  { species: 'turtle', name: 'Otto', badge: '🐢 Schildkröte', body: '#34d399', accent: '#a7f3d0', ear: '#047857', collar: '#f59e0b', upfrontPay: 5 }
 ];
 
 const WALK_GOAL_DISTANCE = 220;
@@ -713,11 +714,11 @@ export function setupPetSittingScreen(stateManager) {
           awardCareSuccess(v.houseIdx, 'walk');
         } else {
           // Even if their top wish wasn't walk, walking them awards a happy walk bonus!
-          const bonus = 8;
+          const bonus = 3;
           totalBonusCoins += bonus;
           shiftCoins += bonus;
-          ShopManager.addCoins(bonus);
-          ShopManager.recordProgress(0, bonus);
+          BankManager.depositEarned(bonus, '🐾 Gassi-Gehalt');
+          ShopManager.recordProgress(0, 1);
           EarnMoneyManager.recordEvent({ care: 1 });
           v.cuddleTimer = 45;
         }
@@ -725,10 +726,11 @@ export function setupPetSittingScreen(stateManager) {
     });
 
     if (packBonus > 0) {
-      totalBonusCoins += packBonus;
-      shiftCoins += packBonus;
-      ShopManager.addCoins(packBonus);
-      ShopManager.recordProgress(0, packBonus);
+      const scaledPackBonus = Math.max(2, Math.round(packBonus * 0.4));
+      totalBonusCoins += scaledPackBonus;
+      shiftCoins += scaledPackBonus;
+      BankManager.depositEarned(scaledPackBonus, '🐕 Rudel-Gassi-Bonus');
+      ShopManager.recordProgress(0, 1);
       window.dispatchEvent(new CustomEvent('runner:coins-updated'));
     }
 
@@ -736,8 +738,8 @@ export function setupPetSittingScreen(stateManager) {
     player.poseTimer = 28;
     syncSittingSlots();
     updateHUD();
-    if (packBonus > 0 || totalBonusCoins > 0) {
-      showToast(`🐕 Rudel-Gassi geschafft! +${totalBonusCoins + packBonus} 🪙 extra Rudel-Bonus!`, 'success');
+    if (totalBonusCoins > 0) {
+      showToast(`🐕 Rudel-Gassi geschafft! +${totalBonusCoins} 🪙 aufs Bankkonto!`, 'success');
     }
     return true;
   }
@@ -774,8 +776,8 @@ export function setupPetSittingScreen(stateManager) {
 
     if (upfrontCoins > 0) {
       shiftCoins += upfrontCoins;
-      ShopManager.addCoins(upfrontCoins);
-      ShopManager.recordProgress(0, upfrontCoins);
+      BankManager.depositEarned(upfrontCoins, '🐾 Hundesitting-Lohn');
+      ShopManager.recordProgress(0, 1);
       window.dispatchEvent(new CustomEvent('runner:coins-updated'));
       player.pose = 'pet';
       player.poseTimer = 24;
@@ -1027,8 +1029,8 @@ export function setupPetSittingScreen(stateManager) {
     visit.y = house.yardY - 8;
 
     shiftCoins += upfront;
-    ShopManager.addCoins(upfront);
-    ShopManager.recordProgress(0, upfront);
+    BankManager.depositEarned(upfront, `🐾 Auftrag: ${house.neighborName}`);
+    ShopManager.recordProgress(0, 1);
     window.dispatchEvent(new CustomEvent('runner:coins-updated'));
 
     player.pose = 'pet';
@@ -1040,11 +1042,11 @@ export function setupPetSittingScreen(stateManager) {
 
     const firstNeed = CARE_BY_ID[visit.need];
     if (autoLeash) {
-      showToast(`💰 +${upfront} 🪙 von ${house.neighborName}! ${visit.info.name} läuft jetzt überall mit dir mit!`, 'success');
+      showToast(`💰 +${upfront} 🪙 von ${house.neighborName} aufs Bankkonto! ${visit.info.name} läuft jetzt mit!`, 'success');
       setStatus(`🐕 ${visit.info.name} kommt an der Leine überall mit (auch ins Haus, Café, Stadt & Rennen)! Wunsch: ${firstNeed.icon} ${firstNeed.label}.`);
     } else {
-      showToast(`💰 ${house.neighborName} gibt dir +${upfront} 🪙! Pass jetzt gut auf ${visit.info.name} auf!`, 'success');
-      setStatus(`💰 +${upfront} 🪙 von ${house.neighborName} erhalten! ${visit.info.name} braucht: ${firstNeed.icon} ${firstNeed.label}.`);
+      showToast(`💰 +${upfront} 🪙 von ${house.neighborName} auf die Bank! Pass gut auf ${visit.info.name} auf!`, 'success');
+      setStatus(`💰 +${upfront} 🪙 auf deinem Bankkonto! ${visit.info.name} braucht: ${firstNeed.icon} ${firstNeed.label}.`);
     }
   }
 
@@ -1053,7 +1055,7 @@ export function setupPetSittingScreen(stateManager) {
     const house = NEIGHBOR_HOUSES[houseIdx];
     if (!visit) return;
     const act = CARE_BY_ID[actionId];
-    const baseReward = act ? act.reward : 7;
+    const baseReward = act ? act.reward : 3;
 
     visit.happiness += 1;
     let totalEarned = baseReward;
@@ -1061,7 +1063,7 @@ export function setupPetSittingScreen(stateManager) {
 
     if (visit.happiness >= visit.tasksGoal) {
       finishedVisit = true;
-      totalEarned += 10;
+      totalEarned += 4;
       visit.state = 'happy_leaving';
       visit.onLeash = false;
       visit.happyTimer = 105;
@@ -1076,8 +1078,8 @@ export function setupPetSittingScreen(stateManager) {
     }
 
     shiftCoins += totalEarned;
-    ShopManager.addCoins(totalEarned);
-    ShopManager.recordProgress(0, totalEarned);
+    BankManager.depositEarned(totalEarned, '🐾 Tierbetreuung');
+    ShopManager.recordProgress(0, 1);
     window.dispatchEvent(new CustomEvent('runner:coins-updated'));
 
     if (actionId === 'feed') {

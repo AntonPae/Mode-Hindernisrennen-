@@ -1,6 +1,7 @@
 import { PlayerConfig } from '../editor/characterData.js';
 import { renderCharacter } from '../editor/characterRenderer.js';
 import { ShopManager } from '../editor/shopData.js';
+import { BankManager } from '../economy/bankData.js';
 import { HomeManager } from '../home/homeData.js';
 import { PetFollowerController, getPetMeta } from '../home/petCompanion.js';
 import { MailboxManager } from './mailboxData.js';
@@ -171,27 +172,35 @@ const BASE_FRIEND_TEMPLATES = [
 ];
 
 function buildAllFriendTemplates() {
-  const newFriendTemplates = NEW_ACQUAINTANCES.map((a) => ({
-    id: a.id,
-    name: a.name,
-    icon: a.icon,
-    isNewPerson: true,
-    config: a.charConfig,
-    greetings: {
-      party: `Hey! So cool, dass ich als neue Bekanntschaft mitfeiern darf! 📸`,
-      trip: a.introLine,
-      race: `Los geht's! Ich feuer dich heute am lautesten an!`,
-      pet_show: `Darf ich Fotos von deinen tollen Tieren machen? 📸`,
-      garden_contest: `Diese Blumenfarben sind ein Traum!`,
-      cafe_contest: `Oh, danach gibt es bestimmt ${a.favoriteFood}!`,
-      treasure_hunt: `Gemeinsam finden wir jeden Schatz!`,
-      band_jam: `Super Rhythmus! Ich tanze mit!`,
-      hide_and_seek: `Psst! Mein Versteck ist richtig gut!`,
-      baking_fest: `Das duftet ja himmlisch!`,
-      stargazing: `Schau mal die vielen Sterne über uns! ✨`
-    },
-    replies: a.facts
-  }));
+  const roommateId = SocialManager.getRoommate()?.id;
+  const newFriendTemplates = NEW_ACQUAINTANCES.map((a) => {
+    const isRm = roommateId === a.id;
+    return {
+      id: a.id,
+      name: a.name,
+      icon: a.icon,
+      isNewPerson: !isRm,
+      config: a.charConfig,
+      greetings: {
+        party: isRm
+          ? 'Hey WG-Partner! Cool, dass wir zusammen auf der Party feiern! 🎉'
+          : 'Hey! So cool, dass ich als neue Bekanntschaft mitfeiern darf! 📸',
+        trip: isRm
+          ? 'Los geht’s, WG-Partner! Gemeinsam entdecken wir hier die schönsten Sachen!'
+          : a.introLine,
+        race: 'Los geht’s! Ich feuer dich heute am lautesten an!',
+        pet_show: 'Darf ich Fotos von deinen tollen Tieren machen? 📸',
+        garden_contest: 'Diese Blumenfarben sind ein Traum!',
+        cafe_contest: `Oh, danach gibt es bestimmt ${a.favoriteFood}!`,
+        treasure_hunt: 'Gemeinsam finden wir jeden Schatz!',
+        band_jam: 'Super Rhythmus! Ich tanze mit!',
+        hide_and_seek: 'Psst! Mein Versteck ist richtig gut!',
+        baking_fest: 'Das duftet ja himmlisch!',
+        stargazing: 'Schau mal die vielen Sterne über uns! ✨'
+      },
+      replies: a.facts
+    };
+  });
   return [...BASE_FRIEND_TEMPLATES, ...newFriendTemplates];
 }
 
@@ -686,11 +695,10 @@ export function setupEventScreen(stateManager) {
 
     if (!chattedFriendIds.has(f.id)) {
       chattedFriendIds.add(f.id);
-      ShopManager.addCoins(2);
+      BankManager.depositEarned(1, `💬 Event-Plausch (${f.name})`);
       refreshHeaderStats();
-      window.dispatchEvent(new CustomEvent('runner:coins-updated'));
       if (!gen.movedIn) {
-        showToast(`💬 Schönes Gespräch mit ${f.name}! +2 🪙`, 'success');
+        showToast(`💬 Schönes Gespräch mit ${f.name}! +1 🪙 auf die 🏦 Bank`, 'success');
       }
     }
   }

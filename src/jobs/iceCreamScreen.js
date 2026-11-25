@@ -1,6 +1,7 @@
 import { PlayerConfig } from '../editor/characterData.js';
 import { renderCharacter } from '../editor/characterRenderer.js';
 import { ShopManager } from '../editor/shopData.js';
+import { BankManager } from '../economy/bankData.js';
 import { EarnMoneyManager } from '../economy/earnMoneyData.js';
 import { HomeManager } from '../home/homeData.js';
 import { PetFollowerController, getPetMeta } from '../home/petCompanion.js';
@@ -17,21 +18,21 @@ export const CAFE_STATIONS = [
 
 export const CAFE_MENU = [
   // Eis (hinter der Eistruhe)
-  { id: 'ice_erdbeere', icon: '🍓', name: 'Erdbeer-Eis', short: 'Erdbeere', station: 'ice', kind: 'ice', color: '#f43f5e', light: '#fda4af', dark: '#be123c', price: 7 },
-  { id: 'ice_schoko', icon: '🍫', name: 'Schoko-Eis', short: 'Schoko', station: 'ice', kind: 'ice', color: '#78350f', light: '#b45309', dark: '#451a03', price: 7 },
-  { id: 'ice_vanille', icon: '🍦', name: 'Vanille-Eis', short: 'Vanille', station: 'ice', kind: 'ice', color: '#fde047', light: '#fef9c3', dark: '#ca8a04', price: 7 },
-  { id: 'ice_pistazie', icon: '🍨', name: 'Pistazien-Eis', short: 'Pistazie', station: 'ice', kind: 'ice', color: '#34d399', light: '#a7f3d0', dark: '#047857', price: 8 },
+  { id: 'ice_erdbeere', icon: '🍓', name: 'Erdbeer-Eis', short: 'Erdbeere', station: 'ice', kind: 'ice', color: '#f43f5e', light: '#fda4af', dark: '#be123c', price: 4 },
+  { id: 'ice_schoko', icon: '🍫', name: 'Schoko-Eis', short: 'Schoko', station: 'ice', kind: 'ice', color: '#78350f', light: '#b45309', dark: '#451a03', price: 4 },
+  { id: 'ice_vanille', icon: '🍦', name: 'Vanille-Eis', short: 'Vanille', station: 'ice', kind: 'ice', color: '#fde047', light: '#fef9c3', dark: '#ca8a04', price: 4 },
+  { id: 'ice_pistazie', icon: '🍨', name: 'Pistazien-Eis', short: 'Pistazie', station: 'ice', kind: 'ice', color: '#34d399', light: '#a7f3d0', dark: '#047857', price: 5 },
   // Waffeln
-  { id: 'waffle_classic', icon: '🧇', name: 'Herzwaffel', short: 'Waffel', station: 'waffle', kind: 'waffle', color: '#f59e0b', light: '#fde68a', dark: '#b45309', topping: '#fffbeb', price: 9 },
-  { id: 'waffle_berry', icon: '🫐', name: 'Beeren-Waffel', short: 'Beeren-Waffel', station: 'waffle', kind: 'waffle', color: '#d97706', light: '#fcd34d', dark: '#92400e', topping: '#f43f5e', price: 11 },
+  { id: 'waffle_classic', icon: '🧇', name: 'Herzwaffel', short: 'Waffel', station: 'waffle', kind: 'waffle', color: '#f59e0b', light: '#fde68a', dark: '#b45309', topping: '#fffbeb', price: 5 },
+  { id: 'waffle_berry', icon: '🫐', name: 'Beeren-Waffel', short: 'Beeren-Waffel', station: 'waffle', kind: 'waffle', color: '#d97706', light: '#fcd34d', dark: '#92400e', topping: '#f43f5e', price: 6 },
   // Essen / Warme Gerichte
-  { id: 'food_pan', icon: '🥘', name: 'Gemüse-Pfanne', short: 'Pfanne 🥘', station: 'food', kind: 'pan', color: '#ea580c', light: '#fdba74', dark: '#9a3412', price: 12 },
-  { id: 'food_pasta', icon: '🍝', name: 'Pasta', short: 'Pasta 🍝', station: 'food', kind: 'pasta', color: '#ef4444', light: '#fde047', dark: '#b91c1c', price: 12 },
-  { id: 'food_pizza', icon: '🍕', name: 'Mini-Pizza', short: 'Pizza 🍕', station: 'food', kind: 'pizza', color: '#f97316', light: '#fef08a', dark: '#c2410c', price: 11 },
+  { id: 'food_pan', icon: '🥘', name: 'Gemüse-Pfanne', short: 'Pfanne 🥘', station: 'food', kind: 'pan', color: '#ea580c', light: '#fdba74', dark: '#9a3412', price: 7 },
+  { id: 'food_pasta', icon: '🍝', name: 'Pasta', short: 'Pasta 🍝', station: 'food', kind: 'pasta', color: '#ef4444', light: '#fde047', dark: '#b91c1c', price: 7 },
+  { id: 'food_pizza', icon: '🍕', name: 'Mini-Pizza', short: 'Pizza 🍕', station: 'food', kind: 'pizza', color: '#f97316', light: '#fef08a', dark: '#c2410c', price: 6 },
   // Trinken
-  { id: 'drink_limo', icon: '🍋', name: 'Zitronen-Limo', short: 'Limo 🍋', station: 'drink', kind: 'drink', color: '#fde047', light: '#fef9c3', dark: '#eab308', price: 6 },
-  { id: 'drink_shake', icon: '🥤', name: 'Erdbeer-Shake', short: 'Shake 🍓', station: 'drink', kind: 'shake', color: '#f472b6', light: '#fbcfe8', dark: '#db2777', price: 8 },
-  { id: 'drink_kakao', icon: '☕', name: 'Warmer Kakao', short: 'Kakao ☕', station: 'drink', kind: 'mug', color: '#92400e', light: '#d97706', dark: '#451a03', price: 7 }
+  { id: 'drink_limo', icon: '🍋', name: 'Zitronen-Limo', short: 'Limo 🍋', station: 'drink', kind: 'drink', color: '#fde047', light: '#fef9c3', dark: '#eab308', price: 4 },
+  { id: 'drink_shake', icon: '🥤', name: 'Erdbeer-Shake', short: 'Shake 🍓', station: 'drink', kind: 'shake', color: '#f472b6', light: '#fbcfe8', dark: '#db2777', price: 5 },
+  { id: 'drink_kakao', icon: '☕', name: 'Warmer Kakao', short: 'Kakao ☕', station: 'drink', kind: 'mug', color: '#92400e', light: '#d97706', dark: '#451a03', price: 4 }
 ];
 
 const MENU_BY_ID = Object.fromEntries(CAFE_MENU.map((m) => [m.id, m]));
@@ -565,10 +566,10 @@ export function setupIceCreamScreen(stateManager) {
     }
 
     // Success!
-    const itemsSum = customer.order.reduce((acc, id) => acc + (MENU_BY_ID[id]?.price || 8), 0);
-    const tipBonus = customer.patience >= 55 ? 7 : customer.patience >= 25 ? 3 : 0;
+    const itemsSum = customer.order.reduce((acc, id) => acc + (MENU_BY_ID[id]?.price || 4), 0);
+    const tipBonus = customer.patience >= 55 ? 2 : customer.patience >= 25 ? 1 : 0;
     streak += 1;
-    const streakBonus = streak >= 3 ? 5 : 0;
+    const streakBonus = streak >= 3 ? 2 : 0;
     const totalEarned = itemsSum + tipBonus + streakBonus;
 
     customer.state = 'eating_leaving';
@@ -582,8 +583,8 @@ export function setupIceCreamScreen(stateManager) {
     localStorage.setItem('runner_ice_served', String(servedCount));
     shiftCoins += totalEarned;
 
-    ShopManager.addCoins(totalEarned);
-    ShopManager.recordProgress(0, totalEarned);
+    BankManager.depositEarned(totalEarned, '🍦 Café-Gehalt');
+    ShopManager.recordProgress(0, 1);
     EarnMoneyManager.recordEvent({ icecream: 1, care: 1 });
     window.dispatchEvent(new CustomEvent('runner:coins-updated'));
 
@@ -592,8 +593,8 @@ export function setupIceCreamScreen(stateManager) {
     updateHUD();
 
     const tipText = tipBonus > 0 ? ` (inkl. +${tipBonus} 🪙 Trinkgeld!)` : '';
-    showToast(`🍽️ Tisch ${tableIdx + 1} bedient! +${totalEarned} 🪙 verdient${tipText}`, 'success');
-    setStatus('Super serviert! Geh wieder hinter die Theke und bereite die nächste Bestellung vor.');
+    showToast(`🍽️ Tisch ${tableIdx + 1} bedient! +${totalEarned} 🪙 auf dein Bankkonto!${tipText}`, 'success');
+    setStatus('Super serviert! Dein Lohn geht direkt auf die Bank. Bereite gleich die nächste Bestellung vor.');
   }
 
   function clearTray() {

@@ -433,15 +433,15 @@ export class QuickTimeEventManager {
     this.resultTimer = 52;
     this.runner.sounds.playSuccess();
     this.runner.addBonusScore(50);
-    this.runner.addRunCoins(25);
+    this.runner.addRunCoins(8);
     const prog = ShopManager.recordProgress(0, 1);
     EarnMoneyManager.recordEvent({ riddles: 1 });
 
     if (this.feedbackEl) {
       this.feedbackEl.className = 'qte-feedback qte-success-text';
       this.feedbackEl.textContent = prog.levelUpBonus > 0
-        ? `🎉 Richtig! +50m, +25 🪙 & LEVEL UP (+${prog.levelUpBonus} 🪙)!`
-        : '🎉 Richtig! +50m & +25 🪙 — Weiter geht\'s!';
+        ? `🎉 Richtig! +50m, +8 🪙 & LEVEL UP (+${prog.levelUpBonus} 🪙 auf die Bank)!`
+        : '🎉 Richtig! +50m & +8 🪙 — Weiter geht\'s!';
     }
   }
 

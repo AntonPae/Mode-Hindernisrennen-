@@ -23,7 +23,8 @@
         <h1>Charakter-Studio &amp; Kleiderschrank</h1>
         <p>Style deine Figur mit deinen Sachen – neue Kleidung gibt es in der 👗 Mode-Boutique auf der Stadt-Straße!</p>
         <div class="coin-wallet-bar">
-          <span class="coin-pill">🪙 Spielgeld: <strong id="editorCoinsVal">0</strong></span>
+          <span class="coin-pill">🪙 Bargeld: <strong id="editorCoinsVal">0</strong></span>
+          <span class="bank-pill">🏦 Bank: <strong data-bank-val>0</strong></span>
           <span class="level-pill">🏆 Level <strong id="editorLevelVal">1</strong></span>
           <button type="button" id="openEarnEditorBtn" class="btn btn-earn">💰 Geld verdienen</button>
         </div>
@@ -137,8 +138,15 @@
         <h1>Wähle dein Renn-Setting</h1>
         <p>Starte in deinen freigeschalteten Welten – neue Tickets gibt es in der Mode-Boutique auf der Stadt-Straße!</p>
         <div class="coin-wallet-bar">
-          <span class="coin-pill">🪙 Spielgeld: <strong id="bgCoinsVal">0</strong></span>
+          <span class="coin-pill">🪙 Bargeld: <strong id="bgCoinsVal">0</strong></span>
+          <span class="bank-pill">🏦 Bank: <strong data-bank-val>0</strong></span>
+          <span class="level-pill">🏆 Rekord: <strong id="bgHighscoreBestVal">0</strong> m</span>
+          <button type="button" id="bgHighscoreBtn" class="btn btn-primary">🏆 Highscore-Liste</button>
           <button type="button" id="openEarnBgBtn" class="btn btn-earn">💰 Geld verdienen</button>
+        </div>
+        <div class="bg-runner-name-bar">
+          <label for="bgRunnerNameInput">🏃 Läufer-Name:</label>
+          <input type="text" id="bgRunnerNameInput" class="hs-name-input" maxlength="22" placeholder="Dein Name (z. B. Mia)" />
         </div>
         <div id="bgToast" class="shop-toast hidden"></div>
       </header>
@@ -158,7 +166,8 @@
         <h1>🏙️ Traumstadt – Wohnviertel &amp; Einkaufsstraße</h1>
         <p>Lauf von deinem Zuhause über die gepflasterte Einkaufsstraße in alle Geschäfte!</p>
         <div class="coin-wallet-bar">
-          <span class="coin-pill">🪙 Spielgeld: <strong id="townCoinsVal">0</strong></span>
+          <span class="coin-pill">🪙 Bargeld: <strong id="townCoinsVal">0</strong></span>
+          <span class="bank-pill">🏦 Bank: <strong data-bank-val>0</strong></span>
           <span class="level-pill">🏆 Level <strong id="townLevelVal">1</strong></span>
           <button type="button" id="openEarnTownBtn" class="btn btn-earn">💰 Geld verdienen</button>
           <button type="button" id="townMailboxBtn" class="btn btn-mailbox">📬 Briefkasten</button>
@@ -205,7 +214,8 @@
         <h1 id="storeTitleEl">🛒 Geschäft</h1>
         <p id="storeSubtitleEl">Lauf durch den Laden zu den Regalen, leg Sachen in den Korb &amp; bezahle an der Kasse!</p>
         <div class="coin-wallet-bar">
-          <span class="coin-pill">🪙 Spielgeld: <strong id="storeCoinsVal">0</strong></span>
+          <span class="coin-pill">🪙 Bargeld: <strong id="storeCoinsVal">0</strong></span>
+          <span class="bank-pill">🏦 Bank: <strong data-bank-val>0</strong></span>
           <span class="level-pill">🏆 Level <strong id="storeLevelVal">1</strong></span>
           <span class="supply-pill">🛒 Einkaufskorb: <strong id="storeBasketCountVal">0</strong></span>
         </div>
@@ -260,13 +270,104 @@
       </div>
     </div>
 
+    <!-- State: Traum-Bank in der Stadt Overlay -->
+    <div id="bank-screen" class="screen-overlay hidden">
+      <header class="app-header ice-compact-header">
+        <h1>🏦 Traum-Bank in der Stadt</h1>
+        <p>Hier liegt dein verdientes Geld sicher auf dem Konto! Heb Bargeld ab, um in den Geschäften einzukaufen.</p>
+        <div class="coin-wallet-bar">
+          <span class="bank-pill">🏦 Bankguthaben: <strong id="bankBalanceHeaderVal">0</strong> 🪙</span>
+          <span class="coin-pill">🪙 Bargeld dabei: <strong id="bankWalletHeaderVal">0</strong></span>
+        </div>
+        <div id="bankToast" class="shop-toast hidden"></div>
+      </header>
+
+      <div class="icecream-layout">
+        <div class="ice-stage-column">
+          <div class="home-canvas-card ice-stage-card">
+            <div class="home-task-banner">
+              <span id="bankStatusText">Geh zum 💳 Geldautomaten oder zum 🏦 Bank-Schalter und heb Bargeld ab!</span>
+            </div>
+            <canvas id="bankCanvas" width="860" height="470"></canvas>
+            <div class="home-walk-pad">
+              <button type="button" id="bankWalkLeftBtn" class="walk-pad-btn" aria-label="Nach links gehen">◀ Links</button>
+              <button type="button" id="bankWalkUpBtn" class="walk-pad-btn" aria-label="Zum Schalter gehen">▲ Schalter</button>
+              <button type="button" id="bankActionBtn" class="walk-pad-btn walk-pad-action" aria-label="Geld abheben oder sprechen">🏧 Abheben / Schalter</button>
+              <button type="button" id="bankWalkDownBtn" class="walk-pad-btn" aria-label="Nach vorne gehen">▼ Halle</button>
+              <button type="button" id="bankWalkRightBtn" class="walk-pad-btn" aria-label="Nach rechts gehen">Rechts ▶</button>
+            </div>
+          </div>
+
+          <div class="home-nav-row ice-nav-row">
+            <button type="button" id="bankToTownBtn" class="btn btn-town">🚪 Raus auf die Einkaufsstraße</button>
+            <button type="button" id="bankToHomeBtn" class="btn btn-home">🏡 Mein Haus &amp; Garten</button>
+          </div>
+        </div>
+
+        <aside class="ice-menu-column bank-side-panel">
+          <div id="bankTalkMount"></div>
+
+          <div class="bank-balances-grid">
+            <div class="bank-stat-card is-bank">
+              <span>🏦 Bankguthaben</span>
+              <strong><span id="bankCardBalanceVal">0</span> 🪙</strong>
+            </div>
+            <div class="bank-stat-card is-wallet">
+              <span>🪙 Bargeld (Portemonnaie)</span>
+              <strong><span id="bankCardWalletVal">0</span> 🪙</strong>
+            </div>
+          </div>
+
+          <div class="bank-action-box">
+            <h3>🏧 Geld abheben (auf die Hand)</h3>
+            <div class="bank-quick-row">
+              <button type="button" data-bank-withdraw="10" class="btn btn-small btn-primary">10 🪙</button>
+              <button type="button" data-bank-withdraw="25" class="btn btn-small btn-primary">25 🪙</button>
+              <button type="button" data-bank-withdraw="50" class="btn btn-small btn-primary">50 🪙</button>
+              <button type="button" data-bank-withdraw="100" class="btn btn-small btn-primary">100 🪙</button>
+              <button type="button" data-bank-withdraw="all" class="btn btn-small btn-earn">Alles</button>
+            </div>
+            <div class="bank-custom-row">
+              <input type="number" id="bankCustomAmountInput" min="1" step="5" value="25" class="bank-amount-input" aria-label="Wunschbetrag in Münzen" />
+              <button type="button" id="bankWithdrawCustomBtn" class="btn btn-small btn-primary">🏧 Abheben</button>
+              <button type="button" id="bankDepositCustomBtn" class="btn btn-small btn-secondary">💵 Einzahlen</button>
+            </div>
+            <div class="bank-deposit-row">
+              <span>Schnell einzahlen:</span>
+              <button type="button" data-bank-deposit="10" class="btn btn-small btn-secondary">+10 🪙</button>
+              <button type="button" data-bank-deposit="25" class="btn btn-small btn-secondary">+25 🪙</button>
+              <button type="button" data-bank-deposit="all" class="btn btn-small btn-secondary">Alles</button>
+            </div>
+          </div>
+
+          <div class="bank-challenge-reset">
+            <button type="button" id="bankResetChallengeBtn" class="btn btn-small btn-secondary">🔄 Zu viel Geld? Auf 25 🪙 zurücksetzen</button>
+            <div id="bankResetConfirmBox" class="bank-reset-confirm hidden">
+              <span>Bargeld auf 25 🪙 &amp; Konto auf 0 🪙 setzen?</span>
+              <div class="bank-reset-actions">
+                <button type="button" id="bankResetConfirmYesBtn" class="btn btn-small btn-primary">✅ Ja, neu sparen!</button>
+                <button type="button" id="bankResetConfirmNoBtn" class="btn btn-small btn-secondary">Abbrechen</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="ice-menu-header">
+            <h2>🧾 Kontoauszüge</h2>
+            <span>Letzte Ein- und Auszahlungen</span>
+          </div>
+          <div id="bankTxList" class="bank-tx-list"></div>
+        </aside>
+      </div>
+    </div>
+
     <!-- State: Home & Garden Container Overlay -->
     <div id="home-screen" class="screen-overlay hidden">
       <header class="app-header ice-compact-header">
         <h1>🏡 Mein Haus &amp; Garten</h1>
         <p>Baue dein Zuhause aus, kümmere dich um Tiere, Küche, Wohnung &amp; Garten!</p>
         <div class="coin-wallet-bar">
-          <span class="coin-pill">🪙 Spielgeld: <strong id="homeCoinsVal">0</strong></span>
+          <span class="coin-pill">🪙 Bargeld: <strong id="homeCoinsVal">0</strong></span>
+          <span class="bank-pill">🏦 Bank: <strong data-bank-val>0</strong></span>
           <span class="level-pill">🏆 Level <strong id="homeLevelVal">1</strong></span>
           <span class="supply-pill">🧊 Kühlschrank: <strong id="foodCountVal">5</strong></span>
           <span class="supply-pill">🥤 Getränke: <strong id="drinkCountVal">3</strong></span>
@@ -417,7 +518,8 @@
         <h1>🍦🥘 Beruf: Traum-Café &amp; Eisdiele</h1>
         <p>Hol Eis, Waffeln, warmes Essen &amp; Getränke hinter der Theke und bring sie an die Tische!</p>
         <div class="coin-wallet-bar">
-          <span class="coin-pill">🪙 Spielgeld: <strong id="iceCoinsVal">0</strong></span>
+          <span class="coin-pill">🪙 Bargeld: <strong id="iceCoinsVal">0</strong></span>
+          <span class="bank-pill">🏦 Bank: <strong data-bank-val>0</strong></span>
           <span class="level-pill">🏆 Level <strong id="iceLevelVal">1</strong></span>
           <span class="supply-pill">🍽️ Bediente Tische: <strong id="iceServedVal">0</strong></span>
           <span class="supply-pill">💰 Schicht-Verdienst: +<strong id="iceShiftEarningsVal">0</strong> 🪙</span>
@@ -477,7 +579,8 @@
         <h1>🐾 Beruf: Hundesitting bei den Nachbarn</h1>
         <p>Lauf von deinem Haus zu den Nachbarn vor ihren Häusern – hol dir das Geld &amp; pass auf ihre Tiere auf!</p>
         <div class="coin-wallet-bar">
-          <span class="coin-pill">🪙 Spielgeld: <strong id="petCoinsVal">0</strong></span>
+          <span class="coin-pill">🪙 Bargeld: <strong id="petCoinsVal">0</strong></span>
+          <span class="bank-pill">🏦 Bank: <strong data-bank-val>0</strong></span>
           <span class="level-pill">🏆 Level <strong id="petLevelVal">1</strong></span>
           <span class="supply-pill">🐾 Betreute Tiere: <strong id="petCaredVal">0</strong></span>
           <span class="supply-pill">💰 Schicht-Verdienst: +<strong id="petShiftEarningsVal">0</strong> 🪙</span>
@@ -538,7 +641,8 @@
         <h1 id="eventTitleEl">🎉 Gemeinsames Event</h1>
         <p id="eventSubtitleEl">Mach aktiv beim Wettbewerb, der Party oder dem Ausflug mit!</p>
         <div class="coin-wallet-bar">
-          <span class="coin-pill">🪙 Spielgeld: <strong id="eventCoinsVal">0</strong></span>
+          <span class="coin-pill">🪙 Bargeld: <strong id="eventCoinsVal">0</strong></span>
+          <span class="bank-pill">🏦 Bank: <strong data-bank-val>0</strong></span>
           <span class="level-pill">🏆 Level <strong id="eventLevelVal">1</strong></span>
           <span class="supply-pill">✨ Ziel: <strong id="eventProgressText">0 / 6</strong></span>
         </div>
@@ -606,7 +710,10 @@
           <span class="hud-coins">🪙 <strong id="runCoinsVal">0</strong></span>
           <span class="high-score">Highscore: <strong id="highScoreVal">0</strong> m</span>
         </div>
-        <button id="pauseBtn" class="btn btn-small">⏸️ Pause</button>
+        <div class="top-hud-actions">
+          <button id="gameHudHighscoreBtn" class="btn btn-small btn-secondary">🏆 Rangliste</button>
+          <button id="pauseBtn" class="btn btn-small">⏸️ Pause</button>
+        </div>
       </div>
 
       <!-- Rätsel / Puzzle Overlay -->
@@ -643,13 +750,15 @@
         <div class="modal-content">
           <h2>Rennen Beendet!</h2>
           <p>Deine Streckenlänge: <span id="finalScore">0</span> m</p>
+          <p id="gameOverRunnerMeta" class="gameover-runner-meta"></p>
           <div class="gameover-coins-box">
-            <div>In diesem Lauf verdient: <strong>+<span id="earnedCoinsVal">0</span> 🪙</strong></div>
+            <div>Verdient (ab auf die 🏦 Bank): <strong>+<span id="earnedCoinsVal">0</span> 🪙</strong></div>
             <div id="gameoverBonusBreakdown" class="gameover-bonus-sub"></div>
-            <div>Dein Spielgeld: <strong><span id="totalCoinsVal">0</span> 🪙</strong></div>
+            <div>🏦 Bankguthaben: <strong><span id="totalBankVal">0</span> 🪙</strong> · 🪙 Bargeld: <strong><span id="totalCoinsVal">0</span> 🪙</strong></div>
           </div>
           <div class="modal-actions">
             <button id="restartBtn" class="btn btn-primary">🔄 Nochmal versuchen</button>
+            <button id="gameOverHighscoreBtn" class="btn btn-earn">🏆 Highscore-Liste</button>
             <button id="homeReturnBtn" class="btn btn-home">🏡 Zum Haus &amp; Garten</button>
             <button id="editorReturnBtn" class="btn btn-secondary">👗 Charakter &amp; Kleiderschrank</button>
           </div>
@@ -662,8 +771,11 @@
       <div class="earn-modal-content">
         <div class="earn-modal-header">
           <div>
-            <h2>💰 Spielgeld verdienen</h2>
-            <span class="coin-pill">🪙 Aktuell: <strong id="earnCoinsVal">0</strong></span>
+            <h2>💰 Geld verdienen (fürs Bankkonto)</h2>
+            <div class="coin-wallet-bar" style="justify-content:flex-start;margin-top:0.35rem;">
+              <span class="coin-pill">🪙 Bargeld: <strong id="earnCoinsVal">0</strong></span>
+              <span class="bank-pill">🏦 Bank: <strong id="earnBankVal" data-bank-val>0</strong></span>
+            </div>
           </div>
           <button type="button" id="closeEarnModalBtn" class="btn btn-small btn-secondary">✖</button>
         </div>
@@ -673,13 +785,43 @@
       </div>
     </div>
 
+    <!-- Highscore List Modal -->
+    <div id="highscore-modal" class="modal hidden">
+      <div class="earn-modal-content hs-modal-content">
+        <div class="earn-modal-header">
+          <div>
+            <h2>🏆 Renn-Highscore-Liste</h2>
+            <span id="hsBestSummary" class="bank-pill">Rekord: 0 m</span>
+          </div>
+          <button type="button" id="closeHighscoreModalBtn" class="btn btn-small btn-secondary" aria-label="Highscore-Liste schließen">✖</button>
+        </div>
+        <div class="hs-runner-editor">
+          <label for="hsRunnerNameInput">Dein Läufer-Name:</label>
+          <input type="text" id="hsRunnerNameInput" class="hs-name-input" maxlength="22" placeholder="Name eingeben..." />
+          <button type="button" id="hsSaveNameBtn" class="btn btn-small btn-primary">💾 Speichern</button>
+        </div>
+        <div id="highscoreTabs" class="earn-tabs"></div>
+        <div id="highscoreListBody" class="earn-tab-body hs-list-body"></div>
+        <div class="hs-footer-actions">
+          <button type="button" id="hsClearListBtn" class="btn btn-small btn-secondary">🗑️ Liste zurücksetzen</button>
+          <div id="hsClearConfirmBox" class="bank-reset-confirm hidden">
+            <span>Wirklich alle Rekorde löschen?</span>
+            <div class="bank-reset-actions">
+              <button type="button" id="hsClearYesBtn" class="btn btn-small btn-primary">✅ Ja, löschen</button>
+              <button type="button" id="hsClearNoBtn" class="btn btn-small btn-secondary">Abbrechen</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Mailbox & Letters Modal -->
     <div id="mailbox-modal" class="modal hidden">
       <div class="earn-modal-content mailbox-modal-content">
         <div class="earn-modal-header">
           <div>
             <h2>📬 Mein Briefkasten</h2>
-            <span class="coin-pill">🪙 Aktuell: <strong id="mailboxCoinsVal">0</strong></span>
+            <span class="coin-pill">🪙 Bargeld: <strong id="mailboxCoinsVal">0</strong></span>
           </div>
           <button type="button" id="closeMailboxBtn" class="btn btn-small btn-secondary" aria-label="Briefkasten schließen">✖</button>
         </div>

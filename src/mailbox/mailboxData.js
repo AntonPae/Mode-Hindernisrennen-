@@ -1,4 +1,5 @@
 import { ShopManager } from '../editor/shopData.js';
+import { BankManager } from '../economy/bankData.js';
 import { HomeManager } from '../home/homeData.js';
 
 const MAILBOX_KEY = 'runner_mailbox_state';
@@ -500,11 +501,11 @@ export const MailboxManager = {
     let coinsEarned = 0;
     let levelUpBonus = 0;
     if (decision === 'accept') {
-      const goldBonus = HomeManager.hasItem('garden', 'gold_mailbox') ? 10 : 0;
-      coinsEarned = (mail.rewardCoins || 20) + goldBonus;
+      const goldBonus = HomeManager.hasItem('garden', 'gold_mailbox') ? 4 : 0;
+      coinsEarned = Math.max(5, Math.round((mail.rewardCoins || 16) * 0.5)) + goldBonus;
       mail.giftClaimed = true;
-      ShopManager.addCoins(coinsEarned);
-      const prog = ShopManager.recordProgress(0, 2);
+      BankManager.depositEarned(coinsEarned, '📬 Einladungs-Bonus');
+      const prog = ShopManager.recordProgress(0, 1);
       levelUpBonus = prog.levelUpBonus;
     }
 
@@ -526,10 +527,10 @@ export const MailboxManager = {
     mail.read = true;
     mail.giftClaimed = true;
 
-    const goldBonus = HomeManager.hasItem('garden', 'gold_mailbox') ? 10 : 0;
-    const coinsEarned = (mail.rewardCoins || 10) + goldBonus;
+    const goldBonus = HomeManager.hasItem('garden', 'gold_mailbox') ? 4 : 0;
+    const coinsEarned = Math.max(4, Math.round((mail.rewardCoins || 10) * 0.5)) + goldBonus;
     if (coinsEarned > 0) {
-      ShopManager.addCoins(coinsEarned);
+      BankManager.depositEarned(coinsEarned, `💌 Geschenk: ${mail.senderName || 'Post'}`);
     }
     if (mail.giftSupply) {
       HomeManager.addSupply(mail.giftSupply.key, mail.giftSupply.amount);
@@ -711,9 +712,9 @@ export const MailboxManager = {
       }
       this.saveState(state);
     }
-    const coinsEarned = firstTime ? baseReward : 10;
-    ShopManager.addCoins(coinsEarned);
-    const prog = ShopManager.recordProgress(0, firstTime ? 3 : 1);
+    const coinsEarned = firstTime ? Math.max(8, Math.round(baseReward * 0.5)) : 5;
+    BankManager.depositEarned(coinsEarned, '🎉 Event-Belohnung');
+    const prog = ShopManager.recordProgress(0, firstTime ? 2 : 1);
     return {
       ok: true,
       firstTime,

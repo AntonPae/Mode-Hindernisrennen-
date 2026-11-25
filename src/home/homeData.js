@@ -1,4 +1,5 @@
 import { ShopManager } from '../editor/shopData.js';
+import { BankManager } from '../economy/bankData.js';
 import { EarnMoneyManager } from '../economy/earnMoneyData.js';
 
 export const HOME_CATALOG = {
@@ -546,8 +547,8 @@ export const HomeManager = {
     if (state.lastDailyBonusDate !== today) {
       state.lastDailyBonusDate = today;
       this.saveState(state);
-      ShopManager.addCoins(15);
-      return 15;
+      BankManager.depositEarned(5, '🏡 Tages-Besuchsbonus');
+      return 5;
     }
     return 0;
   },
@@ -561,12 +562,12 @@ export const HomeManager = {
 
   getRunPocketMoneyBonus() {
     const state = this.getState();
-    let bonus = (state.owned.pets?.length || 0) * 2;
-    if (this.hasItem('decor', 'trophy_shelf')) bonus += 5;
-    if (this.hasItem('supplies', 'robot_helper')) bonus += 5;
-    if (this.hasItem('garden', 'greenhouse')) bonus += 4;
-    if (this.hasItem('pets', 'phoenix')) bonus += 8;
-    return bonus;
+    let bonus = Math.min(2, state.owned.pets?.length || 0);
+    if (this.hasItem('decor', 'trophy_shelf')) bonus += 1;
+    if (this.hasItem('supplies', 'robot_helper')) bonus += 1;
+    if (this.hasItem('garden', 'greenhouse')) bonus += 1;
+    if (this.hasItem('pets', 'phoenix')) bonus += 1;
+    return Math.min(5, bonus);
   },
 
   buyItem(category, itemId) {
@@ -789,8 +790,8 @@ export const HomeManager = {
     state.needs.energy = Math.min(100, (state.needs.energy ?? 80) + 22);
     state.needs.hunger = Math.min(100, (state.needs.hunger ?? 70) + 10);
     this.saveState(state);
-    const bonusCoins = 8;
-    ShopManager.addCoins(bonusCoins);
+    const bonusCoins = 3;
+    BankManager.depositEarned(bonusCoins, '🍵 Gesundheitspflege');
     EarnMoneyManager.recordEvent({ care: 1 });
     return { ok: true, bonusCoins, remaining: state.inventory.medicine, state };
   },
@@ -812,8 +813,8 @@ export const HomeManager = {
     state.needs.petCare = Math.min(100, (state.needs.petCare ?? 80) + 24);
     state.needs.petEnergy = Math.min(100, (state.needs.petEnergy ?? 80) + 18);
     this.saveState(state);
-    const bonusCoins = 10;
-    ShopManager.addCoins(bonusCoins);
+    const bonusCoins = 4;
+    BankManager.depositEarned(bonusCoins, '💊 Tierpflege');
     ShopManager.recordProgress(0, 1);
     EarnMoneyManager.recordEvent({ care: 1 });
     window.dispatchEvent(new CustomEvent('runner:pets-updated', { detail: { companionPets: state.companionPets } }));
@@ -842,10 +843,8 @@ export const HomeManager = {
       state.needs.thirst = Math.min(100, (state.needs.thirst ?? 80) + 36);
       state.needs.energy = Math.min(100, (state.needs.energy ?? 88) + 4);
       this.saveState(state);
-      const bonusCoins = 3;
-      ShopManager.addCoins(bonusCoins);
       EarnMoneyManager.recordEvent({ care: 1 });
-      return { ok: true, usedStock: true, remaining: state.inventory.drinks, bonusCoins, state };
+      return { ok: true, usedStock: true, remaining: state.inventory.drinks, bonusCoins: 0, state };
     }
     state.needs.thirst = Math.min(100, (state.needs.thirst ?? 80) + 22);
     this.saveState(state);
@@ -862,11 +861,11 @@ export const HomeManager = {
     const hasKitchen = this.hasItem('expansions', 'kitchen');
     const hasBbq = this.hasItem('garden', 'bbq');
     const heal = hasKitchen ? 45 : 30;
-    const bonusCoins = 7 + (hasKitchen ? 5 : 0) + (hasBbq ? 6 : 0);
+    const bonusCoins = 2 + (hasKitchen ? 1 : 0) + (hasBbq ? 2 : 0);
     state.needs.hunger = Math.min(100, state.needs.hunger + heal);
     state.needs.cleanliness = Math.max(10, state.needs.cleanliness - 5);
     this.saveState(state);
-    ShopManager.addCoins(bonusCoins);
+    BankManager.depositEarned(bonusCoins, '🍳 Haus-Kochen');
     ShopManager.recordProgress(0, 1);
     EarnMoneyManager.recordEvent({ care: 1 });
     return { ok: true, bonusCoins, state };
@@ -880,10 +879,10 @@ export const HomeManager = {
     const hasVacuum = this.hasItem('supplies', 'vacuum');
     const hasRobot = this.hasItem('supplies', 'robot_helper');
     const boost = hasVacuum ? 50 : 32;
-    const bonusCoins = 8 + (hasVacuum ? 5 : 0) + (hasRobot ? 4 : 0);
+    const bonusCoins = 2 + (hasVacuum ? 1 : 0) + (hasRobot ? 1 : 0);
     state.needs.cleanliness = Math.min(100, state.needs.cleanliness + boost);
     this.saveState(state);
-    ShopManager.addCoins(bonusCoins);
+    BankManager.depositEarned(bonusCoins, '🧹 Hausputz');
     ShopManager.recordProgress(0, 1);
     EarnMoneyManager.recordEvent({ care: 1 });
     return { ok: true, bonusCoins, state };
@@ -901,10 +900,10 @@ export const HomeManager = {
     const hasBowl = this.hasItem('petItems', 'bowl');
     const hasFountain = this.hasItem('petItems', 'water_fountain');
     const boost = hasBowl ? 50 : 35;
-    const bonusCoins = 10 + (hasFountain ? 4 : 0);
+    const bonusCoins = 2 + (hasFountain ? 1 : 0);
     state.needs.petCare = Math.min(100, state.needs.petCare + boost);
     this.saveState(state);
-    ShopManager.addCoins(bonusCoins);
+    BankManager.depositEarned(bonusCoins, '🦴 Tierfütterung');
     ShopManager.recordProgress(0, 1);
     EarnMoneyManager.recordEvent({ care: 1 });
     return { ok: true, bonusCoins, state };
@@ -925,15 +924,15 @@ export const HomeManager = {
   waterOrHarvestGarden() {
     const state = this.getState();
     if (state.needs.gardenGrowth >= 100) {
-      let reward = 18;
-      if (this.hasItem('garden', 'veggies')) reward += 10;
-      if (this.hasItem('garden', 'apple_tree')) reward += 12;
-      if (this.hasItem('garden', 'pond')) reward += 6;
-      if (this.hasItem('garden', 'greenhouse')) reward += 15;
+      let reward = 5;
+      if (this.hasItem('garden', 'veggies')) reward += 3;
+      if (this.hasItem('garden', 'apple_tree')) reward += 3;
+      if (this.hasItem('garden', 'pond')) reward += 2;
+      if (this.hasItem('garden', 'greenhouse')) reward += 4;
       state.needs.gardenGrowth = 10;
       this.saveState(state);
-      ShopManager.addCoins(reward);
-      ShopManager.recordProgress(0, 2);
+      BankManager.depositEarned(reward, '🍎 Garten-Ernte');
+      ShopManager.recordProgress(0, 1);
       EarnMoneyManager.recordEvent({ care: 1 });
       return { ok: true, action: 'harvest', bonusCoins: reward, state };
     }

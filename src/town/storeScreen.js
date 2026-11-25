@@ -1,6 +1,7 @@
 import { PlayerConfig } from '../editor/characterData.js';
 import { renderCharacter } from '../editor/characterRenderer.js';
 import { MYSTERY_BOX_PRICE, SHOP_CATALOG, ShopManager } from '../editor/shopData.js';
+import { BankManager } from '../economy/bankData.js';
 import { HOME_CATALOG, HOME_MYSTERY_BOX_PRICE, HomeManager, StoreRotationManager } from '../home/homeData.js';
 import { drawVectorPet, getPetMeta, PetFollowerController } from '../home/petCompanion.js';
 import { drawMountVector, drawVehicleVector } from './transportRenderer.js';
@@ -97,7 +98,7 @@ const STORE_CONFIG = {
       y: 235,
       icon: '💆',
       label: 'Gratis Haar-Spa',
-      rewardText: '💆 Frische Glanz-Kur im Friseurladen! Deine Haare strahlen & +8 🪙 Styling-Glück!'
+      rewardText: '💆 Frische Glanz-Kur im Friseurladen! Deine Haare strahlen wieder!'
     },
     aisles: [
       {
@@ -358,8 +359,8 @@ const STORE_CONFIG = {
       y: 235,
       icon: '🏁',
       label: 'Spar-Bonus',
-      rewardCoins: 15,
-      rewardText: '🏁 +15 🪙 Spar-Zuschuss für dein erstes Traum-Gefährt!'
+      rewardCoins: 5,
+      rewardText: '🏁 +5 🪙 Spar-Zuschuss auf dein Traum-Bankkonto überwiesen!'
     },
     aisles: [
       {
@@ -774,7 +775,13 @@ export function setupStoreScreen(stateManager) {
     const total = getBasketTotal();
     const coins = ShopManager.getCoins();
     if (coins < total) {
-      showToast(`🔒 An der Kasse fehlen noch ${total - coins} 🪙! Nimm etwas raus oder sammle mehr Spielgeld.`, 'warn');
+      const missing = total - coins;
+      const bankBal = BankManager.getBalance();
+      if (bankBal >= missing) {
+        showToast(`🏦 Noch ${missing} 🪙 Bargeld nötig! Geh in der Stadt kurz zur 🏦 Traum-Bank & heb Geld ab (Konto: ${bankBal} 🪙)!`, 'warn');
+      } else {
+        showToast(`🔒 An der Kasse fehlen noch ${missing} 🪙 Bargeld! Heb auf der 🏦 Bank Geld ab oder arbeite im Café/Hundesitting.`, 'warn');
+      }
       return;
     }
 
@@ -824,19 +831,12 @@ export function setupStoreScreen(stateManager) {
     ShopManager.savePlayerConfig(PlayerConfig);
     ShopManager.recordProgress(0, 1);
 
-    // Loyalty Cashback Bonus if buying 2+ things together!
-    let loyaltyBonus = 0;
-    if (purchasedSnapshot.length >= 2) {
-      loyaltyBonus = 5;
-      ShopManager.addCoins(loyaltyBonus);
-    }
-
     basket = [];
     tryingOnLabel = null;
     scannerBeamTimer = 46;
     receiptPopTimer = 110;
     receiptText = `BEEP! ${purchasedSnapshot.length}x bezahlt!`;
-    cashierBubble = loyaltyBonus > 0 ? 'Danke! +5 🪙 Treue-Bonus!' : 'Vielen Dank & viel Freude!';
+    cashierBubble = 'Vielen Dank & viel Freude damit!';
     cashierBubbleTimer = 120;
 
     spawnFX('#10b981', 745, 225, 14);
@@ -1359,10 +1359,9 @@ export function setupStoreScreen(stateManager) {
     } else if (activeShopId === 'petshop') {
       HomeManager.addSupply('petFood', 1);
     } else if (activeShopId === 'vehicles') {
-      ShopManager.addCoins(store.freeSample.rewardCoins || 15);
+      BankManager.depositEarned(store.freeSample.rewardCoins || 5, '🚗 Fahrzeug-Sparbonus');
       updateHeaderStats();
     } else if (activeShopId === 'salon') {
-      ShopManager.addCoins(8);
       updateHeaderStats();
     }
     spawnFX('#fbbf24', store.freeSample.x, store.freeSample.y - 20, 12);
@@ -2491,11 +2490,7 @@ export function setupStoreScreen(stateManager) {
     receiptPopTimer = 0;
     cashierBubble = `Willkommen im ${store.title.replace(/^[^\s]+\s/, '')}!`;
     cashierBubbleTimer = 110;
-    luckyCoupon = {
-      x: 220 + Math.floor(Math.random() * 320),
-      y: 315 + Math.floor(Math.random() * 85),
-      coins: 10
-    };
+    luckyCoupon = null;
 
     snapshotTryOnConfig();
 

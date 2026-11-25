@@ -1,4 +1,5 @@
 import { ShopManager } from '../editor/shopData.js';
+import { BankManager } from './bankData.js';
 import { HomeManager } from '../home/homeData.js';
 import { createRandomRiddle } from '../game/quickTimeEvent.js';
 import { EarnMoneyManager, WHEEL_SEGMENTS } from './earnMoneyData.js';
@@ -7,6 +8,7 @@ export function setupEarnMoneyUI({ onCoinsChange } = {}) {
   const modal = document.getElementById('earn-money-modal');
   const closeBtn = document.getElementById('closeEarnModalBtn');
   const coinsValEl = document.getElementById('earnCoinsVal');
+  const bankValEl = document.getElementById('earnBankVal');
   const toastEl = document.getElementById('earnToast');
   const tabsEl = document.getElementById('earnTabs');
   const bodyEl = document.getElementById('earnTabBody');
@@ -43,6 +45,9 @@ export function setupEarnMoneyUI({ onCoinsChange } = {}) {
   function notifyGlobalCoins() {
     if (coinsValEl) {
       coinsValEl.textContent = ShopManager.getCoins();
+    }
+    if (bankValEl) {
+      bankValEl.textContent = BankManager.getBalance();
     }
     updateEarnBadges();
     if (typeof onCoinsChange === 'function') {
@@ -106,6 +111,7 @@ export function setupEarnMoneyUI({ onCoinsChange } = {}) {
     currentQuizRiddle = null;
     quizAnswered = false;
     if (coinsValEl) coinsValEl.textContent = ShopManager.getCoins();
+    if (bankValEl) bankValEl.textContent = BankManager.getBalance();
     renderTabs();
     renderActiveTab();
     modal.classList.remove('hidden');
@@ -349,8 +355,8 @@ export function setupEarnMoneyUI({ onCoinsChange } = {}) {
           const bonusTxt = res.segment.supplyLabel ? ` & ${res.segment.supplyLabel}` : '';
           showToast(
             res.segment.jackpot
-              ? `🎊 JACKPOT! Du gewinnst +${res.segment.coins} 🪙!`
-              : `🎡 Gewonnen: +${res.segment.coins} 🪙${bonusTxt}!`,
+              ? `🎊 JACKPOT! +${res.segment.coins} 🪙 auf dein 🏦 Bankkonto überwiesen!`
+              : `🎡 Gewonnen: +${res.segment.coins} 🪙${bonusTxt} (auf dein 🏦 Bankkonto)!`,
             'success'
           );
           if (res.ticketsLeft > 0) {
@@ -426,11 +432,11 @@ export function setupEarnMoneyUI({ onCoinsChange } = {}) {
         if (!treasureActive || !board) return;
         const roll = Math.random();
         let item;
-        if (roll < 0.45) item = { icon: '🪙', value: 3, label: '+3' };
-        else if (roll < 0.68) item = { icon: '🍀', value: 5, label: '+5' };
-        else if (roll < 0.84) item = { icon: '💎', value: 8, label: '+8' };
-        else if (roll < 0.91) item = { icon: '💰', value: 12, label: '+12' };
-        else item = { icon: '🥾', value: -4, label: '-4', bad: true };
+        if (roll < 0.45) item = { icon: '🪙', value: 1, label: '+1' };
+        else if (roll < 0.68) item = { icon: '🍀', value: 2, label: '+2' };
+        else if (roll < 0.84) item = { icon: '💎', value: 3, label: '+3' };
+        else if (roll < 0.91) item = { icon: '💰', value: 5, label: '+5' };
+        else item = { icon: '🥾', value: -2, label: '-2', bad: true };
 
         const btn = document.createElement('button');
         btn.type = 'button';
@@ -475,7 +481,7 @@ export function setupEarnMoneyUI({ onCoinsChange } = {}) {
           if (finalLoot > 0) {
             EarnMoneyManager.awardTreasureCoins(finalLoot);
             notifyGlobalCoins();
-            showToast(`🪙 Super gesammelt! +${finalLoot} 🪙 in deine Kasse!`, 'success');
+            showToast(`🪙 Super gesammelt! +${finalLoot} 🪙 auf dein 🏦 Bankkonto!`, 'success');
           } else {
             showToast('😅 Diesmal leider nichts eingesammelt — gleich nochmal probieren!', 'info');
           }
@@ -497,7 +503,7 @@ export function setupEarnMoneyUI({ onCoinsChange } = {}) {
       <div class="quiz-section">
         <div class="wheel-info-row">
           <span class="earn-stat-pill">⚡ Quiz-Energie: <strong id="quizEnergyVal">${state.quizEnergy}</strong> / 3</span>
-          <span class="earn-stat-pill">🔥 Serie: <strong>${state.quizStreak || 0}</strong> (alle 3: +10 🪙 Bonus!)</span>
+          <span class="earn-stat-pill">🔥 Serie: <strong>${state.quizStreak || 0}</strong> (alle 3: +4 🪙 Bonus!)</span>
         </div>
         ${state.quizEnergy <= 0 && !quizAnswered ? `
           <div class="quiz-empty-box">
@@ -508,7 +514,7 @@ export function setupEarnMoneyUI({ onCoinsChange } = {}) {
             <div class="quiz-question">${currentQuizRiddle.prompt}</div>
             <div class="quiz-options"></div>
             <div id="quizResultBanner" class="quiz-result hidden"></div>
-            <button type="button" id="nextQuizBtn" class="btn btn-primary hidden">➔ Nächstes Rätsel (+15 🪙)</button>
+            <button type="button" id="nextQuizBtn" class="btn btn-primary hidden">➔ Nächstes Rätsel (+6 🪙 auf die 🏦 Bank)</button>
           </div>
         `}
       </div>
@@ -550,8 +556,8 @@ export function setupEarnMoneyUI({ onCoinsChange } = {}) {
           if (isCorrect) {
             resultEl.className = 'quiz-result success';
             resultEl.textContent = res.streakBonus > 0
-              ? `🎉 Richtig! +${res.coinsEarned} 🪙 & +${res.streakBonus} 🪙 Serien-Bonus!`
-              : `🎉 Richtig! +${res.coinsEarned} 🪙 verdient!`;
+              ? `🎉 Richtig! +${res.coinsEarned} 🪙 & +${res.streakBonus} 🪙 auf dein 🏦 Bankkonto!`
+              : `🎉 Richtig! +${res.coinsEarned} 🪙 auf dein 🏦 Bankkonto!`;
           } else {
             resultEl.className = 'quiz-result fail';
             resultEl.textContent = '❌ Leider knapp daneben! Beim nächsten klappt’s!';
