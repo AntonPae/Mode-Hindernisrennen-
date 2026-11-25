@@ -154,30 +154,30 @@ export function mountTalkPanel({
           badgeEl.classList.add('hidden');
         }
 
-        inputEl.placeholder = `Schreib etwas an ${active.name}...`;
-        sendBtn.textContent = '💬 Sagen';
+        inputEl.placeholder = `Frag ${active.name} etwas (antwortet auf jede Frage!)...`;
+        sendBtn.textContent = '💬 Fragen';
         lineEl.textContent = customLine || (isRoommate
-          ? `🏡 ${active.name} wohnt mit dir zusammen! Plaudert oder setzt euch an den Tisch.`
-          : `💬 Sprich mit ${active.name}${active.isNewPerson ? ' – du kannst sie/ihn auch fragen, ob ihr zusammenzieht!' : '!'}`);
+          ? `🏡 ${active.name} wohnt mit dir zusammen! Stell jede Frage oder plaudert über euren Tag.`
+          : `💬 Frag ${active.name} alles, was du möchtest${active.isNewPerson ? ' – oder frag nach Zusammenziehen!' : '!'}`);
 
         quickEl.innerHTML = '';
         let phrases;
         if (isRoommate) {
           phrases = [
-            '🏡 Wie gefällt es dir zuhause?',
-            '🍽️ Wollen wir zusammen essen?',
-            '🎨 Was wollen wir heute machen?',
-            '💛 Schön, dass wir zusammen wohnen!'
+            '🏡 Wie gefällt dir unsere WG?',
+            '🍲 Hast du Hunger oder Durst?',
+            '💼 Wie läuft es bei der Arbeit?',
+            '💛 Wollen wir zusammen essen?'
           ];
         } else if (active.isNewPerson) {
           const prog = SocialManager.getAcquaintanceProgress(active.id);
           if (prog.stage === 0) {
-            phrases = ['👋 Hallo! Ich stell mich vor!', '✨ Wollen wir uns kennenlernen?', '🏡 Wollen wir zusammenziehen?', '🎨 Was sind deine Hobbys?'];
+            phrases = ['👋 Hallo! Wer bist du?', '🎨 Was machst du am liebsten?', '🍕 Was ist dein Lieblingsessen?', '🏡 Wollen wir zusammenziehen?'];
           } else {
-            phrases = ['🏡 Wollen wir zusammenziehen?', '🎨 Erzähl mir von deinem Hobby!', '💌 Wollen wir Freunde sein?', '⭐ Du bist super nett!'];
+            phrases = ['🏡 Wollen wir zusammenziehen?', '🎨 Was machst du heute noch?', '🐾 Magst du Tiere?', '⭐ Erzähl mir etwas über dich!'];
           }
         } else {
-          phrases = ['👋 Hallo! Wie geht’s?', '🐾 Wie findest du meine Tiere?', '✨ Richtig schön hier!', '❤️ Danke dir!'];
+          phrases = ['👋 Hallo! Wie geht’s?', '🐾 Wie findest du meine Tiere?', '✨ Was gibt’s Neues?', '❤️ Danke dir!'];
         }
 
         phrases.forEach((phrase) => {
@@ -186,7 +186,7 @@ export function mountTalkPanel({
           b.className = 'mail-phrase-btn';
           b.textContent = phrase;
           b.addEventListener('click', () => {
-            if (onTalkPerson) onTalkPerson(active, phrase);
+            invokePersonTalk(active, phrase);
           });
           quickEl.appendChild(b);
         });
@@ -222,6 +222,18 @@ export function mountTalkPanel({
     }
   }
 
+  function invokePersonTalk(target, text) {
+    if (!onTalkPerson || !target) return;
+    setStatusLine(`💭 ${target.name} überlegt eine Antwort...`);
+    const result = onTalkPerson(target, text);
+    if (result && typeof result.then === 'function') {
+      sendBtn.disabled = true;
+      result.finally(() => {
+        sendBtn.disabled = false;
+      });
+    }
+  }
+
   function handleSend() {
     const val = (inputEl.value || '').trim();
     if (!val) return;
@@ -231,7 +243,7 @@ export function mountTalkPanel({
 
     inputEl.value = '';
     if (active.type === 'person') {
-      if (onTalkPerson) onTalkPerson(active, val);
+      invokePersonTalk(active, val);
     } else if (onCommandPet) {
       onCommandPet(active, { text: val });
     }

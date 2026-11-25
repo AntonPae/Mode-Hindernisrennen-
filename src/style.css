@@ -2694,6 +2694,88 @@ body, html {
   font-weight: 800;
 }
 
+.roommate-life-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.72rem 0.9rem;
+  background: linear-gradient(135deg, #ecfdf5 0%, #f0f9ff 100%);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.roommate-life-card.hidden {
+  display: none;
+}
+
+.roommate-life-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.roommate-life-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  font-size: 0.88rem;
+  color: #065f46;
+}
+
+.rm-status-badge {
+  font-size: 0.74rem;
+  font-weight: 800;
+  padding: 0.18rem 0.52rem;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #047857;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.rm-status-badge.is-sick {
+  background: #ffe4e6;
+  color: #9f1239;
+  border-color: #fda4af;
+}
+
+.rm-status-badge.is-working {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fcd34d;
+}
+
+.roommate-needs-mini {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.38rem;
+}
+
+.roommate-needs-mini .need-card {
+  padding: 0.4rem 0.48rem;
+  border-radius: 12px;
+}
+
+.roommate-needs-mini .need-label {
+  font-size: 0.7rem;
+  margin-bottom: 0.24rem;
+}
+
+.roommate-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.36rem;
+}
+
+.roommate-actions-row .btn {
+  flex: 1 1 30%;
+  min-width: 0;
+  font-size: 0.75rem;
+  padding: 0.4rem 0.45rem;
+  min-height: 36px;
+}
+
 /* Walkable Real Store Interior Screen */
 #storeCanvas {
   width: 100%;

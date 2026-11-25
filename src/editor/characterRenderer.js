@@ -97,7 +97,7 @@ export function renderCharacter(ctx, x, y, playerConfig, animationState = { fram
   let headTilt = 0;
   let squashX = 1;
   let squashY = 1;
-  let propType = null; // 'spoon' | 'broom' | 'can'
+  let propType = null; // 'spoon' | 'broom' | 'can' | 'cup' | 'plate'
 
   if (pose === 'run') {
     const cyc = f * 0.27;
@@ -212,6 +212,25 @@ export function renderCharacter(ctx, x, y, playerConfig, animationState = { fram
     torsoBounce = -14 * scaleY + breathe * 0.8;
     leanAngle = 0.04;
     headTilt = breathe * 0.02;
+  } else if (pose === 'eat') {
+    const bite = Math.sin(f * 0.16);
+    frontUpperArm = -0.68 + bite * 0.12;
+    frontElbow = -0.82 + bite * 0.16;
+    backUpperArm = -0.32;
+    backElbow = -0.58;
+    torsoBounce = Math.abs(bite) * 1.2;
+    leanAngle = 0.05;
+    headTilt = 0.05 + bite * 0.03;
+    propType = 'plate';
+  } else if (pose === 'drink') {
+    const sip = Math.sin(f * 0.14);
+    frontUpperArm = -0.88 + sip * 0.1;
+    frontElbow = -1.04 + sip * 0.12;
+    backUpperArm = 0.1;
+    backElbow = -0.25;
+    leanAngle = 0.02;
+    headTilt = -0.04 + sip * 0.03;
+    propType = 'cup';
   } else if (pose === 'sleep') {
     const breathe = Math.sin(f * 0.045);
     frontThigh = -0.14;
@@ -872,6 +891,42 @@ function drawArticulatedArm(ctx, shX, shY, thick, upperLen, foreLen, upperAngle,
       ctx.arc(22 + d * 2, 4 + dy, 2, 0, Math.PI * 2);
       ctx.fill();
     }
+    ctx.restore();
+  } else if (!isBack && propType === 'plate') {
+    ctx.save();
+    ctx.rotate(0.12);
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(6, 2, 11, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    // Tiny meal scoop on plate
+    ctx.fillStyle = '#fb923c';
+    ctx.beginPath();
+    ctx.ellipse(5, 0, 5.5, 3.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#34d399';
+    ctx.beginPath();
+    ctx.arc(9, 0.5, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  } else if (!isBack && propType === 'cup') {
+    ctx.save();
+    ctx.rotate(0.08);
+    ctx.fillStyle = '#f472b6';
+    ctx.beginPath();
+    ctx.roundRect(-2, -6, 10, 12, [3]);
+    ctx.fill();
+    ctx.strokeStyle = '#be185d';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.arc(8.5, 0, 3, -Math.PI / 2, Math.PI / 2);
+    ctx.stroke();
+    // Warm drink top
+    ctx.fillStyle = '#fef3c7';
+    ctx.fillRect(0, -6, 6, 2.5);
     ctx.restore();
   }
 

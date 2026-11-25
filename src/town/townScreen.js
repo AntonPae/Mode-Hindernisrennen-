@@ -7,7 +7,7 @@ import { PetFollowerController, getPetMeta } from '../home/petCompanion.js';
 import {
   NEW_ACQUAINTANCES,
   SocialManager,
-  generatePersonReply,
+  askPersonAI,
   parsePetCommand
 } from '../social/socialData.js';
 import { drawCanvasSpeechBubble } from '../social/canvasSpeech.js';
@@ -277,7 +277,7 @@ export function setupTownScreen(stateManager) {
         });
       }
     },
-    onTalkPerson: (target, phrase) => {
+    onTalkPerson: async (target, phrase) => {
       const standX = target.x + (player.x < target.x ? -44 : 44);
       const standY = target.y >= LOWER_WALK_MIN_Y ? target.y : 268;
       player.facing = target.x >= player.x ? 1 : -1;
@@ -285,23 +285,31 @@ export function setupTownScreen(stateManager) {
       player.speechTimer = 135;
       player.pose = 'pet';
       player.poseTimer = 20;
-      const res = generatePersonReply(target, phrase, { scene: 'town' });
-      setNpcSpeech(target.id, res.bubble, 200);
-      talkPanel.refresh(`${target.icon} ${target.name}: „${res.reply}“`);
-      if (res.movedIn) {
-        if (statusEl) {
-          statusEl.textContent = `🏡 Hurra! ${target.name} wohnt jetzt mit dir zusammen! Klick unten auf „🏡 Direkt ins Haus“!`;
-        }
-      } else if (statusEl) {
-        statusEl.textContent = `💬 ${target.name}: „${res.reply}“`;
-      }
+      setNpcSpeech(target.id, '💭 …', 90);
       if (Math.hypot(player.x - target.x, player.y - target.y) > 130) {
         navigateInTown(standX, standY, null, () => {
           player.facing = target.x >= player.x ? 1 : -1;
         });
       }
+      const res = await askPersonAI(target, phrase, { scene: 'town' });
+      if (!res.ok) {
+        const errMsg = `⚠️ ${target.name} konnte gerade nicht antworten (${res.error})`;
+        setNpcSpeech(target.id, '⚠️ …', 90);
+        talkPanel.refresh(errMsg);
+        if (statusEl) statusEl.textContent = errMsg;
+        return;
+      }
+      setNpcSpeech(target.id, res.bubble, 200);
+      talkPanel.refresh(`${target.icon} ${target.name}: „${res.reply}“`);
+      if (res.movedIn) {
+        if (statusEl) {
+          statusEl.textContent = `🏡 Hurra! ${target.name} wohnt jetzt mit dir zusammen! Klick auf „🏡 Ins Haus“!`;
+        }
+      } else if (statusEl) {
+        statusEl.textContent = `💬 ${target.name}: „${res.reply}“`;
+      }
     },
-    onMoveInRequest: (target) => {
+    onMoveInRequest: async (target) => {
       const standX = target.x + (player.x < target.x ? -44 : 44);
       const standY = target.y >= LOWER_WALK_MIN_Y ? target.y : 268;
       player.facing = target.x >= player.x ? 1 : -1;
@@ -309,18 +317,26 @@ export function setupTownScreen(stateManager) {
       player.speechTimer = 140;
       player.pose = 'pet';
       player.poseTimer = 24;
-      const res = generatePersonReply(target, 'Wollen wir zusammenziehen?', { scene: 'town' });
-      setNpcSpeech(target.id, res.bubble, 210);
-      talkPanel.refresh(`${target.icon} ${target.name}: „${res.reply}“`);
-      if (statusEl) {
-        statusEl.textContent = res.movedIn
-          ? `🏡 Hurra! ${target.name} ist bei dir eingezogen! Geh ins Haus („🏡 Direkt ins Haus“), um zusammen zu wohnen!`
-          : `💬 ${target.name}: „${res.reply}“`;
-      }
+      setNpcSpeech(target.id, '💭 …', 90);
+      talkPanel.setStatusLine(`💭 ${target.name} überlegt...`);
       if (Math.hypot(player.x - target.x, player.y - target.y) > 130) {
         navigateInTown(standX, standY, null, () => {
           player.facing = target.x >= player.x ? 1 : -1;
         });
+      }
+      const res = await askPersonAI(target, 'Wollen wir zusammenziehen?', { scene: 'town' });
+      if (!res.ok) {
+        const errMsg = `⚠️ ${target.name} konnte gerade nicht antworten (${res.error})`;
+        talkPanel.refresh(errMsg);
+        if (statusEl) statusEl.textContent = errMsg;
+        return;
+      }
+      setNpcSpeech(target.id, res.bubble, 210);
+      talkPanel.refresh(`${target.icon} ${target.name}: „${res.reply}“`);
+      if (statusEl) {
+        statusEl.textContent = res.movedIn
+          ? `🏡 Hurra! ${target.name} ist bei dir eingezogen! Geh ins Haus („🏡 Ins Haus“), um zusammen zu wohnen!`
+          : `💬 ${target.name}: „${res.reply}“`;
       }
     },
     onMoveOutRequest: (target) => {
@@ -567,15 +583,23 @@ export function setupTownScreen(stateManager) {
           player.facing = person.x >= player.x ? 1 : -1;
           player.speechText = greetText;
           player.speechTimer = 125;
-          const res = generatePersonReply(person, greetText, { scene: 'town' });
-          setNpcSpeech(person.id, res.bubble, 190);
-          talkPanel.selectTarget(person.id, `${person.icon} ${person.name}: „${res.reply}“`);
-          if (statusEl) statusEl.textContent = `💬 ${person.name}: „${res.reply}“`;
+          setNpcSpeech(person.id, '💭 …', 90);
+          talkPanel.selectTarget(person.id, `💭 ${person.name} überlegt...`);
           if (Math.hypot(player.x - person.x, player.y - person.y) > 110) {
             navigateInTown(standX, standY, null, () => {
               player.facing = person.x >= player.x ? 1 : -1;
             });
           }
+          askPersonAI(person, greetText, { scene: 'town' }).then((res) => {
+            if (!res.ok) {
+              talkPanel.selectTarget(person.id, `⚠️ ${person.name} konnte nicht antworten (${res.error})`);
+              if (statusEl) statusEl.textContent = `⚠️ ${person.name}: ${res.error}`;
+              return;
+            }
+            setNpcSpeech(person.id, res.bubble, 190);
+            talkPanel.selectTarget(person.id, `${person.icon} ${person.name}: „${res.reply}“`);
+            if (statusEl) statusEl.textContent = `💬 ${person.name}: „${res.reply}“`;
+          });
           return;
         }
       }
@@ -1407,9 +1431,11 @@ export function setupTownScreen(stateManager) {
 
     // New People to Meet along the Shopping Street & Promenade!
     const currentRoommateId = SocialManager.getRoommate()?.id;
+    const roommateLifeNow = currentRoommateId ? SocialManager.getRoommateLife() : null;
     NEW_ACQUAINTANCES.forEach((p, idx) => {
       const prog = SocialManager.getAcquaintanceProgress(p.id);
       const isRoommate = p.id === currentRoommateId;
+      const isRmWorking = isRoommate && roommateLifeNow?.activity === 'working';
       ctx.save();
       ctx.translate(p.townX, p.townY);
       ctx.scale(0.84, 0.84);
@@ -1420,13 +1446,15 @@ export function setupTownScreen(stateManager) {
       });
       ctx.restore();
 
-      const badge = isRoommate
-        ? `🏡 ${p.name} (Wohnt bei dir)`
-        : prog.stage === 0
-          ? `🆕 ${p.name} kennenlernen!`
-          : prog.stage >= 3
-            ? `💛 ${p.name}`
-            : `${p.icon} ${p.name}`;
+      const badge = isRmWorking
+        ? `💼 ${p.name} arbeitet!`
+        : isRoommate
+          ? `🏡 ${p.name} (Wohnt bei dir)`
+          : prog.stage === 0
+            ? `🆕 ${p.name} kennenlernen!`
+            : prog.stage >= 3
+              ? `💛 ${p.name}`
+              : `${p.icon} ${p.name}`;
       ctx.save();
       ctx.font = '800 9.5px "Plus Jakarta Sans", sans-serif';
       const bw = ctx.measureText(badge).width + 14;

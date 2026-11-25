@@ -6,6 +6,7 @@ export const HOME_CATALOG = {
     { id: 'living_room', name: 'Wohnzimmer', icon: '🏠', price: 0, desc: 'Dein gemütliches Basis-Zuhause' },
     { id: 'kitchen', name: 'Küche', icon: '🍳', price: 80, desc: 'Schaltet die Einbauküche frei (+5 🪙 beim Kochen)' },
     { id: 'pet_room', name: 'Tierzimmer', icon: '🐾', price: 95, isNew: true, desc: 'Ein eigener Raum für deine Tiere – dort bleiben sie & du kannst sie abholen!' },
+    { id: 'roommate_room', name: 'WG-Zimmer (Mitbewohner)', icon: '🛏️', price: 120, isNew: true, desc: 'Eigenes gemütliches Zimmer für deine/n Mitbewohner/in zum Schlafen, Arbeiten & Entspannen!' },
     { id: 'bedroom', name: 'Obergeschoss', icon: '🪜', price: 130, desc: 'Baut ein zweites Stockwerk auf dein Haus' },
     { id: 'conservatory', name: 'Wintergarten', icon: '🪴', price: 170, desc: 'Gläserner Anbau zwischen Haus und Garten' },
     { id: 'balcony', name: 'Sonniger Balkon', icon: '🌅', price: 195, unlockLevel: 2, isNew: true, desc: 'Schicker Balkon am Obergeschoss' },
@@ -76,9 +77,10 @@ export const HOME_CATALOG = {
   supplies: [
     { id: 'buy_food', name: 'Koch-Zutaten (+3)', icon: '🥘', price: 15, isConsumable: true, key: 'food', amount: 3, desc: 'Frische Zutaten für deinen Kühlschrank (3x Kochen)' },
     { id: 'buy_snacks', name: 'Obst & Snacks (+3)', icon: '🍓', price: 14, isConsumable: true, key: 'fridgeSnacks', amount: 3, desc: 'Leckere Snacks direkt für deinen Kühlschrank' },
+    { id: 'buy_drinks', name: 'Kakao, Saft & Wasser (+4)', icon: '🥤', price: 14, isConsumable: true, key: 'drinks', amount: 4, desc: 'Erfrischende Getränke für dich & deine/n Mitbewohner/in' },
     { id: 'buy_cheese_box', name: 'Käse & Pasta-Box (+4)', icon: '🧀', price: 18, isConsumable: true, key: 'food', amount: 4, desc: 'Große Vorratsbox für den Kühlschrank (4x Kochen)' },
     { id: 'buy_pet_food', name: 'Tierfutter (+3)', icon: '🦴', price: 15, isConsumable: true, key: 'petFood', amount: 3, desc: 'Leckeres Futter für 3x Füttern' },
-    { id: 'buy_medicine', name: 'Kräutertee & Medizin (+3)', icon: '🍵', price: 16, isConsumable: true, key: 'medicine', amount: 3, desc: 'Hilft dir schnell wieder gesund zu werden, wenn du mal erkältet bist' },
+    { id: 'buy_medicine', name: 'Kräutertee & Medizin (+3)', icon: '🍵', price: 16, isConsumable: true, key: 'medicine', amount: 3, desc: 'Hilft dir & deinem WG-Mitbewohner schnell wieder gesund zu werden' },
     { id: 'buy_pet_medicine', name: 'Tier-Medizin (+3)', icon: '💊', price: 16, isConsumable: true, key: 'petMedicine', amount: 3, desc: 'Pflegt ein kränkelndes Tier schnell wieder fit und munter' },
     { id: 'vacuum', name: 'Turbo-Staubsauger', icon: '🧹', price: 75, desc: 'Putzt blitzschnell & gibt +5 🪙 Extra beim Putzen' },
     { id: 'gold_can', name: 'Gold-Gießkanne', icon: '🚿', price: 80, desc: 'Verdoppelt das Wachstum beim Gießen!' },
@@ -110,12 +112,14 @@ function getDefaultHomeState() {
       food: 3,
       petFood: 3,
       fridgeSnacks: 2,
+      drinks: 3,
       medicine: 2,
       petMedicine: 2
     },
     needs: {
       cleanliness: 75,
       hunger: 70,
+      thirst: 80,
       petCare: 80,
       gardenGrowth: 40,
       energy: 88,
@@ -179,6 +183,10 @@ export const HomeManager = {
 
   hasPetRoom() {
     return this.hasItem('expansions', 'pet_room');
+  },
+
+  hasRoommateRoom() {
+    return this.hasItem('expansions', 'roommate_room');
   },
 
   hasItem(category, id) {
@@ -495,7 +503,7 @@ export const HomeManager = {
     state.health.ticksSinceSickCheck = (state.health.ticksSinceSickCheck || 0) + 1;
     if (source === 'tick' && state.health.ticksSinceSickCheck < 5) return null;
 
-    const lowPlayer = (state.needs.energy || 80) < 28 || (state.needs.hunger || 70) < 25;
+    const lowPlayer = (state.needs.energy || 80) < 28 || (state.needs.hunger || 70) < 25 || (state.needs.thirst ?? 80) < 25;
     const lowPet = (state.needs.petEnergy || 80) < 28 || (state.needs.petCare || 80) < 28;
     let chance = source === 'run' ? 0.06 : 0.014;
     if (lowPlayer || lowPet) chance *= 2.1;
@@ -532,6 +540,7 @@ export const HomeManager = {
     const cleanDrop = hasRobot ? 5 : 12;
     state.needs.cleanliness = Math.max(15, state.needs.cleanliness - cleanDrop);
     state.needs.hunger = Math.max(10, state.needs.hunger - 14);
+    state.needs.thirst = Math.max(10, (state.needs.thirst ?? 80) - 16);
     state.needs.energy = Math.max(10, (state.needs.energy ?? 88) - 16);
     if (state.owned.pets.length > 0) {
       state.needs.petCare = Math.max(10, state.needs.petCare - 15);
@@ -549,6 +558,7 @@ export const HomeManager = {
       state.needs.cleanliness = Math.max(10, state.needs.cleanliness - 1);
     }
     state.needs.hunger = Math.max(10, state.needs.hunger - (isSleeping ? 0 : 1));
+    state.needs.thirst = Math.max(10, (state.needs.thirst ?? 80) - (isSleeping ? 0 : 1));
 
     if (isSleeping) {
       const hasBed = this.hasItem('furniture', 'bed') || this.hasItem('expansions', 'bedroom');
@@ -653,6 +663,25 @@ export const HomeManager = {
     this.saveState(state);
     EarnMoneyManager.recordEvent({ care: 1 });
     return { ok: true, remaining: state.inventory.fridgeSnacks, state };
+  },
+
+  drinkBeverage() {
+    const state = this.getState();
+    const drinks = state.inventory.drinks || 0;
+    if (drinks > 0) {
+      state.inventory.drinks = drinks - 1;
+      state.needs.thirst = Math.min(100, (state.needs.thirst ?? 80) + 36);
+      state.needs.energy = Math.min(100, (state.needs.energy ?? 88) + 4);
+      this.saveState(state);
+      const bonusCoins = 3;
+      ShopManager.addCoins(bonusCoins);
+      EarnMoneyManager.recordEvent({ care: 1 });
+      return { ok: true, usedStock: true, remaining: state.inventory.drinks, bonusCoins, state };
+    }
+    state.needs.thirst = Math.min(100, (state.needs.thirst ?? 80) + 22);
+    this.saveState(state);
+    EarnMoneyManager.recordEvent({ care: 1 });
+    return { ok: true, usedStock: false, remaining: 0, bonusCoins: 0, state };
   },
 
   cookMeal() {

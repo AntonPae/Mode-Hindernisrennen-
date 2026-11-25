@@ -1,0 +1,8 @@
+{
+  "name": "DreamRunner Studio & Mein Traumhaus",
+  "description": "Ein buntes Abenteuer- und Lebensspiel mit eigenem Charakter-Editor, Traumhaus & Garten, Haustieren, WG-Alltag, Geschäften in der Stadt und lebendigen Gesprächen.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

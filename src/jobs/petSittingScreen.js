@@ -4,7 +4,7 @@ import { ShopManager } from '../editor/shopData.js';
 import { EarnMoneyManager } from '../economy/earnMoneyData.js';
 import { HomeManager } from '../home/homeData.js';
 import { PetFollowerController, getPetMeta } from '../home/petCompanion.js';
-import { generatePersonReply, parsePetCommand } from '../social/socialData.js';
+import { askPersonAI, parsePetCommand } from '../social/socialData.js';
 import { drawCanvasSpeechBubble } from '../social/canvasSpeech.js';
 import { mountTalkPanel } from '../social/talkPanel.js';
 
@@ -279,7 +279,7 @@ export function setupPetSittingScreen(stateManager) {
         }
       }
     },
-    onTalkPerson: (target, phrase) => {
+    onTalkPerson: async (target, phrase) => {
       const h = NEIGHBOR_HOUSES[target.houseIdx];
       if (!h) return;
       player.facing = h.neighborX >= player.x ? 1 : -1;
@@ -287,15 +287,22 @@ export function setupPetSittingScreen(stateManager) {
       player.speechTimer = 135;
       player.pose = 'pet';
       player.poseTimer = 20;
-      const res = generatePersonReply(target, phrase, { scene: 'petsitting' });
-      setNeighborSpeech(target.houseIdx, res.bubble, 175);
-      talkPanel.refresh(`${target.icon} ${target.name}: „${res.reply}“`);
-      setStatus(`💬 ${target.name}: „${res.reply}“`);
+      setNeighborSpeech(target.houseIdx, '💭 …', 90);
       if (Math.hypot(player.x - h.neighborX, player.y - NEIGHBOR_STAND_Y) > 130) {
         navigateToPoint(h.neighborX + 14, 266, null, () => {
           player.facing = h.neighborX >= player.x ? 1 : -1;
         });
       }
+      const res = await askPersonAI(target, phrase, { scene: 'petsitting' });
+      if (!res.ok) {
+        const errMsg = `⚠️ ${target.name} konnte nicht antworten (${res.error})`;
+        talkPanel.refresh(errMsg);
+        setStatus(errMsg);
+        return;
+      }
+      setNeighborSpeech(target.houseIdx, res.bubble, 175);
+      talkPanel.refresh(`${target.icon} ${target.name}: „${res.reply}“`);
+      setStatus(`💬 ${target.name}: „${res.reply}“`);
     },
     onCommandPet: (target, payload) => {
       const firstFollower = petFollowers.followers[0];
@@ -1198,11 +1205,17 @@ export function setupPetSittingScreen(stateManager) {
             icon: NEIGHBOR_ICONS[i],
             role: NEIGHBOR_ROLES[i]
           };
-          navigateToPoint(h.neighborX + 14, 266, null, () => {
+          navigateToPoint(h.neighborX + 14, 266, null, async () => {
             player.facing = h.neighborX >= player.x ? 1 : -1;
             player.speechText = 'Hallo! 😊';
             player.speechTimer = 110;
-            const res = generatePersonReply(targetObj, 'Hallo!', { scene: 'petsitting' });
+            setNeighborSpeech(i, '💭 …', 90);
+            talkPanel.selectTarget(NEIGHBOR_IDS[i], `💭 ${h.neighborName} überlegt...`);
+            const res = await askPersonAI(targetObj, 'Hallo!', { scene: 'petsitting' });
+            if (!res.ok) {
+              talkPanel.selectTarget(NEIGHBOR_IDS[i], `⚠️ ${h.neighborName} konnte nicht antworten (${res.error})`);
+              return;
+            }
             setNeighborSpeech(i, res.bubble, 175);
             talkPanel.selectTarget(NEIGHBOR_IDS[i], `${NEIGHBOR_ICONS[i]} ${h.neighborName}: „${res.reply}“`);
             setStatus(`💬 ${h.neighborName}: „${res.reply}“`);

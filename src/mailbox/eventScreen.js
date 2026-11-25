@@ -8,7 +8,7 @@ import {
   NEW_ACQUAINTANCES,
   PET_COMMANDS,
   SocialManager,
-  generatePersonReply,
+  askPersonAI,
   parsePetCommand
 } from '../social/socialData.js';
 
@@ -629,7 +629,7 @@ export function setupEventScreen(stateManager) {
     }
   }
 
-  function sayToFriend(rawText) {
+  async function sayToFriend(rawText) {
     const text = (rawText || '').trim();
     if (!text) return;
 
@@ -646,9 +646,23 @@ export function setupEventScreen(stateManager) {
     player.facing = f.x >= player.x ? 1 : -1;
     player.pose = 'pet';
     player.poseTimer = 24;
+    f.speechText = '💭 …';
+    f.speechTimer = 95;
+    if (chatReplyLineEl) {
+      chatReplyLineEl.textContent = `💭 ${f.name} überlegt eine Antwort...`;
+    }
 
-    const gen = generatePersonReply({ id: f.id, name: f.name, kind: 'friend', isNewPerson: f.isNewPerson }, text, { scene: 'event' });
-    const reply = f.isNewPerson ? gen.reply : (Math.random() < 0.55 ? gen.reply : f.replies[Math.floor(Math.random() * f.replies.length)]);
+    const gen = await askPersonAI({ id: f.id, name: f.name, kind: 'friend', isNewPerson: f.isNewPerson }, text, { scene: 'event' });
+    if (!gen.ok) {
+      const errMsg = `⚠️ ${f.name} konnte gerade nicht antworten (${gen.error})`;
+      f.speechText = '⚠️ …';
+      f.speechTimer = 80;
+      if (chatReplyLineEl) chatReplyLineEl.textContent = errMsg;
+      showToast(errMsg, 'warn');
+      return;
+    }
+
+    const reply = gen.reply;
     f.facing = player.x < f.x ? -1 : 1;
     f.speechText = reply.length > 46 ? `${reply.slice(0, 43)}…` : reply;
     f.speechTimer = 210;

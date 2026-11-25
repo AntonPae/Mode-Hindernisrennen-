@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>DreamRunner Studio &amp; Mein Traumhaus</title>
+  <meta name="description" content="Ein buntes Abenteuer- und Lebensspiel mit eigenem Charakter-Editor, Traumhaus &amp; Garten, Haustieren, WG-Alltag, Geschäften in der Stadt und lebendigen Gesprächen." />
+  <meta property="og:title" content="DreamRunner Studio &amp; Mein Traumhaus" />
+  <meta property="og:description" content="Ein buntes Abenteuer- und Lebensspiel mit eigenem Charakter-Editor, Traumhaus &amp; Garten, Haustieren, WG-Alltag, Geschäften in der Stadt und lebendigen Gesprächen." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -262,6 +265,7 @@
           <span class="coin-pill">🪙 Spielgeld: <strong id="homeCoinsVal">0</strong></span>
           <span class="level-pill">🏆 Level <strong id="homeLevelVal">1</strong></span>
           <span class="supply-pill">🧊 Kühlschrank: <strong id="foodCountVal">5</strong></span>
+          <span class="supply-pill">🥤 Getränke: <strong id="drinkCountVal">3</strong></span>
           <span class="supply-pill">🦴 Tierfutter: <strong id="petFoodCountVal">3</strong></span>
           <span class="supply-pill">🩺 Medizin: <strong id="homeMedCountVal">4</strong></span>
           <span id="homeHealthPill" class="supply-pill health-pill">❤️ Fit &amp; Gesund</span>
@@ -309,17 +313,51 @@
           <div id="homeFridgeBar" class="home-pet-room-bar hidden">
             <span id="homeFridgeStockSummary" class="fridge-stock-pill"></span>
             <button type="button" id="homeFridgeEatSnackBtn" class="btn btn-small btn-primary">🍓 Snack aus Kühlschrank</button>
+            <button type="button" id="homeFridgeDrinkBtn" class="btn btn-small btn-primary">🥤 Trinken holen</button>
             <button type="button" id="homeFridgeCookBtn" class="btn btn-small btn-secondary">🍳 Zum Herd &amp; Kochen</button>
             <button type="button" id="homeFridgeMarketBtn" class="btn btn-small btn-home">🛒 Zum Supermarkt (Stadt)</button>
             <button type="button" id="homeFridgeCloseBtn" class="btn btn-small btn-secondary">✖ Zu</button>
           </div>
 
+          <!-- Roommate Life & WG-Zimmer Card -->
+          <div id="homeRoommateCard" class="roommate-life-card hidden">
+            <div class="roommate-life-head">
+              <div class="roommate-life-title">
+                <strong id="rmNameLabel">🏡 Mitbewohner/in</strong>
+                <span id="rmStatusBadge" class="rm-status-badge">🏠 Zuhause</span>
+              </div>
+              <button type="button" id="rmRoomActionBtn" class="btn btn-small btn-secondary">🛏️ Zimmer</button>
+            </div>
+            <div class="roommate-needs-mini">
+              <div class="need-card">
+                <div class="need-label"><span>🍲 Essen</span><strong id="rmHungerPct">78%</strong></div>
+                <div class="need-track"><div id="rmHungerBar" class="need-fill"></div></div>
+              </div>
+              <div class="need-card">
+                <div class="need-label"><span>🥤 Trinken</span><strong id="rmThirstPct">76%</strong></div>
+                <div class="need-track"><div id="rmThirstBar" class="need-fill"></div></div>
+              </div>
+              <div class="need-card">
+                <div class="need-label"><span>😴 Energie</span><strong id="rmEnergyPct">86%</strong></div>
+                <div class="need-track"><div id="rmEnergyBar" class="need-fill"></div></div>
+              </div>
+            </div>
+            <div class="roommate-actions-row">
+              <button type="button" id="rmFeedBtn" class="btn btn-small btn-care">🍽️ Essen geben</button>
+              <button type="button" id="rmDrinkBtn" class="btn btn-small btn-care">🥤 Trinken geben</button>
+              <button type="button" id="rmWorkBtn" class="btn btn-small btn-care">💼 Arbeiten</button>
+              <button type="button" id="rmSleepBtn" class="btn btn-small btn-care">😴 Schlafen</button>
+              <button type="button" id="rmHealBtn" class="btn btn-small btn-care">🍵 Pflegen</button>
+            </div>
+          </div>
+
           <div class="ice-menu-header">
             <h2>⚡ Aktionen im Haus</h2>
-            <span>Kochen, Putzen, Sitzen, Schlafen &amp; Tierpflege</span>
+            <span>Kochen, Trinken, Putzen, Sitzen, Schlafen &amp; Tiere</span>
           </div>
           <div class="home-actions-bar home-side-actions">
             <button type="button" id="cookBtn" class="btn btn-care">🍳 Kochen starten</button>
+            <button type="button" id="drinkBtn" class="btn btn-care">🥤 Trinken</button>
             <button type="button" id="cleanBtn" class="btn btn-care">🧹 Zimmer putzen</button>
             <button type="button" id="sitTableBtn" class="btn btn-care">🪑 Am Tisch sitzen</button>
             <button type="button" id="sleepBtn" class="btn btn-care">😴 Schlafen gehen</button>
@@ -342,6 +380,10 @@
             <div class="need-card">
               <div class="need-label"><span>🍲 Sättigung</span><strong id="hungerPct">70%</strong></div>
               <div class="need-track"><div id="hungerBar" class="need-fill"></div></div>
+            </div>
+            <div class="need-card">
+              <div class="need-label"><span>🥤 Durst</span><strong id="thirstPct">80%</strong></div>
+              <div class="need-track"><div id="thirstBar" class="need-fill"></div></div>
             </div>
             <div class="need-card">
               <div class="need-label"><span>😴 Energie</span><strong id="energyPct">88%</strong></div>

@@ -4,7 +4,7 @@ import { ShopManager } from '../editor/shopData.js';
 import { EarnMoneyManager } from '../economy/earnMoneyData.js';
 import { HomeManager } from '../home/homeData.js';
 import { PetFollowerController, getPetMeta } from '../home/petCompanion.js';
-import { generatePersonReply, parsePetCommand } from '../social/socialData.js';
+import { askPersonAI, parsePetCommand } from '../social/socialData.js';
 import { drawCanvasSpeechBubble } from '../social/canvasSpeech.js';
 import { mountTalkPanel } from '../social/talkPanel.js';
 
@@ -209,7 +209,7 @@ export function setupIceCreamScreen(stateManager) {
         }
       }
     },
-    onTalkPerson: (target, phrase) => {
+    onTalkPerson: async (target, phrase) => {
       const idx = target.tableIdx;
       const c = tables[idx];
       const tb = TABLE_POS[idx];
@@ -222,16 +222,24 @@ export function setupIceCreamScreen(stateManager) {
       player.speechTimer = 135;
       player.pose = 'pet';
       player.poseTimer = 20;
-      const res = generatePersonReply({ id: target.rawName, name: target.rawName, kind: 'guest' }, phrase, { scene: 'icecream' });
-      c.chatText = res.bubble;
-      c.chatTimer = 185;
-      talkPanel.refresh(`🍨 ${target.rawName}: „${res.reply}“`);
-      setStatus(`💬 ${target.rawName}: „${res.reply}“`);
+      c.chatText = '💭 …';
+      c.chatTimer = 90;
       if (player.y < 205 || Math.hypot(player.x - tb.guestX, player.y - tb.y) > 140) {
         navigateToPoint(tb.standX, tb.standY, null, () => {
           player.facing = tb.guestX >= player.x ? 1 : -1;
         });
       }
+      const res = await askPersonAI({ id: target.rawName, name: target.rawName, kind: 'guest' }, phrase, { scene: 'icecream' });
+      if (!res.ok) {
+        const errMsg = `⚠️ ${target.rawName} konnte nicht antworten (${res.error})`;
+        talkPanel.refresh(errMsg);
+        setStatus(errMsg);
+        return;
+      }
+      c.chatText = res.bubble;
+      c.chatTimer = 185;
+      talkPanel.refresh(`🍨 ${target.rawName}: „${res.reply}“`);
+      setStatus(`💬 ${target.rawName}: „${res.reply}“`);
     },
     onCommandPet: (target, payload) => {
       const firstPet = petFollowers.followers[0];
@@ -678,11 +686,18 @@ export function setupIceCreamScreen(stateManager) {
         if (trayItems.length === 0 && Math.hypot(cx - tb.guestX, cy - (tb.y - 34)) <= 36) {
           player.sittingTableIdx = null;
           const guestTargetId = `guest_${i}_${c.preset.name}`;
-          navigateToPoint(tb.standX, tb.standY, null, () => {
+          navigateToPoint(tb.standX, tb.standY, null, async () => {
             player.facing = tb.guestX >= player.x ? 1 : -1;
             player.speechText = `Hallo ${c.preset.name}! 😊`;
             player.speechTimer = 120;
-            const res = generatePersonReply({ id: c.preset.name, name: c.preset.name, kind: 'guest' }, 'Hallo!', { scene: 'icecream' });
+            c.chatText = '💭 …';
+            c.chatTimer = 90;
+            talkPanel.selectTarget(guestTargetId, `💭 ${c.preset.name} überlegt...`);
+            const res = await askPersonAI({ id: c.preset.name, name: c.preset.name, kind: 'guest' }, 'Hallo!', { scene: 'icecream' });
+            if (!res.ok) {
+              talkPanel.selectTarget(guestTargetId, `⚠️ ${c.preset.name} konnte nicht antworten (${res.error})`);
+              return;
+            }
             c.chatText = res.bubble;
             c.chatTimer = 180;
             talkPanel.selectTarget(guestTargetId, `🍨 ${c.preset.name}: „${res.reply}“`);

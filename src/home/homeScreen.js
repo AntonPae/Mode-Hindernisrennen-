@@ -4,7 +4,7 @@ import { ShopManager } from '../editor/shopData.js';
 import { HOME_CATALOG, HomeManager } from './homeData.js';
 import { MailboxManager } from '../mailbox/mailboxData.js';
 import { drawVectorPet, getPetMeta, PetFollowerController } from './petCompanion.js';
-import { PetCommandStore, SocialManager, generatePersonReply, parsePetCommand } from '../social/socialData.js';
+import { PetCommandStore, SocialManager, askPersonAI, parsePetCommand } from '../social/socialData.js';
 import { drawCanvasSpeechBubble } from '../social/canvasSpeech.js';
 import { mountTalkPanel } from '../social/talkPanel.js';
 
@@ -13,6 +13,7 @@ const ROOMS = [
   { id: 'kitchen', label: '🍳 Küche', alwaysUnlocked: true },
   { id: 'pet_room', label: '🐾 Tierzimmer', unlockItem: 'pet_room' },
   { id: 'bedroom', label: '🛏️ Schlafzimmer', unlockItem: 'bedroom' },
+  { id: 'roommate_room', label: '🛏️ WG-Zimmer', unlockItem: 'roommate_room' },
   { id: 'conservatory', label: '🪴 Wintergarten', unlockItem: 'conservatory' },
   { id: 'garden', label: '🌳 Garten', alwaysUnlocked: true }
 ];
@@ -40,12 +41,14 @@ export function setupHomeScreen(stateManager) {
   const fridgeBar = document.getElementById('homeFridgeBar');
   const fridgeStockSummary = document.getElementById('homeFridgeStockSummary');
   const fridgeEatSnackBtn = document.getElementById('homeFridgeEatSnackBtn');
+  const fridgeDrinkBtn = document.getElementById('homeFridgeDrinkBtn');
   const fridgeCookBtn = document.getElementById('homeFridgeCookBtn');
   const fridgeMarketBtn = document.getElementById('homeFridgeMarketBtn');
   const fridgeCloseBtn = document.getElementById('homeFridgeCloseBtn');
 
   const cleanBar = document.getElementById('cleanBar');
   const hungerBar = document.getElementById('hungerBar');
+  const thirstBar = document.getElementById('thirstBar');
   const energyBar = document.getElementById('energyBar');
   const petBar = document.getElementById('petBar');
   const petEnergyBar = document.getElementById('petEnergyBar');
@@ -53,18 +56,37 @@ export function setupHomeScreen(stateManager) {
 
   const cleanPct = document.getElementById('cleanPct');
   const hungerPct = document.getElementById('hungerPct');
+  const thirstPct = document.getElementById('thirstPct');
   const energyPct = document.getElementById('energyPct');
   const petPct = document.getElementById('petPct');
   const petEnergyPct = document.getElementById('petEnergyPct');
   const gardenPct = document.getElementById('gardenPct');
 
   const foodCountEl = document.getElementById('foodCountVal');
+  const drinkCountEl = document.getElementById('drinkCountVal');
   const petFoodCountEl = document.getElementById('petFoodCountVal');
   const medCountEl = document.getElementById('homeMedCountVal');
   const healthPillEl = document.getElementById('homeHealthPill');
   const roommatePillEl = document.getElementById('homeRoommatePill');
 
+  const homeRoommateCard = document.getElementById('homeRoommateCard');
+  const rmNameLabel = document.getElementById('rmNameLabel');
+  const rmStatusBadge = document.getElementById('rmStatusBadge');
+  const rmRoomActionBtn = document.getElementById('rmRoomActionBtn');
+  const rmHungerBar = document.getElementById('rmHungerBar');
+  const rmHungerPct = document.getElementById('rmHungerPct');
+  const rmThirstBar = document.getElementById('rmThirstBar');
+  const rmThirstPct = document.getElementById('rmThirstPct');
+  const rmEnergyBar = document.getElementById('rmEnergyBar');
+  const rmEnergyPct = document.getElementById('rmEnergyPct');
+  const rmFeedBtn = document.getElementById('rmFeedBtn');
+  const rmDrinkBtn = document.getElementById('rmDrinkBtn');
+  const rmWorkBtn = document.getElementById('rmWorkBtn');
+  const rmSleepBtn = document.getElementById('rmSleepBtn');
+  const rmHealBtn = document.getElementById('rmHealBtn');
+
   const cookBtn = document.getElementById('cookBtn');
+  const drinkBtn = document.getElementById('drinkBtn');
   const cleanBtn = document.getElementById('cleanBtn');
   const sitTableBtn = document.getElementById('sitTableBtn');
   const sleepBtn = document.getElementById('sleepBtn');
@@ -169,7 +191,7 @@ export function setupHomeScreen(stateManager) {
         player.targetZ = roommateAgent.z;
       }
     },
-    onTalkPerson: (target, phrase) => {
+    onTalkPerson: async (target, phrase) => {
       const rm = SocialManager.getRoommate();
       if (!rm || rm.id !== target.id) return;
       player.facing = roommateAgent.x >= player.x ? 1 : -1;
@@ -179,7 +201,12 @@ export function setupHomeScreen(stateManager) {
         player.pose = 'pet';
         player.poseTimer = 20;
       }
-      const res = generatePersonReply(target, phrase, { scene: 'home' });
+      const res = await askPersonAI(target, phrase, { scene: 'home', room: activeRoom });
+      if (!res.ok) {
+        talkPanel.refresh(`⚠️ ${res.error}`);
+        showToast(res.error, 'warn');
+        return;
+      }
       roommateAgent.facing = player.x >= roommateAgent.x ? 1 : -1;
       roommateAgent.speechText = res.bubble;
       roommateAgent.speechTimer = 185;
@@ -316,17 +343,22 @@ export function setupHomeScreen(stateManager) {
     if (fridgeBar) {
       fridgeBar.classList.toggle('hidden', !show);
     }
+    const food = state.inventory.food || 0;
+    const snacks = state.inventory.fridgeSnacks || 0;
+    const drinks = state.inventory.drinks || 0;
     if (fridgeStockSummary) {
-      const food = state.inventory.food || 0;
-      const snacks = state.inventory.fridgeSnacks || 0;
-      fridgeStockSummary.textContent = `🧊 Im Kühlschrank: ${food} Koch-Zutaten · ${snacks} Frische Snacks`;
+      fridgeStockSummary.textContent = `🧊 Im Kühlschrank: ${food} Zutaten · ${snacks} Snacks · ${drinks} Getränke`;
     }
     if (fridgeEatSnackBtn) {
-      const snacks = state.inventory.fridgeSnacks || 0;
       fridgeEatSnackBtn.disabled = snacks <= 0;
       fridgeEatSnackBtn.textContent = snacks > 0
         ? `🍓 Snack aus Kühlschrank (${snacks})`
         : '🍓 Keine Snacks mehr';
+    }
+    if (fridgeDrinkBtn) {
+      fridgeDrinkBtn.textContent = drinks > 0
+        ? `🥤 Getränk nehmen (${drinks})`
+        : '🚰 Frisches Wasser trinken';
     }
   }
 
@@ -358,12 +390,13 @@ export function setupHomeScreen(stateManager) {
     player.targetZ = null;
     player.pose = 'idle';
     player.poseTimer = 0;
-    roommateAgent.x = roomId === 'garden' ? 355 : roomId === 'kitchen' ? 355 : roomId === 'bedroom' ? 425 : 465;
+    const rmLife = SocialManager.getRoommateLife();
+    roommateAgent.x = roomId === 'garden' ? 355 : roomId === 'kitchen' ? 355 : roomId === 'bedroom' ? 425 : roomId === 'roommate_room' ? 390 : 465;
     roommateAgent.z = 4;
     roommateAgent.targetX = null;
     roommateAgent.sitting = false;
-    roommateAgent.sleeping = false;
-    roommateAgent.pose = 'idle';
+    roommateAgent.sleeping = rmLife?.activity === 'sleeping';
+    roommateAgent.pose = roommateAgent.sleeping ? 'sleep' : 'idle';
     roommateAgent.strollTimer = 95;
     petFollowers.reset(player.x, canvas ? canvas.height - 54 : 336);
     if (petRoomBar) {
@@ -372,12 +405,15 @@ export function setupHomeScreen(stateManager) {
     updateFridgeUI();
     updateUI();
     renderRoomTabs();
+    const rm = SocialManager.getRoommate();
     if (activeRoom === 'pet_room') {
       setTaskBanner('🐾 Tierzimmer: Hier bleiben deine Tiere! Tippe ein Tier an, um es abzuholen & mitzunehmen!', false);
     } else if (activeRoom === 'kitchen') {
-      setTaskBanner('🍳 Küche: Essen im 🧊 Kühlschrank · Tippe auf den 🪑 Esstisch, um Platz zu nehmen!', false);
+      setTaskBanner('🍳 Küche: Essen & Getränke im 🧊 Kühlschrank · Tippe auf den 🪑 Esstisch, um Platz zu nehmen!', false);
     } else if (activeRoom === 'bedroom') {
       setTaskBanner('🛏️ Schlafzimmer: Tippe aufs Bett, um dich und deine Tiere schlafen zu legen!', false);
+    } else if (activeRoom === 'roommate_room') {
+      setTaskBanner(`🛏️ ${rm ? `${rm.name}s` : 'WG-'}Zimmer: Eigenes gemütliches Zimmer mit Bett & Schreibtisch!`, false);
     } else {
       setTaskBanner(`Du bist jetzt in: ${room.label.replace(/^[^\s]+\s/, '')} · Klicke auf den Boden, Stuhl oder Bett!`, false);
     }
@@ -387,6 +423,8 @@ export function setupHomeScreen(stateManager) {
   function renderRoomTabs() {
     if (!roomTabsEl) return;
     const stayingCount = HomeManager.getStayingPets().length;
+    const rm = SocialManager.getRoommate();
+    const rmLife = rm ? SocialManager.getRoommateLife() : null;
     roomTabsEl.innerHTML = '';
     ROOMS.forEach((room) => {
       const unlocked = isRoomUnlocked(room);
@@ -395,6 +433,13 @@ export function setupHomeScreen(stateManager) {
       btn.className = `home-room-tab${activeRoom === room.id ? ' active' : ''}${!unlocked ? ' locked' : ''}`;
       if (room.id === 'pet_room' && unlocked && stayingCount > 0) {
         btn.textContent = `${room.label} (${stayingCount})`;
+      } else if (room.id === 'roommate_room') {
+        const baseName = rm ? `${rm.name}s Zimmer` : 'WG-Zimmer';
+        if (unlocked) {
+          btn.textContent = `🛏️ ${baseName}${rmLife?.activity === 'sleeping' ? ' 💤' : ''}`;
+        } else {
+          btn.textContent = `🔒 ${baseName}`;
+        }
       } else {
         btn.textContent = unlocked ? room.label : `🔒 ${room.label.replace(/^[^\s]+\s/, '')}`;
       }
@@ -425,23 +470,29 @@ export function setupHomeScreen(stateManager) {
 
     setBar(cleanBar, cleanPct, state.needs.cleanliness);
     setBar(hungerBar, hungerPct, state.needs.hunger);
+    setBar(thirstBar, thirstPct, state.needs.thirst ?? 80);
     setBar(energyBar, energyPct, state.needs.energy ?? 88);
     setBar(petBar, petPct, state.owned.pets.length > 0 ? state.needs.petCare : 100);
     setBar(petEnergyBar, petEnergyPct, state.owned.pets.length > 0 ? (state.needs.petEnergy ?? 88) : 100);
     setBar(gardenBar, gardenPct, state.needs.gardenGrowth);
 
     if (foodCountEl) foodCountEl.textContent = (state.inventory.food || 0) + (state.inventory.fridgeSnacks || 0);
+    if (drinkCountEl) drinkCountEl.textContent = state.inventory.drinks || 0;
     if (petFoodCountEl) petFoodCountEl.textContent = state.inventory.petFood || 0;
     if (medCountEl) medCountEl.textContent = (state.inventory.medicine || 0) + (state.inventory.petMedicine || 0);
 
     const playerSick = state.health?.playerSick;
     const sickPetIds = Object.keys(state.health?.sickPets || {});
-    const anyoneSick = Boolean(playerSick) || sickPetIds.length > 0;
+    const rm = SocialManager.getRoommate();
+    const rmLife = rm ? SocialManager.getRoommateLife() : null;
+    const anyoneSick = Boolean(playerSick) || sickPetIds.length > 0 || Boolean(rmLife?.sick);
 
     if (healthPillEl) {
       healthPillEl.classList.toggle('is-sick', anyoneSick);
       if (playerSick) {
         healthPillEl.textContent = `🤒 ${playerSick.label}`;
+      } else if (rmLife?.sick) {
+        healthPillEl.textContent = `🤒 ${rm.name}: ${rmLife.sick.label}`;
       } else if (sickPetIds.length > 0) {
         const meta = getPetMeta(sickPetIds[0]);
         healthPillEl.textContent = `🤒 ${meta.name} kränkelt`;
@@ -451,17 +502,76 @@ export function setupHomeScreen(stateManager) {
     }
 
     if (roommatePillEl) {
-      const rm = SocialManager.getRoommate();
       if (rm) {
         roommatePillEl.classList.remove('hidden');
-        roommatePillEl.textContent = `🏡 WG mit ${rm.icon} ${rm.name}`;
+        roommatePillEl.textContent = rmLife?.activity === 'working'
+          ? `💼 ${rm.icon} ${rm.name} arbeitet`
+          : `🏡 WG mit ${rm.icon} ${rm.name}`;
       } else {
         roommatePillEl.classList.add('hidden');
       }
     }
 
+    if (homeRoommateCard) {
+      if (rm && rmLife) {
+        homeRoommateCard.classList.remove('hidden');
+        if (rmNameLabel) {
+          rmNameLabel.textContent = `${rm.icon} ${rm.name} · ${rm.jobTitle || 'WG'}`;
+        }
+        if (rmStatusBadge) {
+          rmStatusBadge.classList.remove('is-sick', 'is-working', 'is-sleeping');
+          if (rmLife.sick) {
+            rmStatusBadge.classList.add('is-sick');
+            rmStatusBadge.textContent = `🤒 ${rmLife.sick.label}`;
+          } else if (rmLife.activity === 'working') {
+            rmStatusBadge.classList.add('is-working');
+            rmStatusBadge.textContent = `💼 Arbeitet (${rm.jobPlace || 'Stadt'})`;
+          } else if (rmLife.activity === 'sleeping') {
+            rmStatusBadge.classList.add('is-sleeping');
+            rmStatusBadge.textContent = HomeManager.hasRoommateRoom() ? '😴 Schläft im Zimmer' : '😴 Schläft';
+          } else if (rmLife.activity === 'eating') {
+            rmStatusBadge.textContent = '🍽️ Isst gerade';
+          } else if (rmLife.activity === 'drinking') {
+            rmStatusBadge.textContent = '🥤 Trinkt gerade';
+          } else {
+            rmStatusBadge.textContent = '🏠 Zuhause';
+          }
+        }
+        if (rmRoomActionBtn) {
+          if (HomeManager.hasRoommateRoom()) {
+            rmRoomActionBtn.textContent = activeRoom === 'roommate_room' ? '🛋️ Wohnzimmer' : `🛏️ ${rm.name}s Zimmer`;
+          } else {
+            rmRoomActionBtn.textContent = '🏗️ Zimmer kaufen (120 🪙)';
+          }
+        }
+        setBar(rmHungerBar, rmHungerPct, rmLife.hunger ?? 78);
+        setBar(rmThirstBar, rmThirstPct, rmLife.thirst ?? 76);
+        setBar(rmEnergyBar, rmEnergyPct, rmLife.energy ?? 86);
+
+        const isWorking = rmLife.activity === 'working';
+        if (rmFeedBtn) rmFeedBtn.disabled = isWorking;
+        if (rmDrinkBtn) rmDrinkBtn.disabled = isWorking;
+        if (rmWorkBtn) {
+          rmWorkBtn.disabled = isWorking || Boolean(rmLife.sick);
+          rmWorkBtn.textContent = isWorking ? '💼 Auf Arbeit...' : `💼 Arbeiten (+${rm.jobCoins || 14} 🪙)`;
+        }
+        if (rmSleepBtn) {
+          rmSleepBtn.disabled = isWorking;
+          rmSleepBtn.textContent = rmLife.activity === 'sleeping' ? '☀️ Wecken' : '😴 Schlafen';
+        }
+        if (rmHealBtn) {
+          rmHealBtn.classList.toggle('btn-health-alert', Boolean(rmLife.sick));
+          rmHealBtn.textContent = rmLife.sick
+            ? `🍵 Pflegen (${state.inventory.medicine || 0})`
+            : '🩺 Fit';
+        }
+      } else {
+        homeRoommateCard.classList.add('hidden');
+      }
+    }
+
     if (healBtn) {
-      healBtn.classList.toggle('btn-health-alert', anyoneSick);
+      healBtn.classList.toggle('btn-health-alert', Boolean(playerSick) || sickPetIds.length > 0);
       if (playerSick) {
         healBtn.textContent = `🍵 Tee nehmen (${state.inventory.medicine || 0})`;
       } else if (sickPetIds.length > 0) {
@@ -479,6 +589,11 @@ export function setupHomeScreen(stateManager) {
 
     if (sitTableBtn) {
       sitTableBtn.textContent = player.sittingAt ? '🧍 Aufstehen' : '🪑 Am Tisch sitzen';
+    }
+
+    if (drinkBtn) {
+      const drinks = state.inventory.drinks || 0;
+      drinkBtn.textContent = drinks > 0 ? `🥤 Trinken (${drinks})` : '🚰 Wasser trinken';
     }
 
     updateFridgeUI();
@@ -771,7 +886,27 @@ export function setupHomeScreen(stateManager) {
     showToast('❤️ Du und alle deine Tiere sind fit und kerngesund!', 'info');
   }
 
+  function handleDrinkAction() {
+    if (player.sleepingAt) standUpIfNeeded(false);
+    const res = HomeManager.drinkBeverage();
+    if (!player.sittingAt) {
+      player.pose = 'drink';
+      player.poseTimer = 44;
+    }
+    player.speechText = res.usedStock ? '🥤 Lecker & erfrischend!' : '🚰 Frisches Wasser!';
+    player.speechTimer = 110;
+    spawnFX('heart', player.x, 220, 6);
+    updateUI();
+    notifyMoneyOrMissionChange();
+    if (res.usedStock) {
+      showToast(`🥤 Erfrischendes Getränk genossen! +36% Durst & +${res.bonusCoins} 🪙`, 'success');
+    } else {
+      showToast('🚰 Frisches Leitungswasser getrunken! +22% Durst (Getränke gibt’s im 🛒 Supermarkt!)', 'info');
+    }
+  }
+
   if (cookBtn) cookBtn.addEventListener('click', () => { standUpIfNeeded(); startCookingTask(); });
+  if (drinkBtn) drinkBtn.addEventListener('click', handleDrinkAction);
   if (cleanBtn) cleanBtn.addEventListener('click', () => { standUpIfNeeded(); startCleaningTask(); });
   if (sitTableBtn) sitTableBtn.addEventListener('click', walkToSeatAction);
   if (sleepBtn) sleepBtn.addEventListener('click', toggleSleepAction);
@@ -780,17 +915,123 @@ export function setupHomeScreen(stateManager) {
   if (petAnimalsBtn) petAnimalsBtn.addEventListener('click', () => { standUpIfNeeded(); startPetTask('pet'); });
   if (gardenBtn) gardenBtn.addEventListener('click', () => { standUpIfNeeded(); startGardenTask(); });
 
+  if (rmRoomActionBtn) {
+    rmRoomActionBtn.addEventListener('click', () => {
+      if (HomeManager.hasRoommateRoom()) {
+        switchRoom(activeRoom === 'roommate_room' ? 'living_room' : 'roommate_room');
+      } else {
+        stateManager.setState('STORE', { shopId: 'furniture', aisle: 'expansions', from: 'HOME' });
+      }
+    });
+  }
+
+  if (rmFeedBtn) {
+    rmFeedBtn.addEventListener('click', () => {
+      const res = SocialManager.feedRoommate();
+      if (!res.ok) return;
+      roommateAgent.pose = 'eat';
+      roommateAgent.poseTimer = 110;
+      roommateAgent.speechText = res.source === 'meal' ? '🍽️ Leckeres Essen, danke!' : '🍓 Danke für den Snack!';
+      roommateAgent.speechTimer = 140;
+      spawnFX('heart', roommateAgent.x, 220, 5);
+      updateUI();
+      showToast(`🍽️ ${res.person.name} isst gemütlich! (+Sättigung)`, 'success');
+    });
+  }
+
+  if (rmDrinkBtn) {
+    rmDrinkBtn.addEventListener('click', () => {
+      const res = SocialManager.giveRoommateDrink();
+      if (!res.ok) return;
+      roommateAgent.pose = 'drink';
+      roommateAgent.poseTimer = 105;
+      roommateAgent.speechText = res.usedStock ? '🥤 Mmmh, lecker Kakao/Saft!' : '🚰 Danke fürs Wasser!';
+      roommateAgent.speechTimer = 140;
+      spawnFX('heart', roommateAgent.x, 220, 5);
+      updateUI();
+      showToast(`🥤 ${res.person.name} trinkt etwas Erfrischendes!`, 'success');
+    });
+  }
+
+  if (rmWorkBtn) {
+    rmWorkBtn.addEventListener('click', () => {
+      const res = SocialManager.sendRoommateToWork();
+      if (!res.ok) {
+        if (res.reason === 'sick') {
+          showToast(`🤒 ${res.person.name} ist gerade krank und muss sich ausruhen!`, 'warn');
+        } else if (res.reason === 'tired') {
+          showToast(`😴 ${res.person.name} ist zu müde zum Arbeiten – erst schlafen!`, 'warn');
+        } else if (res.reason === 'already_working') {
+          showToast(`💼 ${res.person.name} ist schon bei der Arbeit!`, 'info');
+        }
+        return;
+      }
+      roommateAgent.speechText = `💼 Bis gleich! Auf zu ${res.person.jobPlace || 'der Arbeit'}!`;
+      roommateAgent.speechTimer = 140;
+      updateUI();
+      showToast(`💼 ${res.person.name} geht arbeiten (${res.person.jobTitle || 'Job'}) und bringt gleich +${res.person.jobCoins || 14} 🪙 mit!`, 'info');
+    });
+  }
+
+  if (rmSleepBtn) {
+    rmSleepBtn.addEventListener('click', () => {
+      const res = SocialManager.toggleRoommateSleep();
+      if (!res.ok) {
+        if (res.reason === 'working') {
+          showToast(`💼 ${res.person.name} ist gerade bei der Arbeit!`, 'info');
+        }
+        return;
+      }
+      roommateAgent.sleeping = res.sleeping;
+      roommateAgent.sitting = false;
+      roommateAgent.pose = res.sleeping ? 'sleep' : 'idle';
+      roommateAgent.speechText = res.sleeping ? '😴 Gute Nacht!' : '☀️ Schön ausgeschlafen!';
+      roommateAgent.speechTimer = 130;
+      updateUI();
+      renderRoomTabs();
+      showToast(res.sleeping ? `😴 ${res.person.name} legt sich schlafen.` : `☀️ ${res.person.name} ist wieder wach!`, 'info');
+    });
+  }
+
+  if (rmHealBtn) {
+    rmHealBtn.addEventListener('click', () => {
+      const res = SocialManager.healRoommate();
+      if (!res.ok) {
+        if (res.reason === 'healthy') {
+          showToast(`❤️ ${res.person.name} ist fit und gesund!`, 'info');
+        } else if (res.reason === 'no_medicine') {
+          showToast('🍵 Keine Medizin mehr! Hol Tee/Medizin im 🛒 Supermarkt oder lass sie im Zimmer schlafen.', 'warn');
+        }
+        return;
+      }
+      roommateAgent.pose = 'pet';
+      roommateAgent.poseTimer = 30;
+      roommateAgent.speechText = '🍵 Danke! Mir geht’s sofort viel besser!';
+      roommateAgent.speechTimer = 145;
+      spawnFX('heart', roommateAgent.x, 220, 8);
+      updateUI();
+      notifyMoneyOrMissionChange();
+      showToast(`🍵 ${res.person.name} wurde gesund gepflegt! (+${res.bonusCoins} 🪙)`, 'success');
+    });
+  }
+
   if (fridgeEatSnackBtn) {
     fridgeEatSnackBtn.addEventListener('click', () => {
       const res = HomeManager.eatFridgeSnack();
       if (res.ok) {
-        player.pose = 'pet';
-        player.poseTimer = 22;
+        player.pose = 'eat';
+        player.poseTimer = 36;
         updateUI();
         showToast('🍓 Leckerer Snack aus dem Kühlschrank! +25% Sättigung!', 'success');
       } else {
         showToast('🧊 Keine Snacks mehr im Kühlschrank! Kauf neue im 🛒 Supermarkt in der Stadt!', 'info');
       }
+    });
+  }
+
+  if (fridgeDrinkBtn) {
+    fridgeDrinkBtn.addEventListener('click', () => {
+      handleDrinkAction();
     });
   }
 
@@ -1067,14 +1308,23 @@ export function setupHomeScreen(stateManager) {
           const standX = Math.max(60, Math.min(canvas.width - 60, roommateHotspot.x + (player.x < roommateHotspot.x ? -44 : 44)));
           player.targetX = standX;
           player.targetZ = roommateAgent.z;
-          const res = generatePersonReply(rm, `Hallo ${rm.name}!`, { scene: 'home' });
-          roommateAgent.facing = player.x >= roommateAgent.x ? 1 : -1;
-          roommateAgent.speechText = res.bubble;
-          roommateAgent.speechTimer = 175;
-          roommateAgent.pose = 'pet';
-          roommateAgent.poseTimer = 22;
-          talkPanel.selectTarget(rm.id, `${rm.icon} ${rm.name}: „${res.reply}“`);
-          showToast(`💬 ${rm.name}: „${res.reply}“`, 'info');
+          talkPanel.selectTarget(rm.id, `💭 ${rm.name} hört dir zu...`);
+          askPersonAI(rm, `Hallo ${rm.name}, wie geht es dir gerade?`, { scene: 'home', room: activeRoom }).then((res) => {
+            if (!res.ok) {
+              talkPanel.refresh(`⚠️ ${res.error}`);
+              showToast(res.error, 'warn');
+              return;
+            }
+            roommateAgent.facing = player.x >= roommateAgent.x ? 1 : -1;
+            roommateAgent.speechText = res.bubble;
+            roommateAgent.speechTimer = 175;
+            if (!roommateAgent.sitting && !roommateAgent.sleeping) {
+              roommateAgent.pose = 'pet';
+              roommateAgent.poseTimer = 22;
+            }
+            talkPanel.refresh(`${rm.icon} ${rm.name}: „${res.reply}“`);
+            showToast(`💬 ${rm.name}: „${res.reply}“`, 'info');
+          });
           return;
         }
       }
@@ -1274,6 +1524,11 @@ export function setupHomeScreen(stateManager) {
       if (activeRoom === 'pet_room' && player.x <= 52 && vx < 0) {
         edgeCooldown = 36;
         switchRoom('living_room', 590);
+        return;
+      }
+      if (activeRoom === 'roommate_room' && player.x <= 52 && vx < 0) {
+        edgeCooldown = 36;
+        switchRoom('living_room', 240);
         return;
       }
       if (activeRoom === 'garden' && player.x <= 125 && vx < 0) {
@@ -1483,15 +1738,31 @@ export function setupHomeScreen(stateManager) {
 
     // Update Roommate Agent if someone moved in with the player!
     const rm = SocialManager.getRoommate();
-    if (rm) {
+    const rmLife = rm ? SocialManager.getRoommateLife() : null;
+    if (rm && rmLife) {
       if (roommateAgent.speechTimer > 0) roommateAgent.speechTimer--;
       if (roommateAgent.poseTimer > 0) roommateAgent.poseTimer--;
 
-      if (player.sleepingAt) {
+      if (rmLife.activity === 'working') {
+        roommateAgent.sleeping = false;
+        roommateAgent.sitting = false;
+        roommateAgent.targetX = null;
+        roommateAgent.pose = 'idle';
+      } else if (player.sleepingAt || rmLife.activity === 'sleeping') {
         roommateAgent.sleeping = true;
         roommateAgent.sitting = false;
         roommateAgent.targetX = null;
         roommateAgent.pose = 'sleep';
+      } else if (rmLife.activity === 'eating') {
+        roommateAgent.sleeping = false;
+        roommateAgent.sitting = false;
+        roommateAgent.targetX = null;
+        roommateAgent.pose = 'eat';
+      } else if (rmLife.activity === 'drinking') {
+        roommateAgent.sleeping = false;
+        roommateAgent.sitting = false;
+        roommateAgent.targetX = null;
+        roommateAgent.pose = 'drink';
       } else if (activeRoom === 'kitchen' && player.sittingAt) {
         roommateAgent.sleeping = false;
         const chairX = 626;
@@ -1558,12 +1829,17 @@ export function setupHomeScreen(stateManager) {
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
 
+    const activeRoommate = SocialManager.getRoommate();
+    const rmLife = activeRoommate ? SocialManager.getRoommateLife() : null;
+
     if (activeRoom === 'kitchen') {
       drawKitchenRoom(ctx, w, h, floorY, state);
     } else if (activeRoom === 'pet_room') {
       drawPetRoom(ctx, w, h, floorY, state);
     } else if (activeRoom === 'bedroom') {
       drawBedroomRoom(ctx, w, h, floorY, state);
+    } else if (activeRoom === 'roommate_room') {
+      drawRoommateRoom(ctx, w, h, floorY, activeRoommate);
     } else if (activeRoom === 'conservatory') {
       drawConservatoryRoom(ctx, w, h, floorY, state);
     } else if (activeRoom === 'garden') {
@@ -1607,46 +1883,74 @@ export function setupHomeScreen(stateManager) {
 
     // Roommate Character living with you in the house!
     roommateHotspot = null;
-    const activeRoommate = SocialManager.getRoommate();
-    if (activeRoommate) {
-      let rmX = roommateAgent.x;
-      let rmY = floorY + 12 + roommateAgent.z;
-      let rmFacing = roommateAgent.facing;
-      if (roommateAgent.sleeping) {
-        if (activeRoom === 'bedroom') {
-          rmX = 248;
-          rmY = floorY - 40;
-          rmFacing = 1;
-        } else if (activeRoom === 'living_room') {
-          rmX = 114;
-          rmY = floorY - 26;
-          rmFacing = 1;
-        } else {
-          rmX = Math.max(75, charX - 68);
-          rmY = charY;
-          rmFacing = 1;
+    if (activeRoommate && rmLife) {
+      const sleepingInOwnRoom =
+        rmLife.activity === 'sleeping' &&
+        !player.sleepingAt &&
+        HomeManager.hasRoommateRoom() &&
+        activeRoom !== 'roommate_room';
+
+      if (rmLife.activity === 'working') {
+        drawFloatingHint(ctx, w - 108, 28, `💼 ${activeRoommate.name} arbeitet…`, '#0284c7');
+      } else if (sleepingInOwnRoom) {
+        drawFloatingHint(ctx, w - 122, 28, `😴 ${activeRoommate.name} schläft im Zimmer`, '#4f46e5');
+      } else {
+        let rmX = roommateAgent.x;
+        let rmY = floorY + 12 + roommateAgent.z;
+        let rmFacing = roommateAgent.facing;
+        if (roommateAgent.sleeping) {
+          if (activeRoom === 'roommate_room') {
+            rmX = 495;
+            rmY = floorY - 42;
+            rmFacing = -1;
+          } else if (activeRoom === 'bedroom') {
+            rmX = 248;
+            rmY = floorY - 40;
+            rmFacing = 1;
+          } else if (activeRoom === 'living_room') {
+            rmX = 114;
+            rmY = floorY - 26;
+            rmFacing = 1;
+          } else {
+            rmX = Math.max(75, charX - 68);
+            rmY = charY;
+            rmFacing = 1;
+          }
         }
-      }
 
-      ctx.save();
-      ctx.translate(rmX, rmY);
-      ctx.scale(0.84, 0.84);
-      renderCharacter(ctx, 0, 0, activeRoommate.charConfig, {
-        frame: animFrame + 13,
-        pose: roommateAgent.pose,
-        facing: rmFacing
-      });
-      ctx.restore();
-
-      roommateHotspot = { x: rmX, y: rmY - 38, r: 44 };
-
-      if (roommateAgent.speechTimer > 0 && roommateAgent.speechText) {
-        drawCanvasSpeechBubble(ctx, rmX, rmY - (roommateAgent.sleeping ? 44 : 112), roommateAgent.speechText, {
-          accent: '#10b981',
-          maxX: w - 10
+        ctx.save();
+        ctx.translate(rmX, rmY);
+        ctx.scale(0.84, 0.84);
+        renderCharacter(ctx, 0, 0, activeRoommate.charConfig, {
+          frame: animFrame + 13,
+          pose: roommateAgent.pose,
+          facing: rmFacing,
+          isSick: Boolean(rmLife.sick)
         });
-      } else if (!roommateAgent.sleeping) {
-        drawFloatingHint(ctx, rmX, rmY - 122, `🏡 ${activeRoommate.name}`, '#059669');
+        ctx.restore();
+
+        roommateHotspot = { x: rmX, y: rmY - 38, r: 44 };
+
+        if (roommateAgent.sleeping) {
+          const zFloat = Math.sin((animFrame + 20) * 0.08) * 4;
+          ctx.save();
+          ctx.font = '800 13px "Outfit", sans-serif';
+          ctx.fillStyle = '#4f46e5';
+          ctx.textAlign = 'center';
+          ctx.fillText('Z z z 💤', rmX + 44, rmY - 34 + zFloat);
+          ctx.restore();
+        }
+
+        if (roommateAgent.speechTimer > 0 && roommateAgent.speechText) {
+          drawCanvasSpeechBubble(ctx, rmX, rmY - (roommateAgent.sleeping ? 44 : 112), roommateAgent.speechText, {
+            accent: '#10b981',
+            maxX: w - 10
+          });
+        } else if (rmLife.sick && !roommateAgent.sleeping) {
+          drawFloatingHint(ctx, rmX, rmY - 122, `🤒 ${activeRoommate.name}`, '#e11d48');
+        } else if (!roommateAgent.sleeping) {
+          drawFloatingHint(ctx, rmX, rmY - 122, `🏡 ${activeRoommate.name}`, '#059669');
+        }
       }
     }
 
@@ -2771,6 +3075,163 @@ export function setupHomeScreen(stateManager) {
     drawDoorPortal(ctx, 28, floorY - 148, 72, 148, '◀ Wohnzimmer', 'living_room', 240);
   }
 
+  function drawRoommateRoom(ctx, w, h, floorY, rm) {
+    const themeMap = {
+      lina: { wall1: '#ecfdf5', wall2: '#fef3c7', accent: '#10b981', blanket: '#34d399', rug: '#a7f3d0' },
+      mila: { wall1: '#f0f9ff', wall2: '#fce7f3', accent: '#0284c7', blanket: '#38bdf8', rug: '#bae6fd' },
+      tom: { wall1: '#f0fdf4', wall2: '#ffedd5', accent: '#ea580c', blanket: '#fb923c', rug: '#fed7aa' },
+      jonas: { wall1: '#eef2ff', wall2: '#fef3c7', accent: '#6366f1', blanket: '#818cf8', rug: '#c7d2fe' }
+    };
+    const theme = themeMap[rm?.id] || { wall1: '#f5f3ff', wall2: '#ecfeff', accent: '#8b5cf6', blanket: '#a78bfa', rug: '#ddd6fe' };
+
+    // Wall & Warm Floor
+    const wallGrad = ctx.createLinearGradient(0, 0, 0, floorY);
+    wallGrad.addColorStop(0, theme.wall1);
+    wallGrad.addColorStop(1, theme.wall2);
+    ctx.fillStyle = wallGrad;
+    ctx.fillRect(0, 0, w, floorY);
+
+    const floorGrad = ctx.createLinearGradient(0, floorY, 0, h);
+    floorGrad.addColorStop(0, '#f3d5b5');
+    floorGrad.addColorStop(1, '#d4a373');
+    ctx.fillStyle = floorGrad;
+    ctx.fillRect(0, floorY, w, h - floorY);
+
+    // Cozy Woven Rug
+    ctx.fillStyle = theme.rug;
+    ctx.beginPath();
+    ctx.ellipse(425, floorY + 14, 155, 16, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Sunny Bedroom Window
+    ctx.fillStyle = '#bae6fd';
+    ctx.beginPath();
+    ctx.roundRect(625, 58, 96, 130, [14]);
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 6;
+    ctx.stroke();
+
+    // Room Nameplate Banner on Wall
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.roundRect(275, 40, 210, 32, [16]);
+    ctx.fill();
+    ctx.strokeStyle = theme.accent;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.font = '800 13px "Outfit", sans-serif';
+    ctx.fillStyle = '#1e293b';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`🏡 ${rm ? `${rm.icon} ${rm.name}s Zimmer` : 'WG-Zimmer'}`, 380, 56);
+    ctx.restore();
+
+    // Personalized Hobby Corner (left-center desk & hobby prop)
+    // Desk & Chair (clickable to sit!)
+    ctx.fillStyle = '#fef3c7';
+    ctx.beginPath();
+    ctx.roundRect(185, floorY - 58, 108, 12, [6]);
+    ctx.fill();
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(194, floorY - 46, 10, 46);
+    ctx.fillRect(274, floorY - 46, 10, 46);
+    // Desk Lamp / Laptop
+    ctx.fillStyle = theme.accent;
+    ctx.beginPath();
+    ctx.roundRect(202, floorY - 78, 32, 20, [4]);
+    ctx.fill();
+    // Cozy Desk Chair
+    ctx.fillStyle = theme.blanket;
+    ctx.beginPath();
+    ctx.roundRect(240, floorY - 42, 34, 24, [8]);
+    ctx.fill();
+    ctx.fillStyle = '#64748b';
+    ctx.fillRect(254, floorY - 18, 6, 18);
+
+    seatHotspots.push({
+      x: 195, y: floorY - 70, w: 96, h: 72,
+      seatX: 256, seatZ: 4, facing: -1, room: 'roommate_room', label: 'Schreibtischstuhl'
+    });
+
+    // Character-specific decor item
+    if (rm?.id === 'lina') {
+      // Painting Easel
+      ctx.strokeStyle = '#92400e';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(132, floorY);
+      ctx.lineTo(148, floorY - 102);
+      ctx.lineTo(164, floorY);
+      ctx.stroke();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(126, floorY - 94, 44, 34);
+      ctx.fillStyle = '#34d399';
+      ctx.beginPath();
+      ctx.arc(148, floorY - 76, 9, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (rm?.id === 'jonas') {
+      // Acoustic Guitar on Stand
+      ctx.fillStyle = '#d97706';
+      ctx.beginPath();
+      ctx.ellipse(148, floorY - 26, 14, 20, 0.15, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(145, floorY - 68, 6, 30);
+    } else if (rm?.id === 'tom') {
+      // Potted Plant & Skateboard
+      ctx.fillStyle = '#ea580c';
+      ctx.beginPath();
+      ctx.roundRect(124, floorY - 12, 46, 9, [4]);
+      ctx.fill();
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.arc(134, floorY - 3, 4, 0, Math.PI * 2);
+      ctx.arc(160, floorY - 3, 4, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // Photo Wall Frames
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(118, floorY - 140, 26, 26);
+      ctx.fillRect(150, floorY - 132, 24, 24);
+      ctx.fillStyle = theme.blanket;
+      ctx.fillRect(122, floorY - 136, 18, 18);
+      ctx.fillRect(154, floorY - 128, 16, 16);
+    }
+
+    // Roommate Cozy Bed on Right (clickable to sleep!)
+    ctx.fillStyle = theme.accent;
+    ctx.beginPath();
+    ctx.roundRect(410, floorY - 110, 185, 80, [16, 16, 0, 0]);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.roundRect(402, floorY - 52, 198, 44, [10]);
+    ctx.fill();
+    ctx.fillStyle = theme.blanket;
+    ctx.beginPath();
+    ctx.roundRect(404, floorY - 54, 134, 40, [10]);
+    ctx.fill();
+    // Pillow on right
+    ctx.fillStyle = '#fffbeb';
+    ctx.beginPath();
+    ctx.roundRect(542, floorY - 68, 46, 18, [8]);
+    ctx.fill();
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(410, floorY - 10, 10, 10);
+    ctx.fillRect(584, floorY - 10, 10, 10);
+
+    sleepHotspots.push({
+      x: 400, y: floorY - 114, w: 204, h: 112,
+      approachX: 465, bedX: 495, bedY: floorY - 42, facing: -1,
+      room: 'roommate_room', isDreamBed: true, label: `${rm ? `${rm.name}s` : 'WG-'}Bett`
+    });
+
+    // Open Archway Back to Living Room
+    drawDoorPortal(ctx, 22, floorY - 148, 70, 148, '◀ Wohnzimmer', 'living_room', 240, 'arch');
+  }
+
   function drawConservatoryRoom(ctx, w, h, floorY) {
     // Glass Sunroom with Sky & Golden Sunbeams
     const skyG = ctx.createLinearGradient(0, 0, 0, floorY);
@@ -3474,7 +3935,9 @@ export function setupHomeScreen(stateManager) {
     if (!decayInterval) {
       decayInterval = setInterval(() => {
         HomeManager.tickNeeds({ isSleeping: Boolean(player.sleepingAt) });
+        SocialManager.tickRoommateLife({ isPlayerSleeping: Boolean(player.sleepingAt) });
         updateUI();
+        renderRoomTabs();
       }, 6000);
     }
   }
@@ -3500,8 +3963,52 @@ export function setupHomeScreen(stateManager) {
   window.addEventListener('runner:roommate-updated', () => {
     if (stateManager.getState() === 'HOME') {
       updateUI();
+      renderRoomTabs();
       talkPanel.refresh();
     }
+  });
+
+  window.addEventListener('runner:roommate-life-updated', () => {
+    if (stateManager.getState() === 'HOME') {
+      updateUI();
+      renderRoomTabs();
+    }
+  });
+
+  window.addEventListener('runner:roommate-event', (e) => {
+    if (stateManager.getState() !== 'HOME') return;
+    const detail = e.detail || {};
+    const person = detail.person;
+    if (!person) return;
+    if (detail.type === 'work_done') {
+      spawnFX('coin', roommateAgent.x, 180, 8);
+      roommateAgent.speechText = `💼 Wieder da! +${detail.coins} 🪙 verdient!`;
+      roommateAgent.speechTimer = 160;
+      showToast(`💼 ${person.name} ist von der Arbeit zurück & bringt +${detail.coins} 🪙 für eure WG mit!`, 'success');
+    } else if (detail.type === 'got_sick') {
+      roommateAgent.speechText = `🤒 Hatschi! (${detail.sick?.label || 'Erkältet'})`;
+      roommateAgent.speechTimer = 160;
+      showToast(`🤒 ${person.name} kränkelt (${detail.sick?.label || 'Erkältung'})! Pfleg sie mit 🍵 Tee oder lass sie schlafen.`, 'warn');
+    } else if (detail.type === 'recovered') {
+      roommateAgent.speechText = '✨ Wieder fit & gesund!';
+      roommateAgent.speechTimer = 140;
+      showToast(`✨ ${person.name} ist wieder gesund und munter!`, 'success');
+    } else if (detail.type === 'auto_eat') {
+      roommateAgent.speechText = '🍽️ Kurz was essen!';
+      roommateAgent.speechTimer = 115;
+    } else if (detail.type === 'auto_drink') {
+      roommateAgent.speechText = '🥤 Kurz etwas trinken!';
+      roommateAgent.speechTimer = 115;
+    } else if (detail.type === 'went_sleep') {
+      roommateAgent.speechText = '😴 Müde… ich leg mich schlafen!';
+      roommateAgent.speechTimer = 135;
+    } else if (detail.type === 'went_work') {
+      roommateAgent.speechText = `💼 Ich gehe kurz zu ${person.jobPlace || 'der Arbeit'}!`;
+      roommateAgent.speechTimer = 145;
+      showToast(`💼 ${person.name} ist zur Arbeit gegangen und bringt gleich Spielgeld mit!`, 'info');
+    }
+    updateUI();
+    renderRoomTabs();
   });
 
   window.addEventListener('runner:level-up', (e) => {

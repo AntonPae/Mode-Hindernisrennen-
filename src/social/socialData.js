@@ -10,6 +10,9 @@ export const NEW_ACQUAINTANCES = [
     name: 'Mila',
     icon: '📸',
     role: 'Tierfotografin',
+    jobTitle: 'Tierfotografin',
+    jobPlace: 'Promenade & Tierhandlung',
+    jobCoins: 14,
     hobby: 'Fotos von Hunden, Katzen & Sonnenuntergängen machen',
     favoriteFood: 'Pistazien-Eis 🍨',
     townX: 2475,
@@ -20,11 +23,6 @@ export const NEW_ACQUAINTANCES = [
       'Ich reise mit meiner Sofortbildkamera durch die ganze Traumstadt.',
       'Mein größter Traum ist ein Foto-Album mit allen Nachbar-Hunden!',
       'Ich liebe Pistazien-Eis und gehe abends gern durchs Wohnviertel spazieren.'
-    ],
-    homeLines: [
-      'Unser Zuhause ist so schön gemütlich! Ich mache gleich noch tolle Erinnerungsfotos von dir und deinen Tieren! 📸',
-      'Zusammen wohnen macht so viel Spaß – soll ich beim Kochen oder Blumengießen helfen?',
-      'Es ist einfach schön, nach einem langen Tag gemeinsam nach Hause zu kommen! 💛'
     ],
     charConfig: {
       body: { height: 1.0, width: 1.0, faceId: 'face_4', hairId: 'hair_flower', hairColor: '#b45309' },
@@ -40,6 +38,9 @@ export const NEW_ACQUAINTANCES = [
     name: 'Tom',
     icon: '🛹',
     role: 'Gärtner & Skater',
+    jobTitle: 'Gärtner & Skater-Coach',
+    jobPlace: 'Park & Supermarkt',
+    jobCoins: 14,
     hobby: 'Obstbäume pflegen & auf dem Board durch den Park rollen',
     favoriteFood: 'Frische Äpfel & Herzwaffeln 🧇',
     townX: 1515,
@@ -50,11 +51,6 @@ export const NEW_ACQUAINTANCES = [
       'Ich bin letzte Woche in die Straße hinter dem Supermarkt gezogen.',
       'Ich züchte rote Äpfel und repariere alte Skateboards.',
       'Wenn du mal Lust auf ein Wettrennen hast, schreib mir einfach im Briefkasten!'
-    ],
-    homeLines: [
-      'Hey Mitbewohner! Der Garten sieht super aus – ich helfe dir total gern beim Gießen! 🌱',
-      'Ich hab mein Skateboard ordentlich im Flur abgestellt – bereit für ein bisschen Entspannung!',
-      'Zusammen hier zu wohnen ist echt mega cool! Was wollen wir heute unternehmen? 🛹'
     ],
     charConfig: {
       body: { height: 1.0, width: 1.0, faceId: 'face_2', hairId: 'hair_2', hairColor: '#0f172a' },
@@ -70,6 +66,9 @@ export const NEW_ACQUAINTANCES = [
     name: 'Lina',
     icon: '🎨',
     role: 'Malerin & Buchfreundin',
+    jobTitle: 'Malerin im Traum-Café',
+    jobPlace: 'Traum-Café & Atelier',
+    jobCoins: 15,
     hobby: 'Aquarell-Bilder malen & gemütlich im Café lesen',
     favoriteFood: 'Erdbeer-Shake & Kakao ☕',
     townX: 2795,
@@ -80,11 +79,6 @@ export const NEW_ACQUAINTANCES = [
       'Am liebsten male ich bunte Häuser und glückliche Tiere.',
       'Im Traum-Café trinke ich immer einen warmen Kakao zum Malen.',
       'Ich würde mich riesig freuen, wenn wir richtige Freunde werden!'
-    ],
-    homeLines: [
-      'Das Licht im Wohnzimmer ist perfekt zum Aquarell-Malen! Ich fühl mich hier wie zuhause! 🎨',
-      'Wollen wir uns zusammen an den Küchentisch setzen und etwas Schönes trinken? ☕',
-      'So eine liebe Mitbewohner-WG hab ich mir immer gewünscht! 💕'
     ],
     charConfig: {
       body: { height: 1.0, width: 1.0, faceId: 'face_8', hairId: 'hair_3', hairColor: '#7c2d12' },
@@ -100,6 +94,9 @@ export const NEW_ACQUAINTANCES = [
     name: 'Jonas',
     icon: '🎸',
     role: 'Musiker & Hobbykoch',
+    jobTitle: 'Musiker & Café-Koch',
+    jobPlace: 'Traum-Café',
+    jobCoins: 15,
     hobby: 'Gitarre spielen & leckere Pfannkuchen backen',
     favoriteFood: 'Schoko-Waffeln & Kakao 🍫',
     townX: 2135,
@@ -110,11 +107,6 @@ export const NEW_ACQUAINTANCES = [
       'Abends spiele ich am liebsten Akustik-Gitarre im Wohnzimmer.',
       'Ich backe super gern Pfannkuchen und liebe es, gemütlich am Küchentisch zu sitzen.',
       'Wenn wir uns gut verstehen, würde ich total gern eine WG mit dir gründen!'
-    ],
-    homeLines: [
-      'Ich hab meine Gitarre mitgebracht – soll ich uns zuhause ein Lied spielen? 🎸',
-      'Komm, ich mach uns bald leckere Pfannkuchen in deiner Küche! 🥞',
-      'Hier zusammen zu wohnen fühlt sich einfach richtig schön an! 🏡'
     ],
     charConfig: {
       body: { height: 1.0, width: 1.0, faceId: 'face_1', hairId: 'hair_1', hairColor: '#92400e' },
@@ -244,12 +236,29 @@ export function parsePetCommand(inputText, petMeta) {
   };
 }
 
+function getDefaultRoommateLife() {
+  return {
+    hunger: 78,
+    thirst: 76,
+    energy: 86,
+    sick: null, // null | { kind, label, since }
+    activity: 'idle', // 'idle' | 'eating' | 'drinking' | 'sleeping' | 'working'
+    activityStartedAt: 0,
+    activityEndsAt: 0,
+    workShiftCount: 0,
+    ticksSinceSickCheck: 0,
+    lastSickAt: 0,
+    lastTick: Date.now()
+  };
+}
+
 function getDefaultSocialState() {
   return {
     acquaintances: {}, // { [id]: { stage: 0..3, points: 0, talks: 0, invitedWelcome: false } }
     personAffinity: {}, // { [id]: number }
     roommateId: null, // id of NEW_ACQUAINTANCES currently living with the player
-    movedInRewarded: {} // { [id]: true }
+    movedInRewarded: {}, // { [id]: true }
+    roommateLife: getDefaultRoommateLife()
   };
 }
 
@@ -262,7 +271,11 @@ export const SocialManager = {
           acquaintances: saved.acquaintances || {},
           personAffinity: saved.personAffinity || {},
           roommateId: saved.roommateId || null,
-          movedInRewarded: saved.movedInRewarded || {}
+          movedInRewarded: saved.movedInRewarded || {},
+          roommateLife: {
+            ...getDefaultRoommateLife(),
+            ...(saved.roommateLife || {})
+          }
         };
       }
     } catch {
@@ -316,6 +329,7 @@ export const SocialManager = {
     cur.invitedWelcome = true;
     state.acquaintances[personId] = cur;
     state.roommateId = personId;
+    state.roommateLife = getDefaultRoommateLife();
 
     let bonusCoins = 0;
     if (!state.movedInRewarded[personId]) {
@@ -334,7 +348,7 @@ export const SocialManager = {
       senderName: person.name,
       senderIcon: person.icon,
       title: `Ich bin bei dir eingezogen! 🏡 – ${person.name}`,
-      body: `Hurra! Hier ist ${person.name}! Ich habe meine Koffer gepackt und wohne jetzt mit dir zusammen in deinem Haus & Garten. Wir können zusammen am Tisch sitzen, plaudern und entspannen!`,
+      body: `Hurra! Hier ist ${person.name}! Ich habe meine Koffer gepackt und wohne jetzt mit dir zusammen in deinem Haus & Garten. Wir können zusammen am Tisch sitzen, plaudern, essen, trinken, schlafen und sogar ein eigenes WG-Zimmer einrichten!`,
       isInvitation: false,
       rewardCoins: 15
     });
@@ -352,10 +366,295 @@ export const SocialManager = {
     if (!state.roommateId) return { ok: false };
     const prev = NEW_ACQUAINTANCES.find((p) => p.id === state.roommateId) || null;
     state.roommateId = null;
+    state.roommateLife = getDefaultRoommateLife();
     this.saveState(state);
     window.dispatchEvent(new CustomEvent('runner:social-updated'));
     window.dispatchEvent(new CustomEvent('runner:roommate-updated', { detail: { roommateId: null, prevRoommateId: prev?.id || null } }));
     return { ok: true, prev };
+  },
+
+  getRoommateLife() {
+    const state = this.getState();
+    if (!state.roommateId) return null;
+    const person = NEW_ACQUAINTANCES.find((p) => p.id === state.roommateId);
+    if (!person) return null;
+
+    const life = state.roommateLife || getDefaultRoommateLife();
+    const now = Date.now();
+    let changed = false;
+
+    if (life.activity === 'working' && life.activityEndsAt > 0 && now >= life.activityEndsAt) {
+      const earned = person.jobCoins || 14;
+      life.activity = 'idle';
+      life.activityStartedAt = 0;
+      life.activityEndsAt = 0;
+      life.energy = Math.max(12, Math.round((life.energy ?? 80) - 18));
+      life.hunger = Math.max(12, Math.round((life.hunger ?? 75) - 14));
+      life.thirst = Math.max(12, Math.round((life.thirst ?? 75) - 18));
+      life.workShiftCount = (life.workShiftCount || 0) + 1;
+      changed = true;
+      state.roommateLife = life;
+      this.saveState(state);
+      ShopManager.addCoins(earned);
+      window.dispatchEvent(new CustomEvent('runner:coins-updated'));
+      window.dispatchEvent(new CustomEvent('runner:roommate-event', {
+        detail: { type: 'work_done', person, coins: earned }
+      }));
+    } else if ((life.activity === 'eating' || life.activity === 'drinking') && life.activityEndsAt > 0 && now >= life.activityEndsAt) {
+      life.activity = 'idle';
+      life.activityStartedAt = 0;
+      life.activityEndsAt = 0;
+      changed = true;
+      state.roommateLife = life;
+      this.saveState(state);
+    }
+
+    if (changed) {
+      window.dispatchEvent(new CustomEvent('runner:roommate-life-updated', { detail: { life } }));
+    }
+    return life;
+  },
+
+  _maybeTriggerRoommateSickness(life, source = 'tick') {
+    const now = Date.now();
+    if (life.sick) return null;
+    if (now - (life.lastSickAt || 0) < 180000) return null;
+    life.ticksSinceSickCheck = (life.ticksSinceSickCheck || 0) + 1;
+    if (source === 'tick' && life.ticksSinceSickCheck < 5) return null;
+
+    const low = (life.energy ?? 85) < 28 || (life.hunger ?? 75) < 25 || (life.thirst ?? 75) < 25;
+    let chance = 0.015;
+    if (low) chance *= 2.2;
+    if (Math.random() >= chance) return null;
+
+    const kinds = [
+      { kind: 'cold', label: 'Leichte Erkältung' },
+      { kind: 'tummy', label: 'Kleines Bauchweh' }
+    ];
+    const pick = kinds[Math.floor(Math.random() * kinds.length)];
+    life.sick = { ...pick, since: now };
+    life.lastSickAt = now;
+    life.ticksSinceSickCheck = 0;
+    return life.sick;
+  },
+
+  tickRoommateLife(options = {}) {
+    const { isPlayerSleeping = false } = options;
+    const state = this.getState();
+    if (!state.roommateId) return null;
+    const person = NEW_ACQUAINTANCES.find((p) => p.id === state.roommateId);
+    if (!person) return null;
+
+    // Resolve any finished timed activity first
+    const resolved = this.getRoommateLife();
+    const freshState = this.getState();
+    const life = resolved || freshState.roommateLife || getDefaultRoommateLife();
+    const now = Date.now();
+    const hasOwnRoom = HomeManager.hasRoommateRoom();
+    const sleepBonus = hasOwnRoom ? 12 : 8;
+
+    let eventPayload = null;
+
+    if (life.activity === 'working') {
+      life.lastTick = now;
+      freshState.roommateLife = life;
+      this.saveState(freshState);
+      return { life, event: null };
+    }
+
+    if (life.activity === 'sleeping' || isPlayerSleeping) {
+      life.energy = Math.min(100, (life.energy ?? 80) + sleepBonus);
+      if (life.energy >= 94 && life.sick) {
+        life.sick = null;
+        eventPayload = { type: 'recovered', person };
+      }
+      if (!isPlayerSleeping && life.activity === 'sleeping' && life.energy >= 95) {
+        life.activity = 'idle';
+        eventPayload = eventPayload || { type: 'woke_up', person };
+      }
+    } else {
+      life.hunger = Math.max(8, (life.hunger ?? 78) - 2);
+      life.thirst = Math.max(8, (life.thirst ?? 76) - 2);
+      life.energy = Math.max(8, (life.energy ?? 86) - 2);
+
+      const newSick = this._maybeTriggerRoommateSickness(life, 'tick');
+      if (newSick) {
+        eventPayload = { type: 'got_sick', person, sick: newSick };
+      } else if (life.activity === 'idle') {
+        if (life.energy <= 24) {
+          life.activity = 'sleeping';
+          eventPayload = { type: 'went_sleep', person };
+        } else if (life.hunger <= 32) {
+          const homeState = HomeManager.getState();
+          if ((homeState.inventory.fridgeSnacks || 0) > 0) {
+            homeState.inventory.fridgeSnacks -= 1;
+            HomeManager.saveState(homeState);
+            life.hunger = Math.min(100, life.hunger + 36);
+          } else {
+            life.hunger = Math.min(100, life.hunger + 26);
+          }
+          life.activity = 'eating';
+          life.activityStartedAt = now;
+          life.activityEndsAt = now + 6500;
+          eventPayload = { type: 'auto_eat', person };
+        } else if (life.thirst <= 32) {
+          const homeState = HomeManager.getState();
+          if ((homeState.inventory.drinks || 0) > 0) {
+            homeState.inventory.drinks -= 1;
+            HomeManager.saveState(homeState);
+            life.thirst = Math.min(100, life.thirst + 38);
+          } else {
+            life.thirst = Math.min(100, life.thirst + 24);
+          }
+          life.activity = 'drinking';
+          life.activityStartedAt = now;
+          life.activityEndsAt = now + 6000;
+          eventPayload = { type: 'auto_drink', person };
+        } else if (!life.sick && life.energy >= 58 && Math.random() < 0.08) {
+          life.activity = 'working';
+          life.activityStartedAt = now;
+          life.activityEndsAt = now + 20000;
+          eventPayload = { type: 'went_work', person };
+        }
+      }
+    }
+
+    life.lastTick = now;
+    freshState.roommateLife = life;
+    this.saveState(freshState);
+    if (eventPayload) {
+      window.dispatchEvent(new CustomEvent('runner:roommate-event', { detail: eventPayload }));
+    }
+    window.dispatchEvent(new CustomEvent('runner:roommate-life-updated', { detail: { life } }));
+    return { life, event: eventPayload };
+  },
+
+  feedRoommate() {
+    const state = this.getState();
+    const person = this.getRoommate();
+    if (!person) return { ok: false, reason: 'no_roommate' };
+    const life = this.getRoommateLife() || getDefaultRoommateLife();
+    const homeState = HomeManager.getState();
+    let source = 'snack';
+    if ((homeState.inventory.fridgeSnacks || 0) > 0) {
+      homeState.inventory.fridgeSnacks -= 1;
+      HomeManager.saveState(homeState);
+      life.hunger = Math.min(100, (life.hunger ?? 70) + 40);
+      source = 'fridge_snack';
+    } else if ((homeState.inventory.food || 0) > 0) {
+      homeState.inventory.food -= 1;
+      HomeManager.saveState(homeState);
+      life.hunger = Math.min(100, (life.hunger ?? 70) + 45);
+      source = 'meal';
+    } else {
+      life.hunger = Math.min(100, (life.hunger ?? 70) + 26);
+    }
+    life.activity = 'eating';
+    life.activityStartedAt = Date.now();
+    life.activityEndsAt = Date.now() + 6500;
+
+    const latest = this.getState();
+    latest.roommateLife = life;
+    this.saveState(latest);
+    window.dispatchEvent(new CustomEvent('runner:roommate-life-updated', { detail: { life } }));
+    return { ok: true, person, source, life };
+  },
+
+  giveRoommateDrink() {
+    const state = this.getState();
+    const person = this.getRoommate();
+    if (!person) return { ok: false, reason: 'no_roommate' };
+    const life = this.getRoommateLife() || getDefaultRoommateLife();
+    const homeState = HomeManager.getState();
+    let usedStock = false;
+    if ((homeState.inventory.drinks || 0) > 0) {
+      homeState.inventory.drinks -= 1;
+      HomeManager.saveState(homeState);
+      life.thirst = Math.min(100, (life.thirst ?? 70) + 42);
+      life.energy = Math.min(100, (life.energy ?? 80) + 4);
+      usedStock = true;
+    } else {
+      life.thirst = Math.min(100, (life.thirst ?? 70) + 25);
+    }
+    life.activity = 'drinking';
+    life.activityStartedAt = Date.now();
+    life.activityEndsAt = Date.now() + 6000;
+
+    const latest = this.getState();
+    latest.roommateLife = life;
+    this.saveState(latest);
+    window.dispatchEvent(new CustomEvent('runner:roommate-life-updated', { detail: { life } }));
+    return { ok: true, person, usedStock, life };
+  },
+
+  sendRoommateToWork() {
+    const person = this.getRoommate();
+    if (!person) return { ok: false, reason: 'no_roommate' };
+    const life = this.getRoommateLife() || getDefaultRoommateLife();
+    if (life.activity === 'working') {
+      return { ok: false, reason: 'already_working', person, life };
+    }
+    if (life.sick) {
+      return { ok: false, reason: 'sick', person, life };
+    }
+    if ((life.energy ?? 80) < 22) {
+      return { ok: false, reason: 'tired', person, life };
+    }
+    life.activity = 'working';
+    life.activityStartedAt = Date.now();
+    life.activityEndsAt = Date.now() + 18000;
+    const latest = this.getState();
+    latest.roommateLife = life;
+    this.saveState(latest);
+    window.dispatchEvent(new CustomEvent('runner:roommate-life-updated', { detail: { life } }));
+    return { ok: true, person, life };
+  },
+
+  toggleRoommateSleep() {
+    const person = this.getRoommate();
+    if (!person) return { ok: false, reason: 'no_roommate' };
+    const life = this.getRoommateLife() || getDefaultRoommateLife();
+    if (life.activity === 'working') {
+      return { ok: false, reason: 'working', person, life };
+    }
+    const sleeping = life.activity === 'sleeping';
+    life.activity = sleeping ? 'idle' : 'sleeping';
+    life.activityStartedAt = Date.now();
+    life.activityEndsAt = 0;
+    const latest = this.getState();
+    latest.roommateLife = life;
+    this.saveState(latest);
+    window.dispatchEvent(new CustomEvent('runner:roommate-life-updated', { detail: { life } }));
+    return { ok: true, sleeping: !sleeping, person, life };
+  },
+
+  healRoommate() {
+    const person = this.getRoommate();
+    if (!person) return { ok: false, reason: 'no_roommate' };
+    const life = this.getRoommateLife() || getDefaultRoommateLife();
+    if (!life.sick) {
+      return { ok: false, reason: 'healthy', person, life };
+    }
+    const homeState = HomeManager.getState();
+    const meds = homeState.inventory.medicine || 0;
+    if (meds <= 0) {
+      return { ok: false, reason: 'no_medicine', person, life };
+    }
+    homeState.inventory.medicine = meds - 1;
+    HomeManager.saveState(homeState);
+    life.sick = null;
+    life.energy = Math.min(100, (life.energy ?? 75) + 22);
+    life.thirst = Math.min(100, (life.thirst ?? 70) + 14);
+    if (life.activity === 'sleeping') life.activity = 'idle';
+
+    const latest = this.getState();
+    latest.roommateLife = life;
+    this.saveState(latest);
+    const bonusCoins = 8;
+    ShopManager.addCoins(bonusCoins);
+    window.dispatchEvent(new CustomEvent('runner:coins-updated'));
+    window.dispatchEvent(new CustomEvent('runner:roommate-life-updated', { detail: { life } }));
+    return { ok: true, person, bonusCoins, remaining: homeState.inventory.medicine, life };
   },
 
   getAcquaintanceProgress(personId) {
@@ -468,194 +767,105 @@ export const SocialManager = {
   }
 };
 
-const FAVORITE_COLORS = {
-  mila: 'Sonnengelb und Türkis',
-  tom: 'Apfelgrün und Himmelblau',
-  lina: 'Rosa, Flieder und Himmelblau für meine Aquarelle',
-  jonas: 'Violett und Goldgelb'
-};
+const npcChatHistories = new Map();
 
-export function generatePersonReply(target, playerText = '', sceneContext = {}) {
-  const text = (playerText || '').trim();
-  const q = text.toLowerCase();
+export async function askPersonAI(target, playerText = '', sceneContext = {}) {
+  const text = (playerText || '').trim() || `Hallo ${target?.name || ''}!`;
   const id = target?.id || 'person';
   const name = target?.name || 'Nachbar';
 
-  // Advance acquaintance/talk counter
-  const progress = SocialManager.recordTalk(id);
+  const newPerson = NEW_ACQUAINTANCES.find((p) => p.id === id) || null;
+  const currentRoommate = SocialManager.getRoommate();
+  const isRoommateNow = Boolean(currentRoommate && currentRoommate.id === id);
+  const homeState = HomeManager.getState();
+  const petNames = (homeState.owned?.pets || []).slice(0, 6);
+  const roommateLife = isRoommateNow ? SocialManager.getRoommateLife() : null;
 
-  // 1. New Acquaintances (Mila, Tom, Lina, Jonas) have rich Kennenlernen, Q&A & Zusammenziehen replies!
-  const newPerson = NEW_ACQUAINTANCES.find((p) => p.id === id);
-  if (newPerson) {
-    let reply = '';
-    let movedInResult = null;
-    const isRoommateNow = SocialManager.getRoommate()?.id === id;
-    const wantsMoveIn = /(zusammen\s*zieh|zusammen\s*wohn|einzieh|bei mir (wohn|leb)|mit mir (wohn|leb)|ziehst du (zu|mit)|mitbewohner|in mein haus|wg gründen|wg mit mir)/i.test(q);
+  const prevHistory = npcChatHistories.get(id) || [];
 
-    if (wantsMoveIn) {
-      if (isRoommateNow) {
-        reply = `Wir wohnen doch schon glücklich zusammen in deinem Traumhaus! 🏡💛`;
-      } else {
-        movedInResult = SocialManager.moveInWith(id);
-        reply = `Ja, total gern! 🏡💛 Ich packe sofort meine Sachen und ziehe zu dir ins Traumhaus!${movedInResult.bonusCoins > 0 ? ` (+${movedInResult.bonusCoins} 🪙 Einzugs-Bonus!)` : ''}`;
-      }
+  try {
+    const resp = await fetch('/api/npc-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        target: {
+          id,
+          name,
+          icon: target?.icon || newPerson?.icon || '💬',
+          role: target?.role || newPerson?.role || 'Bewohner/in der Traumstadt',
+          kind: target?.kind || (newPerson ? 'acquaintance' : 'neighbor'),
+          hobby: newPerson?.hobby || '',
+          favoriteFood: newPerson?.favoriteFood || '',
+          spotLabel: newPerson?.spotLabel || '',
+          facts: newPerson?.facts || [],
+          jobTitle: newPerson?.jobTitle || '',
+          isNewPerson: Boolean(newPerson)
+        },
+        message: text,
+        history: prevHistory.slice(-8),
+        context: {
+          scene: sceneContext.scene || 'town',
+          shopId: sceneContext.shopId || null,
+          isRoommate: isRoommateNow,
+          hasOwnRoom: HomeManager.hasRoommateRoom(),
+          roommateLife,
+          playerNeeds: {
+            hunger: homeState.needs?.hunger,
+            thirst: homeState.needs?.thirst,
+            energy: homeState.needs?.energy
+          },
+          playerSick: homeState.health?.playerSick || null,
+          pets: petNames
+        }
+      })
+    });
+
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok || !data?.reply) {
+      const errMsg = data?.error || `Antwort fehlgeschlagen (Status ${resp.status})`;
       return {
-        reply,
-        bubble: reply.length > 52 ? `${reply.slice(0, 49)}…` : reply,
-        progress,
-        movedIn: Boolean(movedInResult?.ok),
-        moveInData: movedInResult
+        ok: false,
+        error: errMsg,
+        code: data?.code || 'API_ERROR'
       };
     }
 
-    const introMatch = text.match(/(?:ich heiße|ich bin|mein name ist)\s+([A-ZÄÖÜa-zäöüß-]{2,20})/i);
-    const nonNames = new Set(['müde', 'glücklich', 'traurig', 'krank', 'gesund', 'fertig', 'bereit', 'hier', 'da', 'neu', 'gut', 'super', 'lieb', 'nett', 'cool', 'groß', 'klein', 'froh', 'allein', 'wach']);
-    const introducedName = introMatch && !nonNames.has(introMatch[1].toLowerCase()) ? introMatch[1] : null;
+    let reply = String(data.reply).trim();
+    const updatedHistory = [
+      ...prevHistory,
+      { role: 'user', text },
+      { role: 'model', text: reply }
+    ].slice(-10);
+    npcChatHistories.set(id, updatedHistory);
 
-    if (introducedName) {
-      reply = `Oh, ${introducedName} ist so ein schöner Name! 🥰 Freut mich riesig, dich kennenzulernen – ich bin ${newPerson.name}!`;
-    } else if (/(wie\s*geht|alles\s*(gut|klar|okay|ok)|wie\s*fühlst)/i.test(q)) {
-      reply = `Mir geht es richtig gut, danke der Nachfrage! 😊 Ich genieße den Tag in der Traumstadt – und wie geht es dir heute?`;
-    } else if (/(wie\s*alt|\balter\b|geburtstag)/i.test(q)) {
-      reply = `Ich bin genau im perfekten Alter zum Malen, Entdecken und für viele Abenteuer in der Traumstadt! ✨`;
-    } else if (/(wo\s*(wohnst|lebst|bist|kommst)|woher\s*kommst|dein\s*haus|deine\s*wohnung)/i.test(q)) {
-      reply = isRoommateNow
-        ? `Ich wohne doch schon glücklich mit dir zusammen in deinem Traumhaus! 🏡💛`
-        : `Normalerweise findest du mich hier (${newPerson.spotLabel}) – aber wenn du magst, ziehe ich total gern zu dir ins Haus! 🏡`;
-    } else if (/(tier|hund|katze|hase|papagei|fuchs|einhorn|welpe|haustier)/i.test(q)) {
-      reply = `Ich liebe Tiere über alles! 🐾 Deine Tiere sehen so niedlich und fröhlich aus – wie viele hast du denn schon?`;
-    } else if (/(lieblingsfarbe|welche\s*farbe|farbe\s*magst)/i.test(q)) {
-      const col = FAVORITE_COLORS[id] || 'Rosa, Türkis und Sonnengelb';
-      reply = `Meine Lieblingsfarbe ist ${col}! 🎨 Welche Farbe magst du am liebsten?`;
-    } else if (/(essen|trinken|kakao|eis|pizza|kuchen|waffel|apfel|liebling|hunger|durst|schmeckt|snack)/i.test(q)) {
-      reply = `Am allerliebsten mag ich ${newPerson.favoriteFood}! Und was isst du am liebsten? 😊`;
-    } else if (/(hobby|was\s*machst|was\s*malst|malst|zeichn|skizzen|buch|lesen|beruf|arbeit|foto|skaten|garten|gitarre|musik)/i.test(q)) {
-      reply = `Am liebsten beschäftige ich mich damit: ${newPerson.hobby}! 😊 Und was machst du gerne in deiner Freizeit?`;
-    } else if (/(müde|schlaf|bett|krank|gesund|wetter|sonne|regen)/i.test(q)) {
-      if (/(krank|gesund)/i.test(q)) {
-        reply = `Mir geht es super und ich bin kerngesund! Hoffentlich sind du und deine Tiere auch fit! ❤️`;
-      } else if (/(müde|schlaf|bett)/i.test(q)) {
-        reply = `Ein kleines Päuschen tut immer gut! Zuhause im Bett oder am Tisch kann man sich prima erholen. 😴`;
-      } else {
-        reply = `Das Wetter in der Traumstadt ist heute einfach zauberhaft – perfekt zum Spazieren und Plaudern! ☀️`;
-      }
-    } else if (/(spiel|spazier|unternehm|treffen|café|eisdiele|stadt|ausflug|party|lust)/i.test(q)) {
-      reply = `Oh ja, voll gerne! 🥳 Lass uns zusammen losziehen, ins Café schauen oder eine Party feiern!`;
-    } else if (/(freund|einlad|brief)/i.test(q)) {
-      reply = `Ja, total gerne! Du findest mich ab jetzt in deinem Briefkasten – und wenn du willst, können wir sogar zusammenziehen! 🏡💌`;
-    } else if (/(wie\s*heißt|dein\s*name|wer\s*bist|vorstellen)/i.test(q)) {
-      reply = `Ich bin ${newPerson.name} (${newPerson.role})! ${newPerson.icon} Schön, dass wir miteinander reden!`;
-    } else if (/(kleid|outfit|hose|schuh|frisur|haar|hübsch|schön|süß|toll|cool|super|nett|lieb|mag\s*dich|danke)/i.test(q)) {
-      reply = `Aww, danke dir! 💕 Du bist richtig nett – und dein Look sieht heute auch super aus!`;
-    } else if (sceneContext.scene === 'home' && isRoommateNow) {
-      if (/\b(kochen|essen|tisch|küche|kühlschrank|hunger)\b/.test(q)) {
-        reply = `Komm, wir setzen uns zusammen an den Küchentisch oder holen was Leckeres aus dem Kühlschrank! 🍽️`;
-      } else {
-        const pool = newPerson.homeLines || newPerson.facts;
-        const idx = (SocialManager.getAcquaintanceProgress(id).talks || 0) % pool.length;
-        reply = pool[idx];
-      }
-    } else if (progress && progress.prevStage === 0 && (!q || /(hallo|hi|hey|guten|servus|moin|kennenlernen)/i.test(q))) {
-      reply = newPerson.introLine;
-    } else if (q.includes('?') || /\b(was|warum|wieso|weshalb|wann|wer|wie|wo|welche|welcher|welches|kannst|hast|willst|möchtest|darf|bist|magst|gibt)\b/i.test(q)) {
-      reply = `Gute Frage! 😊 Ich bin ${newPerson.name} und liebe ${newPerson.hobby}. Am liebsten genieße ich ${newPerson.favoriteFood} – frag mich gern alles oder ob wir zusammenziehen!`;
-    } else if (/(hallo|hi|hey|guten|servus|moin)/i.test(q)) {
-      reply = `Hallo! Schön, dass du mit mir redest! Wie geht es dir heute? 😊`;
-    } else {
-      const idx = (SocialManager.getAcquaintanceProgress(id).talks || 0) % newPerson.facts.length;
-      reply = newPerson.facts[idx];
-    }
+    const progress = SocialManager.recordTalk(id);
 
-    if (progress && progress.prevStage < 3 && progress.stage === 3) {
+    const explicitMoveIn = /(zusammen\s*zieh|zusammen\s*wohn|einzieh|bei mir (wohn|leb)|mit mir (wohn|leb)|ziehst du (zu|mit)|mitbewohner|in mein haus|wg gründen|wg mit mir)/i.test(text);
+    let movedInResult = null;
+    if (newPerson && !isRoommateNow && (data.agreesToMoveIn || explicitMoveIn)) {
+      movedInResult = SocialManager.moveInWith(id);
+      if (movedInResult?.ok && movedInResult.bonusCoins > 0) {
+        reply += ` (+${movedInResult.bonusCoins} 🪙 Einzugs-Bonus!)`;
+      }
+    } else if (progress && progress.prevStage < 3 && progress.stage === 3) {
       reply += ' 🎉 Wir sind jetzt echte neue Freunde! (+20 🪙)';
     } else if (progress && progress.prevStage === 0 && progress.coinsEarned > 0) {
       reply += ` (+${progress.coinsEarned} 🪙 Kennenlern-Bonus!)`;
     }
+
     return {
+      ok: true,
       reply,
       bubble: reply.length > 52 ? `${reply.slice(0, 49)}…` : reply,
-      progress
+      progress,
+      movedIn: Boolean(movedInResult?.ok),
+      moveInData: movedInResult
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err?.message || 'Netzwerkfehler bei der Gesprächsanfrage.',
+      code: 'NETWORK_ERROR'
     };
   }
-
-  // 2. Keyword-matched replies for any neighbor, cashier, shopper, café guest, or friend
-  if (/(wie\s*heißt|dein\s*name|wer\s*bist)/i.test(q)) {
-    const r = `Ich bin ${name}! Schön, dass wir hier zusammen plaudern! 😊`;
-    return { reply: r, bubble: r };
-  }
-
-  if (/(wie\s*geht|alles\s*(gut|klar|okay|ok)|wie\s*fühlst)/i.test(q)) {
-    const r = `Mir geht es prima, danke der Nachfrage! Und dir und deinen Tieren hoffentlich auch! 🌞`;
-    return { reply: r, bubble: r };
-  }
-
-  if (/(wo\s*(wohnst|lebst|kommst)|wie\s*alt|lieblingsfarbe|hobby|was\s*machst)/i.test(q)) {
-    const r = `Ich lebe hier in unserer schönen Traumstadt, liebe gute Gespräche und freue mich immer, dich zu sehen! ✨`;
-    return { reply: r, bubble: 'Ich wohne hier in der Traumstadt! ✨' };
-  }
-
-  if (/\b(hallo|hi|hey|guten|morgen|tag|abend)\b/.test(q)) {
-    const greets = [
-      `Hallo! Wie schön, dass du kurz vorbeischaust! 😊`,
-      `Hi! Alles super bei mir – und bei dir heute?`,
-      `Hallo! Schönes Wetter heute in unserer Traumstadt!`
-    ];
-    const r = greets[Math.floor(Math.random() * greets.length)];
-    return { reply: r, bubble: r };
-  }
-
-  if (/\b(tier|hund|katze|hase|bello|fuchs|einhorn|süß)\b/.test(q)) {
-    const r = `Deine Tiere sind so goldig und gut erzogen! Hörten sie gerade auf deine Anweisungen? 🐾`;
-    return { reply: r, bubble: 'Deine Tiere sind so süß! 🐾' };
-  }
-
-  if (/\b(kauf|preis|kostet|kasse|regal|frisur|farbe|kleid|schuh|eis|waffel|essen|kaffee|kakao)\b/.test(q)) {
-    if (sceneContext.scene === 'store') {
-      const r = `Schau dich ganz in Ruhe um! Alles aus dem Regal legst du einfach in deinen Korb.`;
-      return { reply: r, bubble: 'Schau dich gern um! 🛍️' };
-    }
-    if (sceneContext.scene === 'icecream') {
-      const r = `Das sieht hier alles so lecker aus! Ein frisches Eis oder eine Waffel geht immer! 🍦`;
-      return { reply: r, bubble: 'Mmmh, so lecker hier! 🍦' };
-    }
-    const r = `Die Einkaufsstraße hat heute wieder tolle Sachen im Angebot!`;
-    return { reply: r, bubble: r };
-  }
-
-  if (/\b(danke|super|toll|schön|cool|klasse|lieb)\b/.test(q)) {
-    const r = `Sehr gerne! Mit so netten Leuten wie dir macht die Traumstadt doppelt Spaß! ❤️`;
-    return { reply: r, bubble: 'Danke, du bist super! ❤️' };
-  }
-
-  if (/\b(tschüss|ciao|bis bald|wiedersehen)\b/.test(q)) {
-    const r = `Bis ganz bald! Pass gut auf dich und deine Tiere auf! 👋`;
-    return { reply: r, bubble: 'Bis bald! 👋' };
-  }
-
-  // 3. Context-specific fallback pools
-  if (NEIGHBOR_DIRECTORY[id]) {
-    const pool = NEIGHBOR_DIRECTORY[id].topics;
-    const r = pool[Math.floor(Math.random() * pool.length)];
-    return { reply: r, bubble: r.length > 48 ? `${r.slice(0, 45)}…` : r };
-  }
-
-  if (target?.kind === 'cashier') {
-    const r = `Hallo! Brauchst du Hilfe im Laden oder möchtest du gleich bezahlen? 😊`;
-    return { reply: r, bubble: 'Kann ich dir helfen? 😊' };
-  }
-
-  if (target?.kind === 'shopper') {
-    const r = `Ich schaue hier gerade ein bisschen durch die Regale – hier gibt es echt tolle Sachen!`;
-    return { reply: r, bubble: 'Hier gibt es tolle Sachen!' };
-  }
-
-  if (target?.kind === 'guest') {
-    const r = `Danke, dass du uns im Café bedienst! Es schmeckt hier immer fantastisch! 🍨`;
-    return { reply: r, bubble: 'Es schmeckt fantastisch! 🍨' };
-  }
-
-  const fallback = q.includes('?')
-    ? `Klar, ${name} antwortet dir gern! Hier in der Traumstadt passiert heute so viel Schönes! 😊`
-    : `Das ist ja spannend! Schön, mit dir zu plaudern, ${name} hört dir gern zu! 💬`;
-  return { reply: fallback, bubble: `Schön mit dir zu reden! 💬` };
 }

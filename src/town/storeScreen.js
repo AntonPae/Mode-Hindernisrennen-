@@ -5,7 +5,7 @@ import { HOME_CATALOG, HOME_MYSTERY_BOX_PRICE, HomeManager } from '../home/homeD
 import { drawVectorPet, getPetMeta, PetFollowerController } from '../home/petCompanion.js';
 import { MailboxManager } from '../mailbox/mailboxData.js';
 import {
-  generatePersonReply,
+  askPersonAI,
   parsePetCommand
 } from '../social/socialData.js';
 import { drawCanvasSpeechBubble } from '../social/canvasSpeech.js';
@@ -51,11 +51,14 @@ const STORE_CONFIG = {
       },
       {
         id: 'fridge',
-        label: '🧊 Kühlregal',
+        label: '🧊 Kühlregal & 🥤 Getränke',
         x: 325,
         color: '#0ea5e9',
-        hint: 'Frische Koch-Zutaten, Milch & Käse-Boxen für deinen Kühlschrank!',
-        sources: [{ kind: 'home', category: 'supplies', filter: (i) => i.key === 'food' }]
+        hint: 'Frische Koch-Zutaten, Käse-Boxen, Kakao, Saft & Wasser für deinen Kühlschrank!',
+        sources: [
+          { kind: 'home', category: 'supplies', tabLabel: '🥘 Koch-Zutaten', filter: (i) => i.key === 'food' },
+          { kind: 'home', category: 'supplies', tabLabel: '🥤 Getränke', filter: (i) => i.key === 'drinks' }
+        ]
       },
       {
         id: 'petfood',
@@ -505,16 +508,15 @@ export function setupStoreScreen(stateManager) {
   const talkPanel = mountTalkPanel({
     mountEl: document.getElementById('storeTalkMount'),
     getTargets: getStoreTalkTargets,
-    onTalkPerson: (target, phrase) => {
+    onTalkPerson: async (target, phrase) => {
       player.speechText = phrase;
       player.speechTimer = 135;
       player.pose = 'pet';
       player.poseTimer = 20;
-      const res = generatePersonReply(target, phrase, { scene: 'store', shopId: activeShopId });
       if (target.kind === 'cashier') {
         player.facing = 1;
-        cashierBubble = res.bubble;
-        cashierBubbleTimer = 175;
+        cashierBubble = '💭 …';
+        cashierBubbleTimer = 90;
         if (player.x < 640) {
           navigateInStore(700, 292, () => { player.facing = 1; });
         }
@@ -522,6 +524,24 @@ export function setupStoreScreen(stateManager) {
         const shopper = STORE_SHOPPERS.find((s) => s.id === target.id);
         if (shopper) {
           player.facing = shopper.x >= player.x ? 1 : -1;
+          shopper.speechText = '💭 …';
+          shopper.speechTimer = 90;
+          shopper.pauseTimer = 160;
+        }
+      }
+      const res = await askPersonAI(target, phrase, { scene: 'store', shopId: activeShopId });
+      if (!res.ok) {
+        const errMsg = `⚠️ ${target.name} konnte gerade nicht antworten (${res.error})`;
+        talkPanel.refresh(errMsg);
+        if (statusEl) statusEl.textContent = errMsg;
+        return;
+      }
+      if (target.kind === 'cashier') {
+        cashierBubble = res.bubble;
+        cashierBubbleTimer = 175;
+      } else {
+        const shopper = STORE_SHOPPERS.find((s) => s.id === target.id);
+        if (shopper) {
           shopper.speechText = res.bubble;
           shopper.speechTimer = 175;
           shopper.pauseTimer = 140;
@@ -698,7 +718,7 @@ export function setupStoreScreen(stateManager) {
         const res = HomeManager.buyItem(entry.category, entry.item.id);
         if (res.ok) {
           boughtNames.push(`${entry.item.icon || ''} ${entry.item.name}`);
-          if (entry.item.key === 'food' || entry.item.key === 'fridgeSnacks') hasFridgeGoods = true;
+          if (entry.item.key === 'food' || entry.item.key === 'fridgeSnacks' || entry.item.key === 'drinks') hasFridgeGoods = true;
           if (entry.category === 'pets') hasPet = true;
           if (entry.item.id === 'mailbox' || entry.item.id === 'gold_mailbox') {
             MailboxManager.ensureDailyMail();
@@ -1229,12 +1249,20 @@ export function setupStoreScreen(stateManager) {
       for (const npc of STORE_SHOPPERS) {
         if (Math.hypot(cx - npc.x, cy - (npc.y - 36)) <= 38) {
           const standX = npc.x + (player.x < npc.x ? -42 : 42);
-          navigateInStore(standX, npc.y, () => {
+          navigateInStore(standX, npc.y, async () => {
             player.facing = npc.x >= player.x ? 1 : -1;
             const greet = `Hallo ${npc.name}!`;
             player.speechText = greet;
             player.speechTimer = 120;
-            const res = generatePersonReply({ id: npc.id, name: npc.name, icon: npc.icon, kind: 'shopper' }, greet, { scene: 'store', shopId: activeShopId });
+            npc.speechText = '💭 …';
+            npc.speechTimer = 90;
+            npc.pauseTimer = 160;
+            talkPanel.selectTarget(npc.id, `💭 ${npc.name} überlegt...`);
+            const res = await askPersonAI({ id: npc.id, name: npc.name, icon: npc.icon, kind: 'shopper' }, greet, { scene: 'store', shopId: activeShopId });
+            if (!res.ok) {
+              talkPanel.selectTarget(npc.id, `⚠️ ${npc.name} konnte nicht antworten (${res.error})`);
+              return;
+            }
             npc.speechText = res.bubble;
             npc.speechTimer = 165;
             npc.pauseTimer = 140;
